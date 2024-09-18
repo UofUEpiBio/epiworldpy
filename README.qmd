@@ -18,6 +18,10 @@ The `epiworld` module is already
 - clone this repository
 - `pip install ./epiworldpy`
 
+# API
+
+You can find API documentation on the [API page](/api.html).
+
 # Examples 
 
 ## Basic

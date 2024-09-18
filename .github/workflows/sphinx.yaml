@@ -48,10 +48,15 @@ jobs:
 
       # Building
       - name: Render Quarto File
-        run: quarto render README.qmd --to rst && mv README.rst docs/index.rst
+        run: |
+          quarto render README.qmd --to rst
+          mv README.rst docs/index.rst
 
       - name: Build HTML using Sphinx
         run: sphinx-build -M html docs docs/build/
+
+      - name: Move Assets into Place
+        run: mv README_files docs/build/html
 
       # Upload
       - name: Upload artifacts
