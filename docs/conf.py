@@ -11,13 +11,17 @@
 # All configuration values have a default; values that are commented out
 # serve to show the default.
 from __future__ import annotations
+import sys
+import os
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+#sys.path.insert(0, os.path.abspath('../src/epiworldpy'))
 
 # -- General configuration ------------------------------------------------
+
+#sys.path.insert(0, os.path.abspath("../src"))
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #needs_sphinx = '1.0'
@@ -27,14 +31,17 @@ from __future__ import annotations
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
+    'sphinx.ext.viewcode',
     'myst_parser',
 ]
 
+toc_deph = 5
 autosummary_generate = True
+autoclass_content = "both"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -113,7 +120,30 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'haiku'
+html_theme = 'sphinx_book_theme'
+html_theme_options = {
+    "repository_url": "https://github.com/CDCgov/PyRenew",
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "repository_branch": "main",
+    "path_to_docs": "docs/source",
+    "use_download_button": True,
+}
+
+html_sidebars = {
+    "**": [
+        "navbar-logo.html",
+        "search-field.html",
+        "sbt-sidebar-nav.html",
+    ]
+}
+
+master_doc = "ctoc"
+autodoc_typehints = "description"
+autodoc_type_aliases = {
+    "Any": ":obj:`Any <typing.Any>`",
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

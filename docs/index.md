@@ -1,4 +1,4 @@
-# epiworldpy: Python bindings for epiworld
+# `Epiworldpy`: Python bindings for Epiworld
 
 
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
@@ -21,7 +21,7 @@ target="_blank">implemented in R</a>.
 
 # API
 
-You can find API documentation on the <a href="/api.html">API page</a>.
+You can find API documentation on the <a href="api.html">API page</a>.
 
 # Examples
 
@@ -77,7 +77,7 @@ covid19.print(False)
      - Prob. Recovery       : 0.1400
      - Prob. Transmission   : 0.1000
 
-    <epiworldpy._core.ModelSEIRCONN at 0x10b9099f0>
+    <epiworldpy._core.ModelSEIRCONN at 0x1054d3c30>
 
 Let’s run it and to see what we get:
 
@@ -103,8 +103,8 @@ covid19.print(False)
     Number of entities  : 0
     Days (duration)     : 100 (of 100)
     Number of viruses   : 1
-    Last run elapsed t  : 22.00ms
-    Last run speed      : 43.64 million agents x day / second
+    Last run elapsed t  : 13.00ms
+    Last run speed      : 74.51 million agents x day / second
     Rewiring            : off
 
     Global events:
@@ -134,7 +134,7 @@ covid19.print(False)
      - Infected     0.00  0.00  0.86  0.14
      - Recovered    0.00  0.00  0.00  1.00
 
-    <epiworldpy._core.ModelSEIRCONN at 0x10b9099f0>
+    <epiworldpy._core.ModelSEIRCONN at 0x1054d3c30>
 
 We can now visualize the model’s compartments:
 

@@ -28,7 +28,14 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest"]
-doc = ["nbformat", "nbclient", "jupyter", "epiworldpy[viz]", "myst_parser"]
+doc = [
+    "nbformat",
+    "nbclient",
+    "jupyter",
+    "epiworldpy[viz]",
+    "myst_parser",
+    "sphinx-book-theme",
+]
 viz = ["ipympl>=0.8", "matplotlib>=3.5.0", "networkx>=3.0", "scipy>=1.0"]
 
 [tool.scikit-build.wheel]

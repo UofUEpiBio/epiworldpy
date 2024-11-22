@@ -1,6 +1,6 @@
 ---
 format: gfm
-title: "epiworldpy: Python bindings for epiworld"
+title: "`Epiworldpy`: Python bindings for Epiworld"
 ---
 
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
