@@ -28,8 +28,21 @@ classifiers = [
 
 [project.optional-dependencies]
 test = ["pytest"]
-doc = ["nbformat", "nbclient", "jupyter", "epiworldpy[viz]", "myst_parser"]
-viz = ["ipympl>=0.8", "matplotlib>=3.5.0", "networkx>=3.0", "scipy>=1.0"]
+doc = [
+    "nbformat",
+    "nbclient",
+    "jupyter",
+    "epiworldpy[viz]",
+    "myst_parser",
+    "sphinx-book-theme",
+]
+viz = [
+    "ipympl>=0.8",
+    "matplotlib>=3.5.0",
+    "networkx>=3.0",
+    "scipy>=1.0",
+    "pandas>=2.1.0",
+]
 
 [tool.scikit-build.wheel]
 expand-macos-universal-tags = true

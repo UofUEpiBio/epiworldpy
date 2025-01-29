@@ -1,142 +1,115 @@
-# epiworldpy: Python bindings for epiworld
+# epiworldPy
 
 
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
 [![](https://img.shields.io/pypi/v/epiworldpy.svg)](https://pypi.org/project/epiworldpy)
 
-This is a python wrapper of the [`epiworld c++`
-library](https://github.com/UofUEpiBio/epiworld/), an ABM simulation
-engine. This is possible using the
-[`pybind11`](https://pybind11.readthedocs.io/en/stable/) library (which
-rocks!).
+This Python package is a wrapper of the C++ library
+[epiworld](https://github.com/UofUEpiBio/epiworld). It provides a
+general framework for modeling disease transmission using agent-based
+models. Some of the main features include:
 
-The `epiworld` module is already
-<a href="https://github.com/UofUEpiBio/epiworldR"
-target="_blank">implemented in R</a>.
+-   Fast simulation with an average of 30 million agents/day per second.
+-   One model can include multiple diseases.
+-   Policies (tools) can be multiple and user-defined.
+-   Transmission can be a function of agents’ features.
+-   Out-of-the-box parallelization for multiple simulations.
+
+From the package’s description:
+
+> A flexible framework for Agent-Based Models (ABM), the epiworldR
+> package provides methods for prototyping disease outbreaks and
+> transmission models using a C++ backend, making it very fast. It
+> supports multiple epidemiological models, including the
+> Susceptible-Infected-Susceptible (SIS), Susceptible-Infected-Removed
+> (SIR), Susceptible-Exposed-Infected-Removed (SEIR), and others,
+> involving arbitrary mitigation policies and multiple-disease models.
+> Users can specify infectiousness/susceptibility rates as a function of
+> agents’ features, providing great complexity for the model dynamics.
+> Furthermore, epiworldR is ideal for simulation studies featuring large
+> populations.
+
+Current available models:
+
+1.  `ModelDiffNet`
+2.  `ModelSEIR`
+3.  `ModelSEIRCONN`
+4.  `ModelSEIRD`
+5.  `ModelSEIRDCONN`
+6.  `ModelSEIRMixing`
+7.  `ModelSIR`
+8.  `ModelSIRCONN`
+9.  `ModelSIRD`
+10. `ModelSIRDCONN`
+11. `ModelSIRLogit`
+12. `ModelSIRMixing`
+13. `ModelSIS`
+14. `ModelSISD`
+15. `ModelSURV`
+
+Bindings exist for other languages, [namely
+R](https://uofuepibio.github.io/epiworldR).
 
 # Installation
 
--   clone this repository
--   `pip install ./epiworldpy`
+Installation can be preformed through pip (pip installs packages).
 
-# API
+`pip install epiworldpy`
 
-You can find API documentation on the <a href="/api.html">API page</a>.
+If there’s a feature that’s only available on the repository, and hasn’t
+yet been published to PyPi, please create an issue so we know to get on
+publishing. In the meantime, you can clone the repository though Git,
+and install locally.
+
+``` bash
+git clone https://github.com/uofUEpiBio/epiworldpy
+cd epiworldpy
+
+git checkout $WANTED_COMMIT
+pip install .
+```
 
 # Examples
 
-## Basic
+This Python package includes several popular epidemiological models,
+including SIS, SIR, and SEIR using either a fully connected graph
+(similar to a compartmental model) or a user-defined network.
 
-Here we show how to create a `SEIR` object and add terms to it. We will
-use the following data:
+## SIR model using a random graph
+
+This Susceptible-Infected-Recovered model features a population of
+100,000 agents simulated in a small-world network. Each agent is
+connected to ten other agents. One percent of the population has the
+virus, with a 70% chance of transmission. Infected individuals recover
+at a 0.3 rate:
 
 ``` python
 # Loading the module
 import epiworldpy as epiworld
 
-# Create a SEIR model (susceptible, exposed, infectious, recovered), representing COVID-19.
-covid19 = epiworld.ModelSEIRCONN(
-  name              = 'covid-19',
-  n                 = 10000,
-  prevalence        = .01,
-  contact_rate      = 2.0,
-  transmission_rate = .1,
-  incubation_days   = 7.0,
-  recovery_rate     = 0.14
+# Create a SIR model (susceptible, infectious, recovered).
+covid19 = epiworld.ModelSIR(
+  name              = 'COVID-19',
+  prevalence        = 0.01,
+  transmission_rate = 0.7,
+  recovery_rate     = 0.3
 )
 
-# Taking a look
-covid19.print(False)
-```
+# Adding a Small world population.
+covid19.agents_smallworld(n = 100000, k = 10, d = False, p = .01)
 
-    ________________________________________________________________________________
-    ________________________________________________________________________________
-    SIMULATION STUDY
-
-    Name of the model   : Susceptible-Exposed-Infected-Removed (SEIR) (connected)
-    Population size     : 10000
-    Agents' data        : (none)
-    Number of entities  : 0
-    Days (duration)     : 0 (of 0)
-    Number of viruses   : 1
-    Last run elapsed t  : -
-    Rewiring            : off
-
-    Global events:
-     - Update infected individuals (runs daily)
-
-    Virus(es):
-     - covid-19
-
-    Tool(s):
-     (none)
-
-    Model parameters:
-     - Avg. Incubation days : 7.0000
-     - Contact rate         : 2.0000
-     - Prob. Recovery       : 0.1400
-     - Prob. Transmission   : 0.1000
-
-    <epiworldpy._core.ModelSEIRCONN at 0x10b9099f0>
-
-Let’s run it and to see what we get:
-
-``` python
-# Run for 100 days with a seed of 223.
-covid19.run(100, 223)
-
-# Print an overview.
-covid19.print(False)
+# Run for 50 days with a seed of 1912.
+covid19.run(50, 1912)
 ```
 
     _________________________________________________________________________
-    Running the model...
-    ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
-     done.
-    ________________________________________________________________________________
-    ________________________________________________________________________________
-    SIMULATION STUDY
+    |Running the model...
+    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
+    | done.
 
-    Name of the model   : Susceptible-Exposed-Infected-Removed (SEIR) (connected)
-    Population size     : 10000
-    Agents' data        : (none)
-    Number of entities  : 0
-    Days (duration)     : 100 (of 100)
-    Number of viruses   : 1
-    Last run elapsed t  : 22.00ms
-    Last run speed      : 43.64 million agents x day / second
-    Rewiring            : off
+    <epiworldpy._core.ModelSIR at 0x10a5de970>
 
-    Global events:
-     - Update infected individuals (runs daily)
-
-    Virus(es):
-     - covid-19
-
-    Tool(s):
-     (none)
-
-    Model parameters:
-     - Avg. Incubation days : 7.0000
-     - Contact rate         : 2.0000
-     - Prob. Recovery       : 0.1400
-     - Prob. Transmission   : 0.1000
-
-    Distribution of the population at time 100:
-      - (0) Susceptible :  9900 -> 7275
-      - (1) Exposed     :   100 -> 269
-      - (2) Infected    :     0 -> 292
-      - (3) Recovered   :     0 -> 2164
-
-    Transition Probabilities:
-     - Susceptible  1.00  0.00  0.00  0.00
-     - Exposed      0.00  0.85  0.15  0.00
-     - Infected     0.00  0.00  0.86  0.14
-     - Recovered    0.00  0.00  0.00  1.00
-
-    <epiworldpy._core.ModelSEIRCONN at 0x10b9099f0>
-
-We can now visualize the model’s compartments:
+We can now visualize the model’s compartments/outputs:
 
 ``` python
 import numpy as np
@@ -181,6 +154,85 @@ plt.show()
 src="README_files/figure-markdown_strict/series-visualization-output-1.png"
 id="series-visualization" />
 
+Let’s plot model incidence.
+
+``` python
+import pandas as pd
+
+# Get the data from the database.
+transition_matrix = pd.DataFrame(covid19.get_db().get_hist_transition_matrix(False))
+
+# Subsetting rows where states_from != states_to.
+transition_matrix = transition_matrix[
+  transition_matrix['states_from'] != transition_matrix['states_to']
+]
+
+# Selecting only those where counts > 0
+transition_matrix = transition_matrix[
+  transition_matrix['counts'] > 0
+]
+
+daily_incidence = transition_matrix.groupby(['dates', 'states_to'])['counts'].sum().unstack()
+
+# Plot!
+plt.figure(figsize=(10, 6))
+plt.plot(daily_incidence.index, daily_incidence['Infected'], label='New Infected')
+plt.plot(daily_incidence.index, daily_incidence['Recovered'], label='New Recovered')
+
+plt.title('Daily Incidence of Infected and Recovered Cases')
+plt.xlabel('Days')
+plt.ylabel('Number of New Cases')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+<img
+src="README_files/figure-markdown_strict/case-type-incidence-output-1.png"
+id="case-type-incidence" />
+
+## SEIR model with a fully connected graph
+
+The SEIR model is similar to the SIR model but includes an exposed
+state. Here, we simulate a population of 10,000 agents with a 0.01
+prevalence, a 0.6 transmission rate, a 0.5 recovery rate, and 7
+days-incubation period. The population is fully connected, meaning
+agents can transmit the disease to any other agent:
+
+``` python
+model = epiworld.ModelSEIRCONN(
+  name              = 'COVID-19',
+  prevalence        = 0.01,
+  n                 = 10000,
+  contact_rate      = 10,
+  incubation_days   = 7,
+  transmission_rate = 0.1,
+  recovery_rate     = 1 / 7
+)
+
+# Add a virus.
+covid19 = epiworld.Virus(
+  name = "COVID-19",
+  prevalence = 0.01,
+  as_proportion = True,
+  prob_infecting = 0.01,
+  prob_recovery = 0.6,
+  prob_death = 0.5,
+  post_immunity = -1,
+  incubation = 7
+)
+model.add_virus(covid19)
+
+# Run for 100 days with a seed of 132.
+model.run(100, 132)
+```
+
+Computing some key statistics.
+
+``` python
+# ...
+```
+
 We can get the effective reproductive number, over time, too:
 
 ``` python
@@ -208,10 +260,6 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
-
-<img
-src="README_files/figure-markdown_strict/rt-visualization-output-1.png"
-id="rt-visualization" />
 
 Let’s do the same for generation time:
 
@@ -252,19 +300,29 @@ plt.grid(True)
 plt.show()
 ```
 
-<img
-src="README_files/figure-markdown_strict/gentime-visualization-output-1.png"
-id="gentime-visualization" />
+## Transmission Network
 
-Epiworld records agent-agent interactions, and we can graph those too.
-In the below example, we only track all cases stemming from a specific
-index case, despite the model having a prevalence of 0.01.
+This example shows how we can draw a transmission network from a
+simulation. The following code simulates a population of 500 agents in a
+small-world network. Each agent is connected to ten other agents. One
+percent of the population has the virus, with a 50% chance of
+transmission. Infected individuals recover at a 0.5 rate:
 
 ``` python
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
-transmissions = covid19.get_db().get_transmissions()
+model = epiworld.ModelSIR(
+  name           = "COVID-19",
+  prevalence     = .01,
+  transmission_rate = 0.5,
+  recovery       = 0.5
+)
+
+model.agents_smallworld(n = 500, k = 10, d = False, p = 0.01)
+model.run(50, 1912)
+
+transmissions = model.get_db().get_transmissions()
 start = transmissions['source_exposure_dates']
 end = transmissions['dates']
 source = transmissions['sources']
@@ -320,3 +378,63 @@ plt.show()
   hardcoding a GIF. -->
 
 ![](README_files/figure-markdown_strict/contact-visualization-output-1.gif)
+
+## Multiple Simulations
+
+epiworldpy supports running multiple simulations using the
+`run_multiple` function. The following code simulates 50 SIR models with
+1000 agents each. Each agent is connected to ten other agents. One
+percent of the population has the virus, with a 90% chance of
+transmission. Infected individuals recover at a 0.1 rate. The results
+are saved in a dataframe:
+
+``` python
+model = epiworld.ModelSIRCONN(
+  name = "COVID-19",
+  prevalence = 0.01,
+  n = 1000,
+  contact_rate = 2,
+  transmission_rate = 0.9,
+  recovery_rate = 0.1
+)
+
+saver = epiworld.Saver("total_hist", "reproductive")
+saver.run_multiple(model, 100, 50, nthreads=2)
+```
+
+    Starting multiple runs (50)
+    _________________________________________________________________________
+    _________________________________________________________________________
+    ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
+     done.
+
+    <epiworldpy._core.Model at 0x10a099b70>
+
+Let’s grab the results.
+
+``` python
+ans = saver.run_multiple_get_results("total_hist")
+ans["total_hist"][0:10]
+```
+
+# API
+
+You can find API documentation on the <a href="api.html">API
+documentation page</a>.
+
+# Existing Alternatives
+
+There exist a multitude of existing ABM frameworks/libraries available
+for Python. See the below (non-exhaustive) list.
+
+-   MESA
+-   LDG
+-   BPTK-Py
+
+A comparison table will be added at a later date. Want to contribute
+that, or add a project we missed? Submit a PR!
+
+# Code of Conduct
+
+The epiworldPy project is released with a Contributor Code of Conduct.
+By contributing to this project, you agree to abide by its terms.
