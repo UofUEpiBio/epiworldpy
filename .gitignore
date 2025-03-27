@@ -4,10 +4,12 @@
 .ropeproject/
 .nocheck/
 _build/
+dist/
 build/
 dist/
 __pycache__/
-src/epiworldpy.egg-info
+*.egg-info/
+.ropeproject/
 
 compile_commands.json
 
