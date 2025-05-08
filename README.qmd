@@ -3,6 +3,7 @@ format: gfm
 title: "epiworldPy"
 ---
 
+[![](https://img.shields.io/pypi/dw/epiworldpy)](https://pypi.org/project/epiworldpy)
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
 [![](https://img.shields.io/pypi/v/epiworldpy.svg)](https://pypi.org/project/epiworldpy)
 

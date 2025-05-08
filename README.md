@@ -1,6 +1,6 @@
 # epiworldPy
 
-
+[![PyPI - Downloads](https://img.shields.io/pypi/dw/epiworldpy)](https://pypi.org/project/epiworldpy)
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
 [![](https://img.shields.io/pypi/v/epiworldpy.svg)](https://pypi.org/project/epiworldpy)
 [![ForeSITE Group](https://github.com/EpiForeSITE/software/blob/e82ed88f75e0fe5c0a1a3b38c2b94509f122019c/docs/assets/foresite-software-badge.svg)](https://github.com/EpiForeSITE)
@@ -10,11 +10,11 @@ This Python package is a wrapper of the C++ library
 general framework for modeling disease transmission using agent-based
 models. Some of the main features include:
 
--   Fast simulation with an average of 30 million agents/day per second.
--   One model can include multiple diseases.
--   Policies (tools) can be multiple and user-defined.
--   Transmission can be a function of agents’ features.
--   Out-of-the-box parallelization for multiple simulations.
+- Fast simulation with an average of 30 million agents/day per second.
+- One model can include multiple diseases.
+- Policies (tools) can be multiple and user-defined.
+- Transmission can be a function of agents’ features.
+- Out-of-the-box parallelization for multiple simulations.
 
 From the package’s description:
 
@@ -62,7 +62,7 @@ yet been published to PyPi, please create an issue so we know to get on
 publishing. In the meantime, you can clone the repository though Git,
 and install locally.
 
-``` bash
+```bash
 git clone https://github.com/uofUEpiBio/epiworldpy
 cd epiworldpy
 
@@ -84,7 +84,7 @@ connected to ten other agents. One percent of the population has the
 virus, with a 70% chance of transmission. Infected individuals recover
 at a 0.3 rate:
 
-``` python
+```python
 # Loading the module
 import epiworldpy as epiworld
 
@@ -112,7 +112,7 @@ covid19.run(50, 1912)
 
 We can now visualize the model’s compartments/outputs:
 
-``` python
+```python
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -157,7 +157,7 @@ id="series-visualization" />
 
 Let’s plot model incidence.
 
-``` python
+```python
 import pandas as pd
 
 # Get the data from the database.
@@ -200,7 +200,7 @@ prevalence, a 0.6 transmission rate, a 0.5 recovery rate, and 7
 days-incubation period. The population is fully connected, meaning
 agents can transmit the disease to any other agent:
 
-``` python
+```python
 model = epiworld.ModelSEIRCONN(
   name              = 'COVID-19',
   prevalence        = 0.01,
@@ -230,13 +230,13 @@ model.run(100, 132)
 
 Computing some key statistics.
 
-``` python
+```python
 # ...
 ```
 
 We can get the effective reproductive number, over time, too:
 
-``` python
+```python
 reproductive_data = covid19.get_db().get_reproductive_number()
 
 # Start the plotting!
@@ -264,7 +264,7 @@ plt.show()
 
 Let’s do the same for generation time:
 
-``` python
+```python
 from collections import defaultdict
 
 generation_time = covid19.get_db().get_generation_time()
@@ -309,7 +309,7 @@ small-world network. Each agent is connected to ten other agents. One
 percent of the population has the virus, with a 50% chance of
 transmission. Infected individuals recover at a 0.5 rate:
 
-``` python
+```python
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
@@ -389,7 +389,7 @@ percent of the population has the virus, with a 90% chance of
 transmission. Infected individuals recover at a 0.1 rate. The results
 are saved in a dataframe:
 
-``` python
+```python
 model = epiworld.ModelSIRCONN(
   name = "COVID-19",
   prevalence = 0.01,
@@ -413,7 +413,7 @@ saver.run_multiple(model, 100, 50, nthreads=2)
 
 Let’s grab the results.
 
-``` python
+```python
 ans = saver.run_multiple_get_results("total_hist")
 ans["total_hist"][0:10]
 ```
@@ -428,9 +428,9 @@ documentation page</a>.
 There exist a multitude of existing ABM frameworks/libraries available
 for Python. See the below (non-exhaustive) list.
 
--   MESA
--   LDG
--   BPTK-Py
+- MESA
+- LDG
+- BPTK-Py
 
 A comparison table will be added at a later date. Want to contribute
 that, or add a project we missed? Submit a PR!
