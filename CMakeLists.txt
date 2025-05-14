@@ -8,11 +8,15 @@ project(
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+
 # Include the include/epiworld library
 include_directories(include/epiworld)
 
 python_add_library(_core MODULE
     src/database.cpp
+    src/diagram.cpp
     src/entity.cpp
     src/main.cpp
     src/model.cpp

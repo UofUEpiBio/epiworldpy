@@ -252,6 +252,12 @@ public:
     
     /***
      * @brief Record a transmission event
+     * @param i,j Integers. Id of the source and target agents.
+     * @param virus Integer. Id of the virus.
+     * @param i_expo_date Integer. Date when the source agent was infected.
+     * @details
+     * If i is -1, then it means that the agent was assigned a virus at the
+     * beginning of the simulation.
      */
     void record_transmission(int i, int j, int virus, int i_expo_date);
 
@@ -272,6 +278,11 @@ public:
      * virus is allowed to circulate naïvely or not, respectively.
      * 
      * @param fn File where to write out the reproductive number.
+     * @details
+     * In the case of `MapVec_type<int,int>`, the key is a vector of 3 integers:
+     * - Virus id
+     * - Source id
+     * - Date when the source was infected
      */
     ///@{
     MapVec_type<int,int> reproductive_number() const;
@@ -283,11 +294,20 @@ public:
 
     /**
      * @brief Calculates the transition probabilities
-     * 
+     * @param print Print the transition matrix.
+     * @param normalize Normalize the transition matrix. Otherwise, 
+     * it returns raw counts.
+     * @details
+     * The transition matrix is the matrix of the counts of transitions
+     * from one state to another. So the ij-th element of the matrix is
+     * the number of transitions from state i to state j (when not normalized),
+     * or the probability of transitioning from state i to state j 
+     * (when normalized).
      * @return std::vector< epiworld_double > 
      */
     std::vector< epiworld_double > transition_probability(
-        bool print = true
+        bool print = true,
+        bool normalize = true
     ) const;
 
     bool operator==(const DataBase<TSeq> & other) const;

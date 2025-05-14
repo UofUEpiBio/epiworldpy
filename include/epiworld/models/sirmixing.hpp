@@ -1,6 +1,20 @@
 #ifndef EPIWORLD_MODELS_SIRMIXING_HPP
 #define EPIWORLD_MODELS_SIRMIXING_HPP
 
+#if __cplusplus >= 202302L
+    // C++23 or later
+    #define GET_MODEL(model, output) \
+        auto * output = dynamic_cast< ModelSIRMixing<TSeq> * >( (model) ); \
+        /*Using the [[assume(...)]] to avoid the compiler warning \
+        if the standard is C++23 or later */ \
+        [[assume((output) != nullptr)]]
+#else
+    // C++17 or C++20
+    #define GET_MODEL(model, output) \
+        auto * output = dynamic_cast< ModelSIRMixing<TSeq> * >( (model) ); \
+        assert((output) != nullptr); // Use assert for runtime checks
+#endif
+
 /**
  * @file seirentitiesconnected.hpp
  * @brief Template for a Susceptible-Exposed-Infected-Removed (SEIR) model with mixing
@@ -16,7 +30,7 @@ private:
         epiworld::Agent<TSeq> * agent,
         std::vector< epiworld::Agent<TSeq> * > & sampled_agents
         );
-    double adjusted_contact_rate;
+    std::vector< double > adjusted_contact_rate;
     std::vector< double > contact_matrix;
 
     size_t index(size_t i, size_t j, size_t n) {
@@ -167,8 +181,22 @@ inline void ModelSIRMixing<TSeq>::update_infected_list()
     }
 
     // Adjusting contact rate
-    adjusted_contact_rate = Model<TSeq>::get_param("Contact rate") /
-        agents.size();
+    adjusted_contact_rate.clear();
+    adjusted_contact_rate.resize(infected.size(), 0.0);
+
+    for (size_t i = 0u; i < infected.size(); ++i)
+    {
+                
+        adjusted_contact_rate[i] = 
+            Model<TSeq>::get_param("Contact rate") /
+                static_cast< epiworld_double > (this->get_entity(i).size());
+
+        // Correcting for possible overflow
+        if (adjusted_contact_rate[i] > 1.0)
+            adjusted_contact_rate[i] = 1.0;
+
+    }
+
 
     return;
 
@@ -191,7 +219,7 @@ inline size_t ModelSIRMixing<TSeq>::sample_agents(
         // How many from this entity?
         int nsamples = epiworld::Model<TSeq>::rbinom(
             infected[g].size(),
-            adjusted_contact_rate * contact_matrix[
+            adjusted_contact_rate[g] * contact_matrix[
                 index(agent_group_id, g, ngroups)
             ]
         );
@@ -298,9 +326,8 @@ inline ModelSIRMixing<TSeq>::ModelSIRMixing(
 
             // Downcasting to retrieve the sampler attached to the
             // class
-            ModelSIRMixing<TSeq> * m_down =
-                dynamic_cast<ModelSIRMixing<TSeq> *>(m);
-
+            GET_MODEL(m, m_down);
+            
             size_t ndraws = m_down->sample_agents(p, m_down->sampled_agents);
 
             if (ndraws == 0u)
@@ -413,8 +440,7 @@ inline ModelSIRMixing<TSeq>::ModelSIRMixing(
     epiworld::GlobalFun<TSeq> update = [](epiworld::Model<TSeq> * m) -> void
     {
 
-        ModelSIRMixing<TSeq> * m_down =
-            dynamic_cast<ModelSIRMixing<TSeq> *>(m);
+        GET_MODEL(m, m_down);
 
         m_down->update_infected_list();
 
@@ -493,4 +519,5 @@ inline ModelSIRMixing<TSeq> & ModelSIRMixing<TSeq>::initial_states(
 
 }
 
+#undef GET_MODEL
 #endif
