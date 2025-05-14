@@ -1,9 +1,10 @@
 # epiworldPy
 
-[![PyPI - Downloads](https://img.shields.io/pypi/dw/epiworldpy)](https://pypi.org/project/epiworldpy)
+
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
+[![](https://img.shields.io/pypi/dw/epiworldpy.png)](https://pypi.org/project/epiworldpy)
 [![](https://img.shields.io/pypi/v/epiworldpy.svg)](https://pypi.org/project/epiworldpy)
-[![ForeSITE Group](https://github.com/EpiForeSITE/software/blob/e82ed88f75e0fe5c0a1a3b38c2b94509f122019c/docs/assets/foresite-software-badge.svg)](https://github.com/EpiForeSITE)
+[![](https://github.com/EpiForeSITE/software/blob/e82ed88f75e0fe5c0a1a3b38c2b94509f122019c/docs/assets/foresite-software-badge.svg)](https://github.com/EpiForeSITE)
 
 This Python package is a wrapper of the C++ library
 [epiworld](https://github.com/UofUEpiBio/epiworld). It provides a
@@ -62,7 +63,7 @@ yet been published to PyPi, please create an issue so we know to get on
 publishing. In the meantime, you can clone the repository though Git,
 and install locally.
 
-```bash
+``` bash
 git clone https://github.com/uofUEpiBio/epiworldpy
 cd epiworldpy
 
@@ -84,7 +85,7 @@ connected to ten other agents. One percent of the population has the
 virus, with a 70% chance of transmission. Infected individuals recover
 at a 0.3 rate:
 
-```python
+``` python
 # Loading the module
 import epiworldpy as epiworld
 
@@ -108,11 +109,11 @@ covid19.run(50, 1912)
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
     | done.
 
-    <epiworldpy._core.ModelSIR at 0x10a5de970>
+    <epiworldpy._core.ModelSIR at 0x1035dcd70>
 
 We can now visualize the model’s compartments/outputs:
 
-```python
+``` python
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -152,12 +153,12 @@ plt.show()
 ```
 
 <img
-src="README_files/figure-markdown_strict/series-visualization-output-1.png"
+src="README_files/figure-commonmark/series-visualization-output-1.png"
 id="series-visualization" />
 
 Let’s plot model incidence.
 
-```python
+``` python
 import pandas as pd
 
 # Get the data from the database.
@@ -189,7 +190,7 @@ plt.show()
 ```
 
 <img
-src="README_files/figure-markdown_strict/case-type-incidence-output-1.png"
+src="README_files/figure-commonmark/case-type-incidence-output-1.png"
 id="case-type-incidence" />
 
 ## SEIR model with a fully connected graph
@@ -200,7 +201,7 @@ prevalence, a 0.6 transmission rate, a 0.5 recovery rate, and 7
 days-incubation period. The population is fully connected, meaning
 agents can transmit the disease to any other agent:
 
-```python
+``` python
 model = epiworld.ModelSEIRCONN(
   name              = 'COVID-19',
   prevalence        = 0.01,
@@ -230,13 +231,13 @@ model.run(100, 132)
 
 Computing some key statistics.
 
-```python
+``` python
 # ...
 ```
 
 We can get the effective reproductive number, over time, too:
 
-```python
+``` python
 reproductive_data = covid19.get_db().get_reproductive_number()
 
 # Start the plotting!
@@ -264,7 +265,7 @@ plt.show()
 
 Let’s do the same for generation time:
 
-```python
+``` python
 from collections import defaultdict
 
 generation_time = covid19.get_db().get_generation_time()
@@ -309,7 +310,7 @@ small-world network. Each agent is connected to ten other agents. One
 percent of the population has the virus, with a 50% chance of
 transmission. Infected individuals recover at a 0.5 rate:
 
-```python
+``` python
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
@@ -389,7 +390,7 @@ percent of the population has the virus, with a 90% chance of
 transmission. Infected individuals recover at a 0.1 rate. The results
 are saved in a dataframe:
 
-```python
+``` python
 model = epiworld.ModelSIRCONN(
   name = "COVID-19",
   prevalence = 0.01,
@@ -409,11 +410,11 @@ saver.run_multiple(model, 100, 50, nthreads=2)
     ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
      done.
 
-    <epiworldpy._core.Model at 0x10a099b70>
+    <epiworldpy._core.Model at 0x103547770>
 
 Let’s grab the results.
 
-```python
+``` python
 ans = saver.run_multiple_get_results("total_hist")
 ans["total_hist"][0:10]
 ```
