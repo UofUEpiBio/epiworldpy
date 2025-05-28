@@ -47,30 +47,50 @@ inline VirusToAgentFun<TSeq> distribute_virus_to_set(
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 inline VirusToAgentFun<TSeq> distribute_virus_randomly(
     epiworld_double prevalence,
-    bool prevalence_as_proportion = true
+    bool prevalence_as_proportion = true,
+    std::vector< size_t > agents_ids = {}
 ) {
 
-    return [prevalence,prevalence_as_proportion](
+    auto agents_ids_ptr = std::make_shared< std::vector< size_t > >(agents_ids);
+
+    return [prevalence,prevalence_as_proportion,agents_ids_ptr](
         Virus<TSeq> & virus, Model<TSeq> * model
     ) -> void 
     { 
         
         // Figuring out how what agents are available
+        bool use_set = agents_ids_ptr->size() > 0;
         std::vector< size_t > idx;
-        for (const auto & agent: model->get_agents())
-            if (agent.get_virus() == nullptr)
-                idx.push_back(agent.get_id());
+        if (use_set)
+        {
+            for (const auto & agent: *agents_ids_ptr)
+                if (model->get_agent(agent).get_virus() == nullptr)
+                    idx.push_back(agent);
+        }
+        else 
+        {
+            for (const auto & agent: model->get_agents())
+                if (agent.get_virus() == nullptr)
+                    idx.push_back(agent.get_id());
+        }
 
         // Picking how many
-        size_t n = model->size();
+        int n = use_set ?
+            static_cast<int>(idx.size()) :
+            static_cast<int>(model->size())
+            ;
+            
         int n_available = static_cast<int>(idx.size());
         int n_to_sample;
         if (prevalence_as_proportion)
         {
-            n_to_sample = static_cast<int>(std::floor(prevalence * n));
+            n_to_sample = static_cast<int>(std::floor(
+                prevalence * static_cast< epiworld_double >(n)
+            ));
 
-            if (n_to_sample == static_cast<int>(n))
-                n_to_sample--;
+            // Correcting for possible overflow
+            if (n_to_sample > n)
+                n_to_sample = n;
         }
         else
         {

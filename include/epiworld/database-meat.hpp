@@ -263,23 +263,44 @@ inline void DataBase<TSeq>::record_virus(Virus<TSeq> & v)
 {
 
     // If no sequence, then need to add one. This is regardless of the case
-    if (v.get_sequence() == nullptr)
-        v.set_sequence(default_sequence<TSeq>(
-            static_cast<int>(virus_name.size())
-            ));
+    EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+    {
+        if (v.get_sequence() == -1)
+            v.set_sequence(default_sequence<TSeq>(
+                static_cast<int>(virus_name.size())
+                ));
+    }
+    else
+    {
+        if (v.get_sequence() == nullptr)
+            v.set_sequence(default_sequence<TSeq>(
+                static_cast<int>(virus_name.size())
+                ));        
+    }
 
     // Negative id -> virus hasn't been recorded
     if (v.get_id() < 0)
     {
 
+        epiworld_fast_uint new_id = virus_id.size();
+        virus_name.push_back(v.get_name());
 
         // Generating the hash
-        std::vector< int > hash = seq_hasher(*v.get_sequence());
+        std::vector< int > hash;
+        EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+        {
+            hash = seq_hasher(v.get_sequence());
+            virus_id[hash] = new_id;
+            virus_sequence.push_back(v.get_sequence());
+        }
+        else
+        {
+            hash = seq_hasher(*v.get_sequence());
+            virus_id[hash] = new_id;
+            virus_sequence.push_back(*v.get_sequence());
+        }
 
-        epiworld_fast_uint new_id = virus_id.size();
-        virus_id[hash] = new_id;
-        virus_name.push_back(v.get_name());
-        virus_sequence.push_back(*v.get_sequence());
+
         virus_origin_date.push_back(model->today());
         
         virus_parent_id.push_back(v.get_id()); // Must be -99
@@ -293,11 +314,21 @@ inline void DataBase<TSeq>::record_virus(Virus<TSeq> & v)
 
         today_total_nviruses_active++;
 
-    } else { // In this case, the virus is already on record, need to make sure
+    }
+    else
+    { // In this case, the virus is already on record, need to make sure
              // The new sequence is new.
 
         // Updating registry
-        std::vector< int > hash = seq_hasher(*v.get_sequence());
+        std::vector< int > hash;
+        EPI_IF_TSEQ_LESS_EQ_INT(TSeq)
+        {
+            hash = seq_hasher(v.get_sequence());
+        }
+        else
+        {
+            hash = seq_hasher(*v.get_sequence());
+        }
         epiworld_fast_uint old_id = v.get_id();
         epiworld_fast_uint new_id;
 
@@ -308,7 +339,16 @@ inline void DataBase<TSeq>::record_virus(Virus<TSeq> & v)
             new_id = virus_id.size();
             virus_id[hash] = new_id;
             virus_name.push_back(v.get_name());
-            virus_sequence.push_back(*v.get_sequence());
+
+            EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+            {
+                virus_sequence.push_back(v.get_sequence());
+            }
+            else
+            {
+                virus_sequence.push_back(*v.get_sequence());
+            }
+
             virus_origin_date.push_back(model->today());
             
             virus_parent_id.push_back(old_id);
@@ -353,19 +393,41 @@ template<typename TSeq>
 inline void DataBase<TSeq>::record_tool(Tool<TSeq> & t)
 {
 
-    if (t.get_sequence() == nullptr)
-        t.set_sequence(default_sequence<TSeq>(
-            static_cast<int>(tool_name.size())
-        ));
+    EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+    {
+        if (t.get_sequence() == -1)
+            t.set_sequence(default_sequence<TSeq>(
+                static_cast<int>(tool_name.size())
+            ));
+    }
+    else
+    {
+        if (t.get_sequence() == nullptr)
+            t.set_sequence(default_sequence<TSeq>(
+                static_cast<int>(tool_name.size())
+            ));
+    }
 
     if (t.get_id() < 0) 
     {
 
-        std::vector< int > hash = seq_hasher(*t.get_sequence());
         epiworld_fast_uint new_id = tool_id.size();
-        tool_id[hash] = new_id;
         tool_name.push_back(t.get_name());
-        tool_sequence.push_back(*t.get_sequence());
+
+        std::vector< int > hash;
+        EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+        {
+            hash = seq_hasher(t.get_sequence());
+            tool_id[hash] = new_id;
+            tool_sequence.push_back(t.get_sequence());
+        }
+        else
+        {
+            hash = seq_hasher(*t.get_sequence());
+            tool_id[hash] = new_id;
+            tool_sequence.push_back(*t.get_sequence());
+
+        }
         tool_origin_date.push_back(model->today());
                 
         today_tool.push_back({});
@@ -378,7 +440,15 @@ inline void DataBase<TSeq>::record_tool(Tool<TSeq> & t)
     } else {
 
         // Updating registry
-        std::vector< int > hash = seq_hasher(*t.get_sequence());
+        std::vector< int > hash;
+        EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+        {
+            hash = seq_hasher(t.get_sequence());
+        }
+        else
+        {
+            hash = seq_hasher(*t.get_sequence());
+        }
         epiworld_fast_uint old_id = t.get_id();
         epiworld_fast_uint new_id;
         
@@ -388,7 +458,16 @@ inline void DataBase<TSeq>::record_tool(Tool<TSeq> & t)
             new_id = tool_id.size();
             tool_id[hash] = new_id;
             tool_name.push_back(t.get_name());
-            tool_sequence.push_back(*t.get_sequence());
+
+            EPI_IF_TSEQ_LESS_EQ_INT( TSeq )
+            {
+                tool_sequence.push_back(t.get_sequence());
+            }
+            else
+            {
+                tool_sequence.push_back(*t.get_sequence());
+            }
+            
             tool_origin_date.push_back(model->today());
                     
             today_tool.push_back({});
@@ -1001,6 +1080,10 @@ inline void DataBase<TSeq>::write_data(
         for (int i = 0; i <= model->today(); ++i)
         {
 
+            // Skipping the zeros
+            if (hist_transition_matrix[i * (ns * ns)] == 0)
+                continue;
+
             for (int from = 0u; from < ns; ++from)
                 for (int to = 0u; to < ns; ++to)
                     file_transition <<
@@ -1170,59 +1253,53 @@ inline void DataBase<TSeq>::reproductive_number(
 
 template<typename TSeq>
 inline std::vector< epiworld_double > DataBase<TSeq>::transition_probability(
-    bool print
+    bool print,
+    bool normalize
 ) const {
 
     auto states_labels = model->get_states();
     size_t n_state = states_labels.size();
     size_t n_days   = model->get_ndays();
     std::vector< epiworld_double > res(n_state * n_state, 0.0);
-    std::vector< epiworld_double > days_to_include(n_state, 0.0);
+    std::vector< epiworld_double > rowsums(n_state, 0.0);
 
-    for (size_t t = 1; t < n_days; ++t)
+    for (size_t t = 0; t < n_days; ++t)
     {
 
         for (size_t s_i = 0; s_i < n_state; ++s_i)
         {
-            epiworld_double daily_total = hist_total_counts[(t - 1) * n_state + s_i];
-
-            if (daily_total == 0)
-                continue;
-
-            days_to_include[s_i] += 1.0; 
 
             for (size_t s_j = 0u; s_j < n_state; ++s_j)
             {
-                #ifdef EPI_DEBUG
-                epiworld_double entry = hist_transition_matrix[
+                res[s_i + s_j * n_state] += (
+                    hist_transition_matrix[
+                        s_i + s_j * n_state +
+                        t * (n_state * n_state)
+                    ]
+                );
+                
+                rowsums[s_i] += hist_transition_matrix[
                     s_i + s_j * n_state +
                     t * (n_state * n_state)
-                    ];
-
-                if (entry > daily_total)
-                    throw std::logic_error(
-                        "The entry in hist_transition_matrix cannot have more elememnts than the total"
-                        );
-
-                res[s_i + s_j * n_state] += (entry / daily_total);
-                #else
-                    res[s_i + s_j * n_state] += (
-                        hist_transition_matrix[
-                            s_i + s_j * n_state +
-                            t * (n_state * n_state)
-                        ] / daily_total
-                    );
-                #endif
+                ];
+            
             }
 
         }
 
     }
 
-    for (size_t s_i = 0; s_i < n_state; ++s_i)
+    if (normalize)
     {
-        for (size_t s_j = 0; s_j < n_state; ++s_j)
-            res[s_i + s_j * n_state] /= days_to_include[s_i];
+        for (size_t s_i = 0; s_i < n_state; ++s_i)
+        {
+            // Nothing to normalize if the row is zero
+            if (rowsums[s_i] == 0)
+                continue;
+
+            for (size_t s_j = 0; s_j < n_state; ++s_j)
+                res[s_i + s_j * n_state] /= rowsums[s_i];
+        }
     }
 
     if (print)
@@ -1234,6 +1311,21 @@ inline std::vector< epiworld_double > DataBase<TSeq>::transition_probability(
                 nchar = l.length();
 
         std::string fmt = " - %-" + std::to_string(nchar) + "s";
+
+        std::string fmt_entry = " % 4.2f";
+        if (!normalize)
+        {
+            nchar = 0u;
+            for (auto & l: res)
+            {
+                std::string tmp = std::to_string(l);
+                if (tmp.length() > nchar)
+                    nchar = tmp.length();
+            }
+
+            fmt_entry = " % " + std::to_string(nchar) + ".0f";
+        } 
+
         
         printf_epiworld("\nTransition Probabilities:\n");
         for (size_t s_i = 0u; s_i < n_state; ++s_i)
@@ -1241,11 +1333,16 @@ inline std::vector< epiworld_double > DataBase<TSeq>::transition_probability(
             printf_epiworld(fmt.c_str(), states_labels[s_i].c_str());
             for (size_t s_j = 0u; s_j < n_state; ++s_j)
             {
-                if (std::isnan(res[s_i + s_j * n_state]))
+                if (
+                    std::isnan(res[s_i + s_j * n_state]) ||
+                    (res[s_i + s_j * n_state] < 1e-10)
+                )
                 {
                     printf_epiworld("     -");
                 } else {
-                    printf_epiworld(" % 4.2f", res[s_i + s_j * n_state]);
+                    printf_epiworld(
+                        fmt_entry.c_str(), res[s_i + s_j * n_state]
+                    );
                 }
             }
             printf_epiworld("\n");
