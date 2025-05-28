@@ -24,5 +24,5 @@ void epiworldpy::export_diagram(
 		.def("draw_from_file", &epiworld::ModelDiagram::draw_from_file,
 			 "Draw a new diagram from the given file.")
 		.def("draw_from_files", &epiworld::ModelDiagram::draw_from_files,
-			 "Draw a new diagram from the given file.");
+			 "Draw a new diagram from the given files.");
 }
