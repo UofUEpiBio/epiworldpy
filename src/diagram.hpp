@@ -8,8 +8,8 @@ namespace epiworldpy {
 void export_diagram_type(pybind11::enum_<epiworld::DiagramType> &e);
 
 void export_diagram(
-    pybind11::class_<epiworld::ModelDiagram,
-                     std::shared_ptr<epiworld::ModelDiagram>> &c);
+	pybind11::class_<epiworld::ModelDiagram,
+					 std::shared_ptr<epiworld::ModelDiagram>> &c);
 } // namespace epiworldpy
 
 #endif /* EPIWORLDPY_DIAGRAM_HPP */

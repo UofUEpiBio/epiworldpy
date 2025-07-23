@@ -2,7 +2,11 @@ DOC_TARGET?=html
 
 .PHONY: build
 build:
-	pip3 install .
+	pip install .
+
+.PHONY: format
+format:
+	find src -iname '*.hpp' -o -iname '*.cpp' | xargs clang-format -i
 
 .PHONY: update
 update:
