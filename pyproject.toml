@@ -8,11 +8,11 @@ version = "0.6.0-0"
 description = "Python bindings for epiworld"
 readme = "README.md"
 requires-python = ">=3.7"
-dependencies = ["numpy"]
+dependencies = ["pybind11 >= 3.0", "numpy >= 2.3"]
 
 authors = [
     { name = "George G. Vega Yon", email = "g.vegayon@gmail.com" },
-    { name = "Milo Banks", email = "milobanks@rowlandhall.org" },
+    { name = "Olivia Banks", email = "oliviabanks@fastmail.nl" },
 ]
 
 classifiers = [
@@ -27,21 +27,22 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
-test = ["pytest"]
+test = ["pytest >= 8.4"]
 doc = [
-    "nbformat",
-    "nbclient",
-    "jupyter",
     "epiworldpy[viz]",
-    "myst_parser",
-    "sphinx-book-theme",
+
+    "nbformat >= 5.10",
+    "nbclient >= 0.10",
+    "jupyter >= 1.1",
+    "myst_parser >= 4.0",
+    "sphinx-book-theme >= 1.1",
 ]
 viz = [
-    "ipympl>=0.8",
-    "matplotlib>=3.5.0",
-    "networkx>=3.0",
-    "scipy>=1.0",
-    "pandas>=2.1.0",
+    "ipympl >= 0.8",
+    "matplotlib >= 3.5",
+    "networkx >= 3.0",
+    "scipy >= 1.0",
+    "pandas >= 2.1",
 ]
 
 [tool.scikit-build.wheel]
