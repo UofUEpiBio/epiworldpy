@@ -38,7 +38,7 @@ static py::dict get_hist_total(DataBase<int> &self) {
 
 static std::vector<std::vector<std::map<int, int>>>
 get_reproductive_number(DataBase<int> &self) {
-  MapVec_type<int, int> raw_rt = self.reproductive_number();
+  MapVec_type<int, int> raw_rt = self.get_reproductive_number();
   // viruses | dates     | pairs
   // C       | C         | V
   std::vector<std::vector<std::map<int, int>>> viruses;
@@ -112,7 +112,7 @@ static py::dict get_generation_time(DataBase<int> &self) {
   std::vector<int> *times = new std::vector<int>();
   std::vector<int> *gentimes = new std::vector<int>();
 
-  self.generation_time(*agents, *viruses, *times, *gentimes);
+  self.get_generation_time(*agents, *viruses, *times, *gentimes);
 
   /* Return to Python. */
   py::capsule pyc_agents(
@@ -314,6 +314,6 @@ void epiworldpy::export_database(
       .def("get_hist_transition_matrix", &get_hist_transition_matrix,
            "Get historical transitions in a tabular format.")
       .def("get_transition_probability",
-           &epiworld::DataBase<int>::transition_probability,
+           &epiworld::DataBase<int>::get_transition_probability,
            "Get the transition probably.");
 }
