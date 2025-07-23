@@ -17,14 +17,17 @@
 #include <set>
 #include <type_traits>
 #include <cassert>
+#ifdef EPI_DEBUG_VIRUS
+#include <atomic>
+#endif
 
 #ifndef EPIWORLD_HPP
 #define EPIWORLD_HPP
 
 /* Versioning */
 #define EPIWORLD_VERSION_MAJOR 0
-#define EPIWORLD_VERSION_MINOR 8
-#define EPIWORLD_VERSION_PATCH 2
+#define EPIWORLD_VERSION_MINOR 9
+#define EPIWORLD_VERSION_PATCH 1
 
 static const int epiworld_version_major = EPIWORLD_VERSION_MAJOR;
 static const int epiworld_version_minor = EPIWORLD_VERSION_MINOR;
@@ -83,6 +86,7 @@ namespace epiworld {
 
     #include "entities-bones.hpp"
     
+    #include "agent-meat-virus-sampling.hpp"
     #include "agent-meat-state.hpp"
     #include "agent-bones.hpp"
     #include "agent-meat.hpp"

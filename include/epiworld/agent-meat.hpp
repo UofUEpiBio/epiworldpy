@@ -1,14 +1,15 @@
 #ifndef EPIWORLD_PERSON_MEAT_HPP
 #define EPIWORLD_PERSON_MEAT_HPP
 
-#define CHECK_COALESCE_(proposed_, virus_tool_, alt_) \
-    if (static_cast<int>(proposed_) == -99) {\
-        if (static_cast<int>(virus_tool_) == -99) \
-            (proposed_) = (alt_);\
-        else (proposed_) = (virus_tool_);}
+#include <vector>
+#include <string>
+#include "config.hpp"
+#include "epiworld-macros.hpp"
+#include "entities-bones.hpp"
+#include "agent-bones.hpp"
+#include "agent-events-meat.hpp"
 
 // To large to add directly here
-#include "agent-events-meat.hpp"
 
 template<typename TSeq>
 inline Agent<TSeq>::Agent() {}
@@ -56,6 +57,8 @@ inline Agent<TSeq>::Agent(Agent<TSeq> && p) :
 template<typename TSeq>
 inline Agent<TSeq>::Agent(const Agent<TSeq> & p) :
     model(p.model),
+    neighbors(nullptr),
+    neighbors_locations(nullptr),
     n_neighbors(p.n_neighbors),
     entities(p.entities),
     entities_locations(p.entities_locations),
@@ -110,8 +113,13 @@ inline Agent<TSeq> & Agent<TSeq>::operator=(
 
     if (other_agent.n_neighbors > 0u)
     {
-        neighbors = new std::vector< size_t >(other_agent.n_neighbors);
-        neighbors_locations = new std::vector< size_t >(other_agent.n_neighbors);
+        neighbors = new std::vector< size_t >(*other_agent.neighbors);
+        neighbors_locations = new std::vector< size_t >(*other_agent.neighbors_locations);
+    }
+    else 
+    {
+        neighbors = nullptr;
+        neighbors_locations = nullptr;
     }
     
     entities = other_agent.entities;
@@ -155,7 +163,7 @@ inline Agent<TSeq>::~Agent()
 
 template<typename TSeq>
 inline void Agent<TSeq>::add_tool(
-    ToolPtr<TSeq> tool,
+    ToolPtr<TSeq> & tool,
     Model<TSeq> * model,
     epiworld_fast_int state_new,
     epiworld_fast_int queue
@@ -167,9 +175,6 @@ inline void Agent<TSeq>::add_tool(
             " has not been registered. There are only " + std::to_string(model->get_n_tools()) + 
             " included in the model.");
 
-    CHECK_COALESCE_(state_new, tool->state_init, state);
-    CHECK_COALESCE_(queue, tool->queue_init, Queue<TSeq>::NoOne);
-
     model->events_add(
         this, nullptr, tool, nullptr, state_new, queue, default_add_tool<TSeq>, -1, -1
         );
@@ -178,7 +183,7 @@ inline void Agent<TSeq>::add_tool(
 
 template<typename TSeq>
 inline void Agent<TSeq>::add_tool(
-    Tool<TSeq> tool,
+    const Tool<TSeq> & tool,
     Model<TSeq> * model,
     epiworld_fast_int state_new,
     epiworld_fast_int queue
@@ -190,7 +195,7 @@ inline void Agent<TSeq>::add_tool(
 
 template<typename TSeq>
 inline void Agent<TSeq>::set_virus(
-    VirusPtr<TSeq> virus,
+    VirusPtr<TSeq> & virus,
     Model<TSeq> * model,
     epiworld_fast_int state_new,
     epiworld_fast_int queue
@@ -203,8 +208,11 @@ inline void Agent<TSeq>::set_virus(
             " has not been registered. There are only " + std::to_string(model->get_n_viruses()) + 
             " included in the model.");
 
-    CHECK_COALESCE_(state_new, virus->state_init, state);
-    CHECK_COALESCE_(queue, virus->queue_init, Queue<TSeq>::NoOne);
+    if (state_new == -99)
+        virus->get_state(&state_new, nullptr, nullptr);
+
+    if (queue == -99)
+        virus->get_queue(&queue, nullptr, nullptr);
 
     model->events_add(
         this, virus, nullptr, nullptr, state_new, queue, default_add_virus<TSeq>, -1, -1
@@ -214,7 +222,7 @@ inline void Agent<TSeq>::set_virus(
 
 template<typename TSeq>
 inline void Agent<TSeq>::set_virus(
-    Virus<TSeq> virus,
+    const Virus<TSeq> & virus,
     Model<TSeq> * model,
     epiworld_fast_int state_new,
     epiworld_fast_int queue
@@ -233,9 +241,6 @@ inline void Agent<TSeq>::add_entity(
 )
 {
 
-    CHECK_COALESCE_(state_new, entity.state_init, state);
-    CHECK_COALESCE_(queue, entity.queue_init, Queue<TSeq>::NoOne);
-
     if (model != nullptr)
     {
 
@@ -248,8 +253,16 @@ inline void Agent<TSeq>::add_entity(
          // model entity
     {
 
+        auto nullvirus = VirusPtr<TSeq>(nullptr);
+        auto nulltool = ToolPtr<TSeq>(nullptr);
+        auto call = EventFun<TSeq>(default_add_entity<TSeq>);
+
         Event<TSeq> a(
-                this, nullptr, nullptr, &entity, state_new, queue, default_add_entity<TSeq>,
+                this,
+                nullvirus,
+                nulltool,
+                &entity, state_new, queue,
+                call,
                 -1, -1
             );
 
@@ -267,9 +280,6 @@ inline void Agent<TSeq>::rm_tool(
     epiworld_fast_int queue
 )
 {
-
-    CHECK_COALESCE_(state_new, tools[tool_idx]->state_post, state);
-    CHECK_COALESCE_(queue, tools[tool_idx]->queue_post, Queue<TSeq>::NoOne);
 
     if (tool_idx >= n_tools)
         throw std::range_error(
@@ -314,11 +324,16 @@ inline void Agent<TSeq>::rm_virus(
             "There is no virus to remove here!"
         );
 
-    CHECK_COALESCE_(state_new, virus->state_post, state);
-    CHECK_COALESCE_(queue, virus->queue_post, Queue<TSeq>::Everyone);
+    if (state_new == -99)
+        virus->get_state(nullptr, &state_new, nullptr);
+
+    if (queue == -99)
+        virus->get_queue(nullptr, &queue, nullptr);
 
     model->events_add(
-        this, virus, nullptr, nullptr, state_new, queue,
+        this, virus, nullptr, nullptr,
+        state_new,
+        queue,
         default_rm_virus<TSeq>, -1, -1
         );
     
@@ -342,9 +357,6 @@ inline void Agent<TSeq>::rm_entity(
         throw std::logic_error(
             "There is entity to remove here!"
         );
-
-    CHECK_COALESCE_(state_new, model->get_entity(entity_idx).state_post, state);
-    CHECK_COALESCE_(queue, model->get_entity(entity_idx).queue_post, Queue<TSeq>::NoOne);
 
     model->events_add(
         this,
@@ -388,9 +400,6 @@ inline void Agent<TSeq>::rm_entity(
             std::string("\".")
             );
 
-    CHECK_COALESCE_(state_new, entity.state_post, state);
-    CHECK_COALESCE_(queue, entity.queue_post, Queue<TSeq>::NoOne);
-
     model->events_add(
         this,
         nullptr,
@@ -406,17 +415,14 @@ inline void Agent<TSeq>::rm_entity(
 
 template<typename TSeq>
 inline void Agent<TSeq>::rm_agent_by_virus(
-    Model<TSeq> * model,
-    epiworld_fast_int state_new,
-    epiworld_fast_int queue
+    Model<TSeq> * model
 )
 {
 
-    CHECK_COALESCE_(state_new, virus->state_removed, state);
-    CHECK_COALESCE_(queue, virus->queue_removed, Queue<TSeq>::Everyone);
-
     model->events_add(
-        this, virus, nullptr, nullptr, state_new, queue,
+        this, virus, nullptr, nullptr,
+        virus->state_removed,
+        virus->queue_removed,
         default_rm_virus<TSeq>, -1, -1
         );
 
@@ -767,7 +773,6 @@ inline bool Agent<TSeq>::has_entity(std::string name) const
 
 template<typename TSeq>
 inline void Agent<TSeq>::print(
-    Model<TSeq> * model,
     bool compressed
     ) const
 {
@@ -916,7 +921,7 @@ inline bool Agent<TSeq>::operator==(const Agent<TSeq> & other) const
     for (size_t i = 0u; i < n_neighbors; ++i)
     {
         EPI_DEBUG_FAIL_AT_TRUE(
-            neighbors[i] != other.neighbors[i],
+            (*neighbors)[i] != (*other.neighbors)[i],
             "Agent:: neighbor[i] don't match"
         )
     }
@@ -981,7 +986,5 @@ inline bool Agent<TSeq>::operator==(const Agent<TSeq> & other) const
     return true;
     
 }
-
-#undef CHECK_COALESCE_
 
 #endif

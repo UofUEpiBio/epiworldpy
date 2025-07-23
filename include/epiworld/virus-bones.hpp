@@ -60,23 +60,43 @@ private:
 
     epiworld_fast_int queue_init    = Queue<TSeq>::Everyone; ///< Change of state when added to agent.
     epiworld_fast_int queue_post    = -Queue<TSeq>::Everyone; ///< Change of state when removed from agent.
-    epiworld_fast_int queue_removed = -99; ///< Change of state when agent is removed
+    epiworld_fast_int queue_removed = -Queue<TSeq>::Everyone; ///< Change of state when agent is removed
 
     std::shared_ptr< VirusFunctions<TSeq> > virus_functions = 
         std::make_shared< VirusFunctions<TSeq> >();
         
 public:
 
+    #ifdef EPI_DEBUG_VIRUS
+    static std::atomic<int> counter_construct;          // Default and parameterized constructors
+    static std::atomic<int> counter_copy_construct;     // Copy constructor
+    static std::atomic<int> counter_move_construct;     // Move constructor
+    static std::atomic<int> counter_copy_assign;        // Copy assignment
+    static std::atomic<int> counter_move_assign;        // Move assignment
+    static std::atomic<int> counter_destruct;           // Destructor
+    #endif
+
     Virus();
 
     Virus(std::string name = "unknown virus");
-
+    
     Virus(
         std::string name,
         epiworld_double prevalence,
         bool as_proportion
-        );
+    );
+    
+    #ifdef EPI_DEBUG_VIRUS
+    
+    // Copy and move operations for debugging
+    Virus(const Virus<TSeq>& other);                    // Copy constructor
+    Virus(Virus<TSeq>&& other) noexcept;                // Move constructor
+    Virus<TSeq>& operator=(const Virus<TSeq>& other);   // Copy assignment
+    Virus<TSeq>& operator=(Virus<TSeq>&& other) noexcept; // Move assignment
 
+    ~Virus();
+    #endif
+    
     void mutate(Model<TSeq> * model);
     void set_mutation(MutFun<TSeq> fun);
     

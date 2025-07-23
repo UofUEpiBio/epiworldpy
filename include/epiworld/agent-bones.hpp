@@ -122,28 +122,28 @@ public:
      */
     ///@{
     void add_tool(
-        ToolPtr<TSeq> tool,
+        ToolPtr<TSeq> & tool,
         Model<TSeq> * model,
         epiworld_fast_int state_new = -99,
         epiworld_fast_int queue = -99
         );
 
     void add_tool(
-        Tool<TSeq> tool,
+        const Tool<TSeq> & tool,
         Model<TSeq> * model,
         epiworld_fast_int state_new = -99,
         epiworld_fast_int queue = -99
         );
 
     void set_virus(
-        VirusPtr<TSeq> virus,
+        VirusPtr<TSeq> & virus,
         Model<TSeq> * model,
         epiworld_fast_int state_new = -99,
         epiworld_fast_int queue = -99
         );
 
     void set_virus(
-        Virus<TSeq> virus,
+        const Virus<TSeq> & virus,
         Model<TSeq> * model,
         epiworld_fast_int state_new = -99,
         epiworld_fast_int queue = -99
@@ -190,11 +190,7 @@ public:
         epiworld_fast_int queue = -99
     );
 
-    void rm_agent_by_virus(
-        Model<TSeq> * model,
-        epiworld_fast_int state_new = -99,
-        epiworld_fast_int queue = -99
-    ); ///< Agent removed by virus
+    void rm_agent_by_virus(Model<TSeq> * model); ///< Agent removed by virus
     ///@}
     
     /**
@@ -262,7 +258,7 @@ public:
     bool has_entity(epiworld_fast_uint t) const;
     bool has_entity(std::string name) const;
 
-    void print(Model<TSeq> * model, bool compressed = false) const;
+    void print(bool compressed = false) const;
 
     /**
      * @brief Access the j-th column of the agent
