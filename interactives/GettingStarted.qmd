@@ -1,0 +1,468 @@
+---
+title: Overview of `epiworldpy`
+---
+
+`epiworldpy` is an Python package that provides a fast (C++ backend) and highly-customizable framework for building network-based transmission/diffusion agent-based models. Some key features of `epiworldpy` are the ability to construct multi-virus models (e.g. models of competing multi-pathogens/multi-rumor), design mutating pathogens, architect population-level interventions, and build models with an arbitrary number of compartments/states (beyond SIR/SEIR).
+
+`epiworld` is also [available as an R package](https://github.com/UofUEpiBio/epiworldR).
+
+
+## Basic API Introduction
+
+```{python}
+# Loading the module
+import epiworldpy as epiworld
+
+# Create a SIR model (susceptible, infectious, recovered), representing COVID-19.
+covid19 = epiworld.ModelSIRCONN(
+  name              = 'covid-19',
+  n                 = 50000,
+  prevalence        = .001,
+  contact_rate      = 2.0,
+  transmission_rate = 0.3,
+  recovery_rate     = 0.13
+)
+```
+
+Printing the model shows us some information. Nevertheless, we can extract detailed information using the `print` method.
+
+```{python}
+# Taking a look
+covid19.print(False)
+```
+
+First, the name of the model, population size, number of entities (think of these as public spaces in which agents can make social contact with one another), the duration in days, number of viruses, amount of time the last replicate took to run (last run elapsed t), and rewiring status (on or off). The model also includes a list of global actions (interventions) that are called during the model run. Next, you will see a list of the viruses used in the model. In this case, COVID-19 was the only virus used. Note that `epiworldpy` can include more than one virus in a model. Tool(s) lists agents' tools to fight the virus. Examples of this may include masking, vaccines, social distancing, etc. In this model, no tools are specified. Lastly, model parameters are listed.
+
+To execute the model, use the `run` function with the SIR model object, the number of simulation days, and an optional seed for reproducibility. Next, print out the results from the simulated model using `model_sir`.
+
+```{python}
+# Run for 100 days with a seed of 223.
+covid19.run(100, 223)
+
+# Print an overview.
+covid19.print(False)
+```
+
+There are two additional sections included in the summary after running the model. First, we see the distribution of the population at time 50. This section describes the flow of agents from each compartment (susceptible, infected, recovered) after 50 days. In the example, you’ll see the number of agents in the susceptible state decreased from 49,950 to 587, the number of agents in the infected state decreased from 50 to none, and recovered agents increased to 46,413 after 50 days. The counts for these states will change based on model parameters or simulation run-time. The transmission probabilities section outputs a 3x3 matrix that describes the probability of moving from one state to another. For example, in the susceptible row, each agent has a 0.95 probability of remaining in the susceptible state with a 0.05 probability of moving from the susceptible state to the infected state. Notice there is no chance of skipping states. In other words, an agent can’t jump from the susceptible state to the recovered state; that agent must pass through the infected state to progress to the recovered state. The same logic applies to moving backward; an agent cannot become susceptible again after infection.
+
+### Extracting Information (and Plotting)
+
+After running the `epiworld` model, below is a list of all the functions that can be called using `epiworld` `Model`/`DataBase` objects.
+
+| Not Implemented               | Implemented                  | Implemented in Another Branch       |
+| ----------------------------- | ---------------------------- | ----------------------------------- |
+|                               | `agents_from_edgelist`       |                                     |
+|                               | `agents_smallworld`          |                                     |
+|                               | `add_virus`                  |                                     |
+|                               | `add_tool`                   |                                     |
+|                               | `get_hist_tool`              |                                     |
+|                               | `get_hist_total`             |                                     |
+|                               | `get_hist_transition_matrix` |                                     |
+|                               | `get_hist_virus`             |                                     |
+|                               | `get_n_replicates`           |                                     |
+|                               | `get_n_tools`                |                                     |
+|                               | `get_n_viruses`              |                                     |
+|                               | `get_name`                   |                                     |
+|                               | `get_ndays`                  |                                     |
+|                               | `get_param`                  |                                     |
+|                               | `get_reproductive_number`    |                                     |
+|                               | `get_states`                 |                                     |
+|                               | `get_today_total`            |                                     |
+|                               | `get_transition_probability` |                                     |
+|                               | `get_transmissions`          |                                     |
+|                               | `print`                      |                                     |
+|                               | `queuing_off`                |                                     |
+|                               | `queuing_on`                 |                                     |
+|                               | `run_multiple`               |                                     |
+|                               | `run`                        |                                     |
+|                               | `set_name`                   |                                     |
+|                               | `set_param`                  |                                     |
+|                               | `size`                       |                                     |
+|                               | `summary`                    |                                     |
+|                               | `verbose_off`                |                                     |
+|                               | `verbose_on`                 |                                     |
+
+### Model Compartments
+
+Let's use some of this data to visualize a few of the models compartments.
+
+```{python}
+#| label: series-visualization
+#| fig-cap: COVID-19 SIR model data
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+# Get the data from the database
+history = covid19.get_db().get_hist_total()
+
+# Extract unique states and dates
+unique_states = np.unique(history['states'])
+unique_dates = np.unique(history['dates'])
+
+# Initialize a dictionary to store time series data for each state
+time_series_data = {state: [] for state in unique_states}
+
+# Populate the time series data for each state
+for state in unique_states:
+  for date in unique_dates:
+    # Get the count for the current state and date
+    mask = (history['states'] == state) & (history['dates'] == date)
+    count = history['counts'][mask][0]
+    time_series_data[state].append(count)
+
+# Start the plotting!
+plt.figure(figsize=(10, 6))
+
+for state in unique_states:
+  plt.plot(unique_dates, time_series_data[state], label=state)
+
+plt.xlabel('Day')
+plt.ylabel('Count')
+plt.title('COVID-19 SIR Model Data')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+As evident from the above plot, the SIR model constructed from `epiworldpy` displays the changes in susceptible, infected, and recovered case counts over time (days). Notice after a certain amount of time, the curves flatten. Below, a table representation of the above plot is printed, complete with each state within the SIR model, date, and agent counts.
+
+```{python}
+import pandas as pd
+
+# Get the data from the database
+history = covid19.get_db().get_hist_total()
+history = pd.DataFrame(history)
+print(history)
+```
+
+### Reproductive Number
+
+An essential statistic in epidemiological models is the reproductive number, so let's view that:
+
+```{python}
+reproductive_data = covid19.get_db().get_reproductive_number()
+reproductive_data = pd.DataFrame(reproductive_data)
+
+print(reproductive_data)
+```
+
+Because of the way `epiworld` handles things internally, this doesn't look too nice and may be a bit hard to grep. Below is an example on how to grab these values, by way of an example graph:
+
+```{python}
+reproductive_data = covid19.get_db().get_reproductive_number()
+
+# Start the plotting!
+plt.figure(figsize=(10, 6))
+
+for virus_id, virus_data in enumerate(reproductive_data):
+    average_rts = list()
+
+    for date_data in virus_data:
+        if not date_data:
+            continue
+
+        keys_array = np.array(list(date_data.values()), dtype=np.float64)
+        average_rts.append(np.mean(keys_array))
+
+    plt.plot(range(0, len(average_rts)), average_rts, label=f"Virus {virus_id}")
+
+plt.xlabel('Date')
+plt.ylabel('Effective Reproductive Rate')
+plt.title('COVID-19 SIR Model Effective Reproductive Rate')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+### Incidence
+
+Another typical piece of information is the daily incidence. This is the number of new cases per day. In `epiworldpy`, we can get the incidence by looking at the daily transitions between states. We can get at this data through the function `get_hist_transition_matrix`.
+
+```{python}
+transition_matrix = pd.DataFrame(covid19.get_db().get_hist_transition_matrix(False))
+
+print(transition_matrix)
+```
+
+By itself, this data is hard to parse (like previous results). Let's graph it:
+
+```{python}
+# Subsetting rows where states_from != states_to.
+transition_matrix = transition_matrix[
+  transition_matrix['states_from'] != transition_matrix['states_to']
+]
+# Selecting only those where counts > 0
+transition_matrix = transition_matrix[
+  transition_matrix['counts'] > 0
+]
+
+daily_incidence = transition_matrix.groupby(['dates', 'states_to'])['counts'].sum().unstack()
+
+# Plot!
+plt.figure(figsize=(10, 6))
+plt.plot(daily_incidence.index, daily_incidence['Infected'], label='New Infected')
+plt.plot(daily_incidence.index, daily_incidence['Recovered'], label='New Recovered')
+
+plt.title('Daily Incidence of Infected and Recovered Cases')
+plt.xlabel('Days')
+plt.ylabel('Number of New Cases')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+### Generation Time
+
+We can also look at generation time, here's an example on how to do that:
+
+```{python}
+from collections import defaultdict
+
+generation_time = covid19.get_db().get_generation_time()
+generation_time = pd.DataFrame(generation_time)
+
+# Filtering where gentimes is not -1
+generation_time = generation_time[
+  generation_time['gentimes'] != -1
+]
+
+agents = generation_time['agents']
+viruses = generation_time['viruses']
+times = generation_time['times']
+gentimes = generation_time['gentimes']
+
+# Data formatting
+unique_viruses = np.unique(viruses)
+data = defaultdict(lambda: defaultdict(list))
+
+for agent, virus, time, gentime in zip(agents, viruses, times, gentimes):
+    data[virus][time].append(gentime)
+
+average_data = {virus: {} for virus in unique_viruses}
+
+for virus, time_dict in data.items():
+    for time, gentime_list in time_dict.items():
+        average_data[virus][time] = np.mean(gentime_list)
+
+# Plotting
+plt.figure(figsize=(10, 6))
+for virus, time_dict in average_data.items():
+    times = sorted(time_dict.keys())
+    gentimes = [time_dict[time] for time in times]
+    plt.plot(times, gentimes, label=f'Virus {virus}')
+
+plt.xlabel('Date')
+plt.ylabel('Generation Time')
+plt.title('COVID-19 SIR Model Generation Time')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+### Agent-Agent Interactions
+
+Epiworld records agent-agent interactions, and we can graph those too. In the below example, we only track all cases stemming from a specific index case, so the animation doesn't splinter off in an unmanagable number of different directions. While this visualization is almost useless, it's still useful as an example of how to get at agent-specific transmission data.
+
+```{python}
+import networkx as nx
+from matplotlib.animation import FuncAnimation
+
+transmissions = covid19.get_db().get_transmissions()
+start = transmissions['source_exposure_dates']
+end = transmissions['dates']
+source = transmissions['sources']
+target = transmissions['targets']
+days = max(end)
+
+graph = nx.Graph()
+fig, ax = plt.subplots(figsize=(6,4))
+
+# Animation function
+to_track = { source[0] }
+def update(frame):
+    ax.clear()
+
+    agents_involved_today = set()
+    agents_relationships_we_care_about = []
+
+    # Get only the agents involved in the current frame.
+    for i in range(len(start)):
+        if start[i] <= frame <= end[i]:
+            agents_involved_today.add((source[i], target[i]))
+
+    # Get only today's agents who have some connection to agents
+    # we've seen before.
+    for agent in agents_involved_today:
+        if agent[0] in to_track or agent[1] in to_track:
+            to_track.add(agent[0])
+            to_track.add(agent[1])
+            graph.add_edge(agent[0], agent[1])
+
+    # Lay and space them out.
+    pos = nx.kamada_kawai_layout(graph)
+
+    options = {
+        "with_labels": True,
+        "node_size": 300,
+        "font_size": 6,
+        "node_color": "white",
+        "edgecolors": "white",
+        "linewidths": 1,
+        "width": 1,
+    }
+
+    # Graph!
+    nx.draw_networkx(graph, pos, **options)
+    ax.set_title(f"COVID-19 SIR Model Agent Contact (Day {frame})")
+
+ani = FuncAnimation(fig, update, frames=int(days/3), interval=200, repeat=False)
+plt.show()
+```
+
+## Adding New Viruses
+
+`epiworld` supports multi-virus models. The below code gives instructions on how to implement this. Using the virus function, give a name to the new virus/virus with its corresponding probability of infecting any given agent. In this example, `prob_infecting` is set to 1.0, making it highly contagious. To officially add this new virus to the model, use the `add_virus` function by calling the original `epiworld` model object, the new virus, and the new virus's prevalence (which is set to 0.01 in this example).
+
+```{python}
+model = epiworld.Model()
+model.add_state("Susceptible", epiworld.UpdateFun.default_update_susceptible());
+model.add_state("Infected", epiworld.UpdateFun.default_update_exposed());
+model.add_state("Recovered", epiworld.UpdateFun.default());
+model.add_state("Removed", epiworld.UpdateFun.default());
+
+covid19 = epiworld.Virus(
+    name           = 'covid-19',
+    prevalence     = .001,
+    as_proportion  = False,
+    prob_infecting = 0.2,
+    prob_recovery  = 0.92,
+    prob_death     = 0.08,
+    post_immunity  = 0.7,
+    incubation     = 5,
+)
+
+flu = epiworld.Virus(
+    name           = "flu",
+    prevalence     = 0.003,
+    as_proportion  = False,
+    prob_infecting = 1.0,
+    prob_recovery  = 0.95,
+    prob_death     = 0.05,
+    post_immunity  = 0.6,
+    incubation     = 9
+)
+
+# Black magic.
+flu.set_state(1, 2, 3);
+covid19.set_state(1, 2, 3);
+
+# Add it to our model.
+model.add_virus(flu)
+model.add_virus(covid19)
+
+# We need agents to infect.
+model.agents_smallworld(100000, 4, False, 0.01);
+```
+
+After running the updated model with the new virus included for 50 days, the output below describes the simulation. To confirm that the flu is included, notice the presence of “Flu” in the virus(es) section of the output. All other output is interpretable as specified in previous sections.
+
+```{python}
+# Run for 100 days with a seed of 223.
+model.run(100, 223)
+```
+
+Like before, we can go ahead and do some introspection.
+
+```{python}
+model.print(False)
+```
+
+## Adding New Tools
+
+Now, the implementation of tools to combat any viruses and viruses in the model will be demonstrated. First, for the sake of simplicity, remove the flu virus from the SIR model object (keep in mind the index for the flu virus in the model object is 1). Next, provide parameters for the new tool using the tool function. These parameters include the name of the tool, any reduction in probabilities for the SIR model parameters, and increased probability of recovery option. In order to add the tool to the SIR model, use the `add_tool` function with the SIR model object, new tool, and prevalence of the tool. In this example, assume that 85% of the population will have received the vaccination.
+
+```{python}
+# Bring this back for simplicity.
+covid19 = epiworld.ModelSIRCONN(
+    name              = 'covid-19',
+    n                 = 50000,
+    prevalence        = .001,
+    contact_rate      = 2.0,
+    transmission_rate = 0.3,
+    recovery_rate     = 0.13
+)
+
+vaccine = epiworld.Tool(
+    name                     = "Vaccine",
+    prevalence               = 0.5,
+    as_proportion            = True,
+    susceptibility_reduction = 0.9,
+    transmission_reduction   = 0.5,
+    recovery_enhancer        = 0.5,
+    death_reduction          = 0.9
+)
+
+covid19.add_tool(vaccine)
+```
+
+Let's run and view:
+
+```{python}
+# Run for 100 days with a seed of 223.
+covid19.run(100, 223)
+
+# View
+covid19.print(False)
+```
+
+Let's bring back our daily incidence graph to see how well the vaccine worked.
+
+```{python}
+transition_matrix = pd.DataFrame(covid19.get_db().get_hist_transition_matrix(False))
+
+grouped = transition_matrix.groupby(['dates', 'states_to'])['counts'].sum().unstack().fillna(0)
+daily_incidence = transition_matrix.groupby(['dates', 'states_to'])['counts'].sum().unstack().fillna(0)
+
+# Plot!
+plt.figure(figsize=(10, 6))
+plt.plot(daily_incidence.index, daily_incidence['Infected'], label='New Infected')
+plt.plot(daily_incidence.index, daily_incidence['Recovered'], label='New Recovered')
+
+plt.title('Daily Incidence of Infected and Recovered Cases (w/ Vaccination)')
+plt.xlabel('Days')
+plt.ylabel('Number of New Cases')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+Comparing with the Daily Incidence without vaccinating half of the population, the peak "new infected" numbers are much, much smaller. Let's verify by looking at the reproductive number again.
+
+```{python}
+reproductive_data = covid19.get_db().get_reproductive_number()
+
+# Start the plotting!
+plt.figure(figsize=(10, 6))
+
+for virus_id, virus_data in enumerate(reproductive_data):
+    average_rts = list()
+
+    for date_data in virus_data:
+        if not date_data:
+            continue
+
+        keys_array = np.array(list(date_data.values()), dtype=np.float64)
+        average_rts.append(np.mean(keys_array))
+
+    plt.plot(range(0, len(average_rts)), average_rts, label=f"Virus {virus_id}")
+
+plt.xlabel('Date')
+plt.ylabel('Effective Reproductive Rate')
+plt.title('COVID-19 SIR Model Effective Reproductive Rate (w/ Vaccination)')
+plt.legend()
+plt.grid(True)
+plt.show()
+```
+
+The numbers start out lower, and stay lower.
