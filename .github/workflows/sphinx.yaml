@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Setting up the environment
       - name: Setup Pages
@@ -68,7 +68,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Post comment preview
         uses: CDCgov/cfa-actions/post-artifact@v1.0.0
