@@ -15,5 +15,12 @@ compile_commands.json
 
 *.html
 *.ipynb
+*.csv
+*.json
+*.h5
+*.db
+*.sqlite
+*.log
+*.zarr/
 *_files
 !README_files
