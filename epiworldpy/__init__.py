@@ -13,6 +13,7 @@ __all__ = ["epimodels"]
 
 import csv
 import json
+import numpy as np
 from pathlib import Path
 from typing import Protocol, Any
 
@@ -84,12 +85,12 @@ try:
 
             for key, value in results.items():
                 grp = root.create_group(key)
-
                 if isinstance(value, dict):
                     for subkey, arr in value.items():
-                        grp.create_dataset(subkey, data=arr)
+                        grp.create_array(subkey, data=np.asarray(arr))
                 else:
-                    grp.create_dataset("data", data=value)
+                    grp.create_array("data", data=np.asarray(value))
+
 
 except ImportError:
     ZarrBackend = None  # type: ignore[assignment]
