@@ -10,23 +10,20 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "shell", inline: <<-SHELL
     # Update and install prerequisites
-    sudo apt-get update
-    sudo apt-get install -y python3 python3-pip python3-venv cmake build-essential
+    apt-get update -y
+    apt-get install -y python3 python3-pip python3-venv build-essential cmake git curl
 
-    # Create a Python virtual environment
-    python3 -m venv /home/vagrant/epiworldPy-env
+    # Install uv (standalone binary install is easiest)
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
 
-    # Activate virtual environment and upgrade pip
-    source /home/vagrant/epiworldPy-env/bin/activate
-    pip install --upgrade pip setuptools wheel
+    # Create and activate a uv environment for the project
+    cd /vagrant
+    uv venv .venv
+    source .venv/bin/activate
 
-    # Install dependencies from pyproject.toml (if it exists)
-    if [ -f /vagrant/pyproject.toml ]; then
-      pip install .
-    fi
-
-    # Deactivate the virtual environment
-    deactivate
+    # Install editable package
+    uv pip install -e .
   SHELL
 
   # Synchronize the project directory with the VM
