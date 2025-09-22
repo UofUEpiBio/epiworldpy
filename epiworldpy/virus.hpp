@@ -1,7 +1,7 @@
 #ifndef EPIWORLDPY_VIRUS_HPP
 #define EPIWORLDPY_VIRUS_HPP
 
-#include "epiworld-common.hpp"
+#include "common.hpp"
 #include <pybind11/pybind11.h>
 
 namespace epiworldpy {

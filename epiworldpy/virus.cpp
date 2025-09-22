@@ -4,16 +4,18 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <utility>
+
 using namespace epiworld;
 using namespace epiworldpy;
 using namespace pybind11::literals;
 namespace py = pybind11;
 
-static epiworld::Virus<int> new_virus(std::string name, double prevalence,
-									  bool as_proportion, double prob_infecting,
-									  double prob_recovery, double prob_death,
-									  double post_immunity, double incubation) {
-	Virus<int> virus(name, prevalence, as_proportion);
+static auto new_virus(std::string name, double prevalence, bool as_proportion,
+					  double prob_infecting, double prob_recovery,
+					  double prob_death, double post_immunity,
+					  double incubation) -> epiworld::Virus<int> {
+	Virus<int> virus(std::move(name), prevalence, as_proportion);
 
 	virus.set_prob_infecting(prob_infecting);
 	virus.set_prob_recovery(prob_recovery);
@@ -27,7 +29,7 @@ static epiworld::Virus<int> new_virus(std::string name, double prevalence,
 	return virus;
 }
 
-static py::dict get_queue(epiworld::Virus<int> virus) {
+static auto get_queue(epiworld::Virus<int> virus) -> py::dict {
 	epiworld_fast_int init;
 	epiworld_fast_int end;
 	epiworld_fast_int removed;
@@ -40,7 +42,7 @@ static py::dict get_queue(epiworld::Virus<int> virus) {
 	return ret;
 }
 
-static py::dict get_state(epiworld::Virus<int> virus) {
+static auto get_state(epiworld::Virus<int> virus) -> py::dict {
 	epiworld_fast_int init;
 	epiworld_fast_int end;
 	epiworld_fast_int removed;
@@ -53,7 +55,7 @@ static py::dict get_state(epiworld::Virus<int> virus) {
 	return ret;
 }
 
-static void print_virus(epiworld::Virus<int> virus) { virus.print(); }
+static void print_virus(const epiworld::Virus<int> &virus) { virus.print(); }
 
 void epiworldpy::export_virus(pybind11::class_<epiworld::Virus<int>> &c) {
 	c.def(py::init(&new_virus), "Create a new virus (evil...)", py::arg("name"),
@@ -124,25 +126,27 @@ void epiworldpy::export_virus(pybind11::class_<epiworld::Virus<int>> &c) {
 		.def("print", &print_virus, "Print information about this virus.");
 }
 
-static VirusToAgentFun<int> new_distribution_fun(
-	const std::function<void(Virus<int> &, Model<int> *)> &fun) {
-	return VirusToAgentFun<int>(fun);
+static auto
+new_distribution_fun(const std::function<void(Virus<int> &, Model<int> *)> &fun)
+	-> VirusToAgentFun<int> {
+	return {fun};
 }
 
-static VirusFun<int> new_virus_fun(
+static auto new_virus_fun(
 	std::function<epiworld_double(Agent<int> *, Virus<int> &, Model<int> *)>
-		&fun) {
-	return VirusFun<int>(fun);
+		&fun) -> VirusFun<int> {
+	return {fun};
 }
 
-static VirusToAgentFun<int> new_random_distribution(double prevalence,
-													bool as_proportion) {
+static auto new_random_distribution(double prevalence, bool as_proportion)
+	-> VirusToAgentFun<int> {
 	return distribute_virus_randomly(prevalence);
 }
 
-static VirusToAgentFun<int> new_distribute_to_set(std::vector<size_t> ids) {
+static auto new_distribute_to_set(std::vector<size_t> ids)
+	-> VirusToAgentFun<int> {
 	/* epiworldr does a negative check, do we need to do this? */
-	return distribute_virus_to_set(ids);
+	return distribute_virus_to_set(std::move(ids));
 }
 
 void epiworldpy::export_virus_to_agent_fun(

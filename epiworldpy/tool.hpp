@@ -1,7 +1,7 @@
 #ifndef EPIWORLDPY_TOOL_HPP
 #define EPIWORLDPY_TOOL_HPP
 
-#include "epiworld-common.hpp"
+#include "epiworld.hpp"
 #include <pybind11/pybind11.h>
 
 namespace epiworldpy {

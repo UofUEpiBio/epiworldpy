@@ -1,7 +1,7 @@
 #ifndef EPIWORLDPY_ENTITY_HPP
 #define EPIWORLDPY_ENTITY_HPP
 
-#include "epiworld-common.hpp"
+#include "common.hpp"
 
 namespace epiworldpy {
 void export_entity(pybind11::class_<epiworld::Entity<int>,

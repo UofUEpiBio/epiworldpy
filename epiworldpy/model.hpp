@@ -1,7 +1,7 @@
 #ifndef EPIWORLDPY_MODEL_HPP
 #define EPIWORLDPY_MODEL_HPP
 
-#include "epiworld-common.hpp"
+#include "common.hpp"
 #include <pybind11/pybind11.h>
 
 #define MODEL_CHILD_TYPE(model)                                                \

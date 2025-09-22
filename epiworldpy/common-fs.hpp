@@ -1,8 +1,10 @@
-#ifndef DEFM_COMMON_H
-#define DEFM_COMMON_H
+#ifndef EPIWORLD_COMMON_FS_HPP
+#define EPIWORLD_COMMON_FS_HPP
 
 #include <pybind11/pybind11.h>
 #include <random>
+#include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <io.h>
@@ -30,38 +32,21 @@ const char EPIWORLD_OS_PATHSEP = '\\';
 const char EPIWORLD_OS_PATHSEP = '/';
 #endif
 
-namespace epiworld {
-inline void pyprinter(const char *fmt, ...) {
-	char buffer[1024];
-
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buffer, sizeof(buffer), fmt, args);
-	va_end(args);
-
-	pybind11::print(std::string(buffer), pybind11::arg("end") = "");
-}
-} // namespace epiworld
-
-#define printf_epiworld epiworld::pyprinter
-#include "epiworld.hpp"
-
 namespace epiworldpy {
-static std::string parse_kwarg_string(const pybind11::kwargs &kwargs,
-									  const char *key,
-									  const std::string &_default) {
+static auto parse_kwarg_string(const pybind11::kwargs &kwargs, const char *key,
+							   const std::string &_default) -> std::string {
 	PyObject *item = PyDict_GetItemString(kwargs.ptr(), key);
 
 	if (item != nullptr) {
-		return std::string(PyBytes_AS_STRING(
-			PyUnicode_AsEncodedString(PyObject_Str(item), "utf-8", "?")));
+		return {PyBytes_AS_STRING(
+			PyUnicode_AsEncodedString(PyObject_Str(item), "utf-8", "?"))};
 	}
 
 	return _default;
 }
 
-static int parse_kwarg_int(const pybind11::kwargs &kwargs, const char *key,
-						   int _default) {
+static auto parse_kwarg_int(const pybind11::kwargs &kwargs, const char *key,
+							int _default) -> int {
 	PyObject *item = PyDict_GetItemString(kwargs.ptr(), key);
 
 	if (item != nullptr) {
@@ -71,8 +56,8 @@ static int parse_kwarg_int(const pybind11::kwargs &kwargs, const char *key,
 	return _default;
 }
 
-static bool parse_kwarg_bool(const pybind11::kwargs &kwargs, const char *key,
-							 bool _default) {
+static auto parse_kwarg_bool(const pybind11::kwargs &kwargs, const char *key,
+							 bool _default) -> bool {
 	PyObject *item = PyDict_GetItemString(kwargs.ptr(), key);
 
 	if (item != nullptr) {
@@ -82,7 +67,7 @@ static bool parse_kwarg_bool(const pybind11::kwargs &kwargs, const char *key,
 	return _default;
 }
 
-static std::string dirname(const std::string &filepath) {
+static auto dirname(const std::string &filepath) -> std::string {
 	struct stat s;
 
 #if EPIWORLD_PLATFORM_WINDOWS
@@ -110,12 +95,15 @@ treat_as_file:
 	return directory;
 }
 
-static std::vector<std::string> get_files_in_dir(const std::string &directory) {
+static auto get_files_in_dir(const std::string &directory)
+	-> std::vector<std::string> {
 	std::vector<std::string> found;
 
 #ifdef _WIN32
 	WIN32_FIND_DATA find_file_data;
-	HANDLE hFind = FindFirstFile((directory + "\\*").c_str(), &find_file_data);
+	std::string search_path = directory;
+	search_path += "\\*";
+	HANDLE hFind = FindFirstFile(search_path.c_str(), &find_file_data);
 
 	if (hFind == INVALID_HANDLE_VALUE) {
 		std::cerr << "Error opening directory: " << GetLastError() << std::endl;
@@ -125,7 +113,10 @@ static std::vector<std::string> get_files_in_dir(const std::string &directory) {
 	do {
 		std::string file_name = find_file_data.cFileName;
 		if (!(find_file_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
-			found.push_back(directory + "\\" + file_name);
+			std::string full_path = directory;
+			full_path += "\\";
+			full_path += file_name;
+			found.push_back(full_path);
 		}
 	} while (FindNextFile(hFind, &find_file_data) != 0);
 
@@ -141,7 +132,10 @@ static std::vector<std::string> get_files_in_dir(const std::string &directory) {
 	while ((entry = readdir(dir)) != nullptr) {
 		std::string file_name = entry->d_name;
 		if (entry->d_type != DT_DIR) {
-			found.push_back(directory + "/" + file_name);
+			std::string full_path = directory;
+			full_path += "/";
+			full_path += file_name;
+			found.push_back(full_path);
 		}
 	}
 
@@ -151,12 +145,17 @@ static std::vector<std::string> get_files_in_dir(const std::string &directory) {
 	return found;
 }
 
-inline std::string temp_id(size_t len) {
-	const char alphanum[] =
-		"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+inline auto temp_id(size_t len) -> std::string {
+	const auto alphanum = std::array<char, 62>{
+		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C',
+		'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'a', 'b', 'c',
+		'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+		'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'};
+
 	std::random_device rd;
 	std::mt19937 gen(rd());
-	std::uniform_int_distribution<> dis(0, sizeof(alphanum) - 2);
+	std::uniform_int_distribution<> dis(0, alphanum.size() - 2);
 	std::string id;
 
 	id.reserve(len);
@@ -168,10 +167,11 @@ inline std::string temp_id(size_t len) {
 	return id;
 }
 
-inline std::string temp_directory_path() {
-	std::string env_to_check[]{"TMPDIR", "TMP", "TEMP", "TEMPDIR"};
+inline auto temp_directory_path() -> std::string {
+	auto env_to_check =
+		std::array<std::string, 4>({"TMPDIR", "TMP", "TEMP", "TEMPDIR"});
 
-	for (auto env : env_to_check) {
+	for (const auto &env : env_to_check) {
 		char const *result = getenv(env.c_str());
 
 		if (result != nullptr) {
@@ -192,4 +192,4 @@ inline std::string temp_directory_path() {
 }
 } // namespace epiworldpy
 
-#endif
+#endif /* EPIWORLD_COMMON_FS_HPP */

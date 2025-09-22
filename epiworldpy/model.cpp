@@ -9,9 +9,9 @@ using namespace epiworldpy;
 using namespace epiworld;
 namespace py = pybind11;
 
-static std::shared_ptr<DataBase<int>> get_db(Model<int> &self) {
-	return std::shared_ptr<DataBase<int>>(
-		&self.get_db(), [](DataBase<int> *) { /* do nothing, no delete */ });
+static auto get_db(Model<int> &self) -> std::shared_ptr<DataBase<int>> {
+	return {&self.get_db(),
+			[](DataBase<int> *) { /* do nothing, no delete */ }};
 }
 
 static void update_susceptible(Agent<int> *p, Model<int> *m) {
@@ -151,6 +151,7 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 	 * TODO: Make Python model proxys inhereit from an interface and do this in
 	 * a loop.
 	 */
+
 	auto diffnet = MODEL_OF(m, DiffNet, "A network diffusion model.");
 	auto seir = MODEL_OF(m, SEIR,
 						 "A model with four compartments: susceptible, "

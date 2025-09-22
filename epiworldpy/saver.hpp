@@ -1,7 +1,7 @@
 #ifndef EPIWORLDPY_SAVER_HPP
 #define EPIWORLDPY_SAVER_HPP
 
-#include "epiworld-common.hpp"
+#include "common.hpp"
 #include <pybind11/pybind11.h>
 
 namespace epiworldpy {
@@ -19,12 +19,12 @@ class Saver {
 		  bool file_output);
 
 	void unlink_siblings() const;
-	const std::ostream &out(std::ostream &stream) const;
+	auto out(std::ostream &stream) const -> const std::ostream &;
 
 	void set_cvsloc(std::string cvsloc);
-	const std::string_view get_cvsloc() const;
+	[[nodiscard]] auto get_cvsloc() const -> const std::string_view;
 
-	std::function<void(size_t, epiworld::Model<int> *)> operator*();
+	auto operator*() -> std::function<void(size_t, epiworld::Model<int> *)>;
 };
 
 void export_saver(pybind11::class_<Saver, std::shared_ptr<Saver>> &c);

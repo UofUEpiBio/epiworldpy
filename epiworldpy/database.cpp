@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "common.hpp"
 #include "config.hpp"
 
 #include <pybind11/numpy.h>
@@ -10,273 +11,137 @@ using namespace epiworldpy;
 using namespace pybind11::literals;
 namespace py = pybind11;
 
-static py::dict get_hist_total(DataBase<int> &self) {
-	/* Lo, one of the times in modern C++ where the 'new' keyword
-	 * isn't out of place. */
+static auto get_hist_total(DataBase<int> &self) -> py::dict {
 	std::vector<std::string> states;
-	std::vector<int> *dates = new std::vector<int>();
-	std::vector<int> *counts = new std::vector<int>();
+	auto *dates = new std::vector<int>();
+	auto *counts = new std::vector<int>();
 
 	self.get_hist_total(dates, &states, counts);
 
-	/* Return to Python. */
-	py::capsule pyc_dates(
-		dates, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	/* TODO: Find a way to do a no-copy of a string vector. */
-	py::array py_states = py::array(py::cast(states));
-	py::array_t<int> py_dates(dates->size(), dates->data(), pyc_dates);
-	py::array_t<int> py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("dates"_a = py_dates, "states"_a = py_states,
-				 "counts"_a = py_counts);
-
-	return ret;
+	return py::dict("dates"_a = vector_to_pyarray(dates), "states"_a = states,
+					"counts"_a = vector_to_pyarray(counts));
 }
 
-static std::vector<std::vector<std::map<int, int>>>
-get_reproductive_number(DataBase<int> &self) {
-	MapVec_type<int, int> raw_rt = self.get_reproductive_number();
-	// viruses | dates     | pairs
-	// C       | C         | V
-	std::vector<std::vector<std::map<int, int>>> viruses;
+static auto get_reproductive_number(DataBase<int> &self)
+	-> std::vector<std::vector<std::map<int, int>>> {
+	auto raw_rt = self.get_reproductive_number();
 
-	/* Reserve our spaces for our elements so we don't have to
-	 * worry about it later. */
-	for (int virus_id = 0; virus_id < self.get_n_viruses(); virus_id++) {
-		std::vector<std::map<int, int>> dates(self.get_model()->today() + 1);
-		viruses.push_back(dates);
+	/* Preallocate: [virus][day] -> { source: R } */
+	std::vector<std::vector<std::map<int, int>>> result(
+		self.get_n_viruses(),
+		std::vector<std::map<int, int>>(self.get_model()->today() + 1));
+
+	for (const auto &kv : raw_rt) {
+		const auto &key = kv.first;
+		int virus_id = key[0];
+		int source = key[1];
+		int exposure_day = key[2];
+		int effective_rn = kv.second;
+
+		result[virus_id][exposure_day][source] = effective_rn;
 	}
 
-	/* Load into pre-return. */
-	for (const auto &keyValue : raw_rt) {
-		const std::vector<int> &key = keyValue.first;
-		const int virus_id = key.at(0);
-		const int source = key.at(1);
-		const int exposure_date = key.at(2);
-		const int effective_rn = keyValue.second;
-
-		viruses[virus_id][exposure_date].insert({source, effective_rn});
-	}
-
-	/* TODO: There's lots room for optimization here, namely
-	 * returning an array instead of a bunch of lists. */
-	return viruses;
+	return result;
 }
 
-static py::dict get_transmissions(DataBase<int> &self) {
-	/* Lo, one of the times in modern C++ where the 'new' keyword
-	 * isn't out of place. */
-	std::vector<int> *dates = new std::vector<int>();
-	std::vector<int> *sources = new std::vector<int>();
-	std::vector<int> *targets = new std::vector<int>();
-	std::vector<int> *viruses = new std::vector<int>();
-	std::vector<int> *source_exposure_dates = new std::vector<int>();
+static auto get_transmissions(DataBase<int> &self) -> py::dict {
+	auto *dates = new std::vector<int>();
+	auto *sources = new std::vector<int>();
+	auto *targets = new std::vector<int>();
+	auto *viruses = new std::vector<int>();
+	auto *source_exposure_dates = new std::vector<int>();
 
 	self.get_transmissions(*dates, *sources, *targets, *viruses,
 						   *source_exposure_dates);
 
-	/* Return to Python. */
-	py::capsule pyc_dates(
-		dates, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_sources(sources, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-	py::capsule pyc_targets(targets, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-	py::capsule pyc_viruses(viruses, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-	py::capsule pyc_source_exposure_dates(source_exposure_dates, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_dates(dates->size(), dates->data(), pyc_dates);
-	py::array py_sources(sources->size(), sources->data(), pyc_sources);
-	py::array py_targets(targets->size(), targets->data(), pyc_targets);
-	py::array py_viruses(viruses->size(), viruses->data(), pyc_viruses);
-	py::array py_source_exposure_dates(source_exposure_dates->size(),
-									   source_exposure_dates->data(),
-									   pyc_source_exposure_dates);
-
-	py::dict ret("dates"_a = py_dates, "sources"_a = py_sources,
-				 "targets"_a = py_targets, "viruses"_a = py_viruses,
-				 "source_exposure_dates"_a = py_source_exposure_dates);
-
-	return ret;
+	return make_dict(
+		make_entry("dates", dates), make_entry("sources", sources),
+		make_entry("targets", targets), make_entry("viruses", viruses),
+		make_entry("source_exposure_dates", source_exposure_dates));
 }
 
-static py::dict get_generation_time(DataBase<int> &self) {
-	std::vector<int> *agents = new std::vector<int>();
-	std::vector<int> *viruses = new std::vector<int>();
-	std::vector<int> *times = new std::vector<int>();
-	std::vector<int> *gentimes = new std::vector<int>();
+static auto get_generation_time(DataBase<int> &self) -> py::dict {
+	auto *agents = new std::vector<int>();
+	auto *viruses = new std::vector<int>();
+	auto *times = new std::vector<int>();
+	auto *gentimes = new std::vector<int>();
 
 	self.get_generation_time(*agents, *viruses, *times, *gentimes);
 
-	/* Return to Python. */
-	py::capsule pyc_agents(agents, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-	py::capsule pyc_viruses(viruses, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-	py::capsule pyc_times(
-		times, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_gentimes(gentimes, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_agents(agents->size(), agents->data(), pyc_agents);
-	py::array py_viruses(viruses->size(), viruses->data(), pyc_viruses);
-	py::array py_times(times->size(), times->data(), pyc_times);
-	py::array py_gentimes(gentimes->size(), gentimes->data(), pyc_gentimes);
-
-	py::dict ret("agents"_a = py_agents, "viruses"_a = py_viruses,
-				 "times"_a = py_times, "gentimes"_a = py_gentimes);
-
-	return ret;
+	return make_dict(make_entry("agents", agents),
+					 make_entry("viruses", viruses), make_entry("times", times),
+					 make_entry("gentimes", gentimes));
 }
 
-static py::dict get_hist_transition_matrix(DataBase<int> &self,
-										   bool skip_zeros) {
-	std::vector<std::string> *state_from = new std::vector<std::string>();
-	std::vector<std::string> *state_to = new std::vector<std::string>();
-	std::vector<int> *dates = new std::vector<int>();
-	std::vector<int> *counts = new std::vector<int>();
+static auto get_hist_transition_matrix(DataBase<int> &self, bool skip_zeros)
+	-> py::dict {
+	std::vector<std::string> state_from;
+	std::vector<std::string> state_to;
+	auto *dates = new std::vector<int>();
+	auto *counts = new std::vector<int>();
 
-	self.get_hist_transition_matrix(*state_from, *state_to, *dates, *counts,
+	self.get_hist_transition_matrix(state_from, state_to, *dates, *counts,
 									skip_zeros);
 
-	/* Return to Python. */
-	py::capsule pyc_dates(
-		dates, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_dates(dates->size(), dates->data(), pyc_dates);
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("states_from"_a = state_from, "states_to"_a = state_to,
-				 "dates"_a = py_dates, "counts"_a = py_counts);
-
-	return ret;
+	py::dict d =
+		make_dict(make_entry("dates", dates), make_entry("counts", counts));
+	d["states_from"] = state_from;
+	d["states_to"] = state_to;
+	return d;
 }
 
-static py::dict get_hist_virus(DataBase<int> &self) {
-	std::vector<std::string> *states = new std::vector<std::string>();
-	std::vector<int> *dates = new std::vector<int>();
-	std::vector<int> *ids = new std::vector<int>();
-	std::vector<int> *counts = new std::vector<int>();
+static auto get_hist_virus(DataBase<int> &self) -> py::dict {
+	auto *dates = new std::vector<int>();
+	auto *ids = new std::vector<int>();
+	auto *counts = new std::vector<int>();
+	std::vector<std::string> states;
 
-	self.get_hist_virus(*dates, *ids, *states, *counts);
+	self.get_hist_virus(*dates, *ids, states, *counts);
 
-	/* Return to Python. */
-	py::capsule pyc_dates(
-		dates, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_ids(
-		ids, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_dates(dates->size(), dates->data(), pyc_dates);
-	py::array py_ids(ids->size(), ids->data(), pyc_ids);
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("dates"_a = dates, "ids"_a = py_ids, "states"_a = states,
-				 "counts"_a = py_counts);
-
-	return ret;
+	return py::dict("dates"_a = vector_to_pyarray(dates),
+					"ids"_a = vector_to_pyarray(ids), "states"_a = states,
+					"counts"_a = vector_to_pyarray(counts));
 }
 
-static py::dict get_hist_tool(DataBase<int> &self) {
-	std::vector<std::string> *states = new std::vector<std::string>();
-	std::vector<int> *dates = new std::vector<int>();
-	std::vector<int> *ids = new std::vector<int>();
-	std::vector<int> *counts = new std::vector<int>();
+static auto get_hist_tool(DataBase<int> &self) -> py::dict {
+	auto *dates = new std::vector<int>();
+	auto *ids = new std::vector<int>();
+	auto *counts = new std::vector<int>();
+	std::vector<std::string> states;
 
-	self.get_hist_tool(*dates, *ids, *states, *counts);
+	self.get_hist_tool(*dates, *ids, states, *counts);
 
-	/* Return to Python. */
-	py::capsule pyc_dates(
-		dates, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_ids(
-		ids, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_dates(dates->size(), dates->data(), pyc_dates);
-	py::array py_ids(ids->size(), ids->data(), pyc_ids);
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("dates"_a = dates, "ids"_a = py_ids, "states"_a = states,
-				 "counts"_a = py_counts);
-
-	return ret;
+	return py::dict("dates"_a = vector_to_pyarray(dates),
+					"ids"_a = vector_to_pyarray(ids), "states"_a = states,
+					"counts"_a = vector_to_pyarray(counts));
 }
 
-static py::dict get_today_transition_matrix(DataBase<int> &self) {
-	std::vector<int> *counts = new std::vector<int>();
-
+static auto get_today_transition_matrix(DataBase<int> &self) -> py::dict {
+	auto *counts = new std::vector<int>();
 	self.get_today_transition_matrix(*counts);
 
-	/* Return to Python. */
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("counts"_a = py_counts);
-
-	return ret;
+	return py::dict("counts"_a = vector_to_pyarray(counts));
 }
 
-static py::dict get_today_virus(DataBase<int> &self) {
-	std::vector<std::string> *states = new std::vector<std::string>();
-	std::vector<int> *ids = new std::vector<int>();
-	std::vector<int> *counts = new std::vector<int>();
+static auto get_today_virus(DataBase<int> &self) -> py::dict {
+	auto *ids = new std::vector<int>();
+	auto *counts = new std::vector<int>();
+	std::vector<std::string> states;
 
-	self.get_today_virus(*states, *ids, *counts);
+	self.get_today_virus(states, *ids, *counts);
 
-	/* Return to Python. */
-	py::capsule pyc_ids(
-		ids, [](void *x) { delete reinterpret_cast<std::vector<int> *>(x); });
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_ids(ids->size(), ids->data(), pyc_ids);
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("states"_a = states, "ids"_a = py_ids, "counts"_a = py_counts);
-
-	return ret;
+	return py::dict("states"_a = states, "ids"_a = vector_to_pyarray(ids),
+					"counts"_a = vector_to_pyarray(counts));
 }
 
-static py::dict get_today_total(DataBase<int> &self) {
-	std::vector<std::string> *states = new std::vector<std::string>();
-	std::vector<int> *counts = new std::vector<int>();
+static auto get_today_total(DataBase<int> &self) -> py::dict {
+	auto counts = new std::vector<int>();
+	auto states = new std::vector<std::string>();
 
 	self.get_today_total(states, counts);
 
-	/* Return to Python. */
-	py::capsule pyc_counts(counts, [](void *x) {
-		delete reinterpret_cast<std::vector<int> *>(x);
-	});
-
-	py::array py_counts(counts->size(), counts->data(), pyc_counts);
-
-	py::dict ret("states"_a = states, "counts"_a = py_counts);
-
-	return ret;
+	return py::dict("states"_a = states,
+					"counts"_a = vector_to_pyarray(counts));
 }
 
 void epiworldpy::export_database(
@@ -305,9 +170,6 @@ void epiworldpy::export_database(
 		.def("get_today_transition_matrix", &get_today_transition_matrix,
 			 "Get today's transition matrix.")
 		.def("get_today_virus", &get_today_virus, "Get today's virus data.")
-		//.def("get_today_total",
-		// pybind11::detail::overload_cast_impl<epiworld_fast_uint>()(&epiworld::DataBase<int>::get_today_total),
-		//"Get today's total data.")
 		.def("get_today_total", &get_today_total, "Get today's total data.")
 		.def("size", &epiworld::DataBase<int>::size,
 			 "Get the size (number of entries).")

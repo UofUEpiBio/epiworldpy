@@ -1,16 +1,18 @@
 #include "saver.hpp"
+#include "common-fs.hpp"
 
 #include <sstream>
+#include <utility>
 
 using namespace epiworld;
 using namespace epiworldpy;
 namespace py = pybind11;
 
-void Saver::set_cvsloc(std::string cvsloc) { this->csvloc = cvsloc; }
+void Saver::set_cvsloc(std::string cvsloc) { this->csvloc = std::move(cvsloc); }
 
-const std::string_view Saver::get_cvsloc() const { return csvloc; }
+auto Saver::get_cvsloc() const -> const std::string_view { return csvloc; }
 
-std::ostream &operator<<(std::ostream &stream, const Saver &data) {
+auto operator<<(std::ostream &stream, const Saver &data) -> std::ostream & {
 	data.out(stream);
 	return stream;
 }
@@ -27,13 +29,14 @@ Saver::Saver(std::vector<std::string> what, std::string fn, std::string id,
 		  std::find(what.begin(), what.end(), "transition") != what.end(),
 		  std::find(what.begin(), what.end(), "reproductive") != what.end(),
 		  std::find(what.begin(), what.end(), "generation") != what.end())),
-	  what(what), fn(fn), id(id), file_output(file_output) {}
+	  what(std::move(what)), fn(std::move(fn)), id(std::move(id)),
+	  file_output(file_output) {}
 
 void Saver::unlink_siblings() const {
 	auto dir = dirname(fn);
 	auto contestants = get_files_in_dir(dir);
 
-	for (auto contestant : contestants) {
+	for (const auto &contestant : contestants) {
 		if (unlink(contestant.c_str()) != 0 && errno != ENOENT) {
 			throw std::runtime_error("Failed to remove file " + contestant +
 									 ": " + strerror(errno));
@@ -41,37 +44,37 @@ void Saver::unlink_siblings() const {
 	}
 }
 
-const std::ostream &Saver::out(std::ostream &stream) const {
-	stream << "A saver for -run_multiple-" << std::endl;
+auto Saver::out(std::ostream &stream) const -> const std::ostream & {
+	stream << "A saver for -run_multiple-\n";
 	stream << "Saves the following: ";
 
-	for (const auto whatum : what) {
+	for (const auto &whatum : what) {
 		stream << whatum;
 
 		if (what.back() != whatum) {
 			stream << ", ";
 		} else {
-			stream << std::endl;
+			stream << "\n";
 		}
 	}
 
-	stream << "To file            : " << (file_output ? "yes" : "no")
-		   << std::endl;
+	stream << "To file            : " << (file_output ? "yes" : "no") << "\n";
 	if (file_output) {
-		stream << "Saver pattern      : " << fn << std::endl;
+		stream << "Saver pattern      : " << fn << "\n";
 	}
 
 	return stream;
 }
 
-std::function<void(size_t, epiworld::Model<int> *)> Saver::operator*() {
+auto Saver::operator*() -> std::function<void(size_t, epiworld::Model<int> *)> {
 	return fun;
 }
 
 void epiworldpy::export_saver(
 	pybind11::class_<Saver, std::shared_ptr<Saver>> &c) {
-	c.def(py::init([](py::args args, const py::kwargs &kwargs) {
-		/* TODO: Verify that this has the same effect as `make_saver` in:
+	c.def(py::init([](const py::args &args, const py::kwargs &kwargs) {
+		/*
+		 * TODO: Verify that this has the same effect as `make_saver` in:
 		 *  https://github.com/UofUEpiBio/epiworldR/blob/main/R/make_saver.R
 		 */
 
@@ -88,7 +91,7 @@ void epiworldpy::export_saver(
 		/* Make sure valid arguments are passed into this constructor, and
 		 * marshall things out all the same. */
 		for (auto arg : args) {
-			std::string whatum = arg.cast<std::string>();
+			auto whatum = arg.cast<std::string>();
 
 			if (std::find(valid_whats.begin(), valid_whats.end(), whatum) ==
 				valid_whats.end()) {
@@ -158,7 +161,7 @@ void epiworldpy::export_saver(
 		/* Make sure valid arguments are passed into this constructor, and
 		 * marshall things out all the same. */
 		for (auto arg : args) {
-			std::string whatum = arg.cast<std::string>();
+			auto whatum = arg.cast<std::string>();
 
 			if (std::find(valid_whats.begin(), valid_whats.end(), whatum) ==
 				valid_whats.end()) {
@@ -169,7 +172,7 @@ void epiworldpy::export_saver(
 			whats.push_back(whatum);
 		}
 
-		for (auto what : whats) {
+		for (const auto &what : whats) {
 			std::ifstream t(std::string(csvloc) + what);
 			std::stringstream buffer;
 			buffer << t.rdbuf();
@@ -186,7 +189,7 @@ void epiworldpy::export_saver(
 					row.push_back(cell);
 				}
 
-				result.push_back(std::vector<int>(std::atoi(row[0].c_str())));
+				result.emplace_back(std::atoi(row[0].c_str()));
 			}
 
 			results.push_back(result);

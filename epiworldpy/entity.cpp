@@ -5,21 +5,24 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <utility>
+
 using namespace epiworld;
 using namespace epiworldpy;
 using namespace pybind11::literals;
 namespace py = pybind11;
 
-static epiworld::Entity<int> new_entity(std::string name,
-										epiworld::EntityToAgentFun<int> fun) {
-	Entity<int> entity(name, fun);
+static auto new_entity(std::string name, epiworld::EntityToAgentFun<int> fun)
+	-> epiworld::Entity<int> {
+	Entity<int> entity(std::move(name), std::move(fun));
 
 	return entity;
 }
 
-static epiworld::EntityToAgentFun<int> new_entity_to_agent_fun(
-	const std::function<void(Entity<int> &, Model<int> *)> &fun) {
-	return EntityToAgentFun<int>(fun);
+static auto new_entity_to_agent_fun(
+	const std::function<void(Entity<int> &, Model<int> *)> &fun)
+	-> epiworld::EntityToAgentFun<int> {
+	return {fun};
 }
 
 void epiworldpy::export_entity(

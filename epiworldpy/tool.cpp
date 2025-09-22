@@ -1,14 +1,16 @@
 #include "tool.hpp"
 
+#include <utility>
+
 using namespace epiworld;
 using namespace epiworldpy;
 namespace py = pybind11;
 
-static epiworld::Tool<int>
-new_tool(std::string name, double prevalence, bool as_proportion,
-		 double susceptibility_reduction, double transmission_reduction,
-		 double recovery_enhancer, double death_reduction) {
-	Tool<int> tool(name, prevalence, as_proportion);
+static auto new_tool(std::string name, double prevalence, bool as_proportion,
+					 double susceptibility_reduction,
+					 double transmission_reduction, double recovery_enhancer,
+					 double death_reduction) -> epiworld::Tool<int> {
+	Tool<int> tool(std::move(name), prevalence, as_proportion);
 
 	if (susceptibility_reduction > 0) {
 		tool.set_susceptibility_reduction(susceptibility_reduction);
@@ -29,12 +31,12 @@ new_tool(std::string name, double prevalence, bool as_proportion,
 	return tool;
 }
 
-static std::string get_name(epiworld::Tool<int> &self) {
+static auto get_name(epiworld::Tool<int> &self) -> std::string {
 	return self.get_name();
 }
 
 static void set_name(epiworld::Tool<int> &self, std::string name) {
-	self.set_name(name);
+	self.set_name(std::move(name));
 }
 
 static void set_susceptibility_reduction(epiworld::Tool<int> &self,
