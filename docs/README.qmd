@@ -229,7 +229,6 @@ reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
-plt.figure(figsize=(10, 6))
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
@@ -247,6 +246,7 @@ for virus_id in virus_ids:
 
     plt.plot(days, average_rts, label=f"Virus {virus_id}")
 
+plt.figure(figsize=(10, 6))
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
 plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
