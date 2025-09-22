@@ -9,9 +9,7 @@
 #include "diagram.hpp"
 #include "entity.hpp"
 #include "misc.hpp"
-#include "model-bones.hpp"
 #include "model.hpp"
-#include "saver.hpp"
 #include "tool.hpp"
 #include "virus.hpp"
 
@@ -22,30 +20,6 @@ using namespace epiworld;
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 PYBIND11_MODULE(_core, m) {
-	m.doc() = R"pbdoc(
-        Epiworld Python Wrapper
-        -----------------------
-
-        .. currentmodule:: epiworldpy
-
-        .. autosummary::
-		   :recursive:
-           :toctree: generated
-
-		   ModelDiffNet
-		   ModelSEIR
-		   ModelSEIRCONN
-    	   ModelSEIRD
-		   ModelSIR
-		   ModelSIRCONN
-		   ModelSIRD
-		   ModelSIRDCONN
-		   ModelSIS
-    	  ModelSISD
-		  ModelSURV
-		  Saver
-    )pbdoc";
-
 	auto update_fun =
 		py::class_<UpdateFun<int>>(m, "UpdateFun", "Model update functions.");
 	auto model = py::class_<Model<int>>(
@@ -57,23 +31,21 @@ PYBIND11_MODULE(_core, m) {
 		m, "ModelDiagram", "Exporting a diagram from a model.");
 	auto entity = py::class_<Entity<int>, std::shared_ptr<Entity<int>>>(
 		m, "Entity", "Unknown.");
-	auto saver =
-		py::class_<epiworldpy::Saver, std::shared_ptr<epiworldpy::Saver>>(
-			m, "Saver", "Saves the result of multiple runs.");
 	auto tool =
 		py::class_<Tool<int>>(m, "Tool", "A tool for modifying virus spread.");
 	auto virus = py::class_<Virus<int>>(m, "Virus", "A virus.");
 
 	epiworldpy::export_update_fun(update_fun);
 	epiworldpy::export_model(model);
-	epiworldpy::export_all_models(m);
 	epiworldpy::export_database(database);
 	epiworldpy::export_diagram_type(diagram_type);
 	epiworldpy::export_diagram(diagram);
 	epiworldpy::export_entity(entity);
-	epiworldpy::export_saver(saver);
 	epiworldpy::export_tool(tool);
 	epiworldpy::export_virus(virus);
+
+	auto m_epimodels = m.def_submodule("epimodels", "Epidemiological models.");
+	epiworldpy::export_all_models(m_epimodels);
 
 #ifdef VERSION_INFO
 	/* Give the real version. */

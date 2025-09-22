@@ -12,14 +12,15 @@ using namespace pybind11::literals;
 namespace py = pybind11;
 
 static auto get_hist_total(DataBase<int> &self) -> py::dict {
-	std::vector<std::string> states;
-	auto *dates = new std::vector<int>();
-	auto *counts = new std::vector<int>();
+	auto states = new std::vector<std::string>;
+	auto dates = new std::vector<int>;
+	auto counts = new std::vector<int>;
 
-	self.get_hist_total(dates, &states, counts);
+	self.get_hist_total(dates, states, counts);
 
-	return py::dict("dates"_a = vector_to_pyarray(dates), "states"_a = states,
-					"counts"_a = vector_to_pyarray(counts));
+	return make_dict(make_dict_entry("dates", *dates),
+					 make_dict_entry("states", *states),
+					 make_dict_entry("counts", *counts));
 }
 
 static auto get_reproductive_number(DataBase<int> &self)
@@ -45,93 +46,94 @@ static auto get_reproductive_number(DataBase<int> &self)
 }
 
 static auto get_transmissions(DataBase<int> &self) -> py::dict {
-	auto *dates = new std::vector<int>();
+	auto dates = new std::vector<int>();
 	auto *sources = new std::vector<int>();
-	auto *targets = new std::vector<int>();
-	auto *viruses = new std::vector<int>();
-	auto *source_exposure_dates = new std::vector<int>();
+	auto targets = new std::vector<int>();
+	auto viruses = new std::vector<int>();
+	auto source_exposure_dates = new std::vector<int>();
 
 	self.get_transmissions(*dates, *sources, *targets, *viruses,
 						   *source_exposure_dates);
 
 	return make_dict(
-		make_entry("dates", dates), make_entry("sources", sources),
-		make_entry("targets", targets), make_entry("viruses", viruses),
-		make_entry("source_exposure_dates", source_exposure_dates));
+		make_dict_entry("dates", *dates), make_dict_entry("sources", *sources),
+		make_dict_entry("viruses", *viruses),
+		make_dict_entry("source_exposure_dates", *source_exposure_dates));
 }
 
 static auto get_generation_time(DataBase<int> &self) -> py::dict {
-	auto *agents = new std::vector<int>();
-	auto *viruses = new std::vector<int>();
-	auto *times = new std::vector<int>();
-	auto *gentimes = new std::vector<int>();
+	auto agents = new std::vector<int>();
+	auto viruses = new std::vector<int>();
+	auto times = new std::vector<int>();
+	auto gentimes = new std::vector<int>();
 
 	self.get_generation_time(*agents, *viruses, *times, *gentimes);
 
-	return make_dict(make_entry("agents", agents),
-					 make_entry("viruses", viruses), make_entry("times", times),
-					 make_entry("gentimes", gentimes));
+	return make_dict(make_dict_entry("agents", *agents),
+					 make_dict_entry("viruses", *viruses),
+					 make_dict_entry("times", *times),
+					 make_dict_entry("generation_times", *gentimes));
 }
 
 static auto get_hist_transition_matrix(DataBase<int> &self, bool skip_zeros)
 	-> py::dict {
-	std::vector<std::string> state_from;
-	std::vector<std::string> state_to;
-	auto *dates = new std::vector<int>();
-	auto *counts = new std::vector<int>();
 
-	self.get_hist_transition_matrix(state_from, state_to, *dates, *counts,
+	auto state_from = new std::vector<std::string>();
+	auto state_to = new std::vector<std::string>();
+	auto dates = new std::vector<int>();
+	auto counts = new std::vector<int>();
+
+	self.get_hist_transition_matrix(*state_from, *state_to, *dates, *counts,
 									skip_zeros);
 
-	py::dict d =
-		make_dict(make_entry("dates", dates), make_entry("counts", counts));
-	d["states_from"] = state_from;
-	d["states_to"] = state_to;
-	return d;
+	return make_dict(make_dict_entry("state_from", *state_from),
+					 make_dict_entry("state_to", *state_to),
+					 make_dict_entry("dates", *dates),
+					 make_dict_entry("counts", *counts));
 }
 
 static auto get_hist_virus(DataBase<int> &self) -> py::dict {
-	auto *dates = new std::vector<int>();
-	auto *ids = new std::vector<int>();
-	auto *counts = new std::vector<int>();
-	std::vector<std::string> states;
+	auto dates = new std::vector<int>();
+	auto ids = new std::vector<int>();
+	auto counts = new std::vector<int>();
+	auto states = new std::vector<std::string>();
 
-	self.get_hist_virus(*dates, *ids, states, *counts);
+	self.get_hist_virus(*dates, *ids, *states, *counts);
 
-	return py::dict("dates"_a = vector_to_pyarray(dates),
-					"ids"_a = vector_to_pyarray(ids), "states"_a = states,
-					"counts"_a = vector_to_pyarray(counts));
+	return make_dict(
+		make_dict_entry("dates", *dates), make_dict_entry("ids", *ids),
+		make_dict_entry("states", *states), make_dict_entry("counts", *counts));
 }
 
 static auto get_hist_tool(DataBase<int> &self) -> py::dict {
-	auto *dates = new std::vector<int>();
-	auto *ids = new std::vector<int>();
-	auto *counts = new std::vector<int>();
-	std::vector<std::string> states;
+	auto dates = new std::vector<int>();
+	auto ids = new std::vector<int>();
+	auto counts = new std::vector<int>();
+	auto states = std::vector<std::string>();
 
 	self.get_hist_tool(*dates, *ids, states, *counts);
 
-	return py::dict("dates"_a = vector_to_pyarray(dates),
-					"ids"_a = vector_to_pyarray(ids), "states"_a = states,
-					"counts"_a = vector_to_pyarray(counts));
+	return make_dict(
+		make_dict_entry("dates", *dates), make_dict_entry("ids", *ids),
+		make_dict_entry("states", states), make_dict_entry("counts", *counts));
 }
 
 static auto get_today_transition_matrix(DataBase<int> &self) -> py::dict {
-	auto *counts = new std::vector<int>();
+	auto counts = new std::vector<int>();
 	self.get_today_transition_matrix(*counts);
-
-	return py::dict("counts"_a = vector_to_pyarray(counts));
+	return make_dict(make_dict_entry("counts", *counts));
 }
 
 static auto get_today_virus(DataBase<int> &self) -> py::dict {
-	auto *ids = new std::vector<int>();
-	auto *counts = new std::vector<int>();
-	std::vector<std::string> states;
+	auto states = new std::vector<std::string>();
+	auto ids = new std::vector<int>();
+	auto counts = new std::vector<int>();
 
-	self.get_today_virus(states, *ids, *counts);
+	self.get_today_virus(*states, *ids, *counts);
 
-	return py::dict("states"_a = states, "ids"_a = vector_to_pyarray(ids),
-					"counts"_a = vector_to_pyarray(counts));
+	return make_dict(make_dict_entry("states", *states),
+					 make_dict_entry("ids", *ids),
+					 make_dict_entry("counts", *counts));
 }
 
 static auto get_today_total(DataBase<int> &self) -> py::dict {
@@ -140,46 +142,40 @@ static auto get_today_total(DataBase<int> &self) -> py::dict {
 
 	self.get_today_total(states, counts);
 
-	return py::dict("states"_a = states,
-					"counts"_a = vector_to_pyarray(counts));
+	return make_dict(make_dict_entry("states", *states),
+					 make_dict_entry("counts", *counts));
 }
 
 void epiworldpy::export_database(
-	py::class_<epiworld::DataBase<int>,
-			   std::shared_ptr<epiworld::DataBase<int>>> &c) {
+	py::class_<DataBase<int>, std::shared_ptr<DataBase<int>>> &c) {
 	c.def("add_user_data",
 		  pybind11::detail::overload_cast_impl<std::vector<epiworld_double>>()(
-			  &epiworld::DataBase<int>::add_user_data),
+			  &DataBase<int>::add_user_data),
 		  "Add a list of user data.")
 		.def("add_user_data",
 			 pybind11::detail::overload_cast_impl<epiworld_fast_uint,
 												  epiworld_double>()(
-				 &epiworld::DataBase<int>::add_user_data),
+				 &DataBase<int>::add_user_data),
 			 "Add a list of user data.")
-		.def("get_n_tools", &epiworld::DataBase<int>::get_n_tools,
+		.def("get_n_tools", &DataBase<int>::get_n_tools,
 			 "Get the number of tools.")
-		.def("get_n_viruses", &epiworld::DataBase<int>::get_n_viruses,
+		.def("get_n_viruses", &DataBase<int>::get_n_viruses,
 			 "Get the number of viruses.")
-		.def("record_transmission",
-			 &epiworld::DataBase<int>::record_transmission,
+		.def("record_transmission", &DataBase<int>::record_transmission,
 			 "Record a transmission event.")
-		.def("write_data", &epiworld::DataBase<int>::write_data,
-			 "Write some data.")
+		.def("write_data", &DataBase<int>::write_data, "Write some data.")
 		.def("get_hist_virus", &get_hist_virus, "Get historical virus data.")
 		.def("get_hist_tool", &get_hist_tool, "Get historical tool data.")
 		.def("get_today_transition_matrix", &get_today_transition_matrix,
 			 "Get today's transition matrix.")
 		.def("get_today_virus", &get_today_virus, "Get today's virus data.")
 		.def("get_today_total", &get_today_total, "Get today's total data.")
-		.def("size", &epiworld::DataBase<int>::size,
-			 "Get the size (number of entries).")
-		.def("record", &epiworld::DataBase<int>::record,
-			 "Register a new variant.") // ?
-		.def("reset", &epiworld::DataBase<int>::reset,
-			 "Reset the database.") // ?
-		.def("record_tool", &epiworld::DataBase<int>::record_tool,
+		.def("size", &DataBase<int>::size, "Get the size (number of entries).")
+		.def("record", &DataBase<int>::record, "Register a new variant.")
+		.def("reset", &DataBase<int>::reset, "Reset the database.")
+		.def("record_tool", &DataBase<int>::record_tool,
 			 "Add a new tool to the database.")
-		.def("record_virus", &epiworld::DataBase<int>::record_virus,
+		.def("record_virus", &DataBase<int>::record_virus,
 			 "Add a new virus to the database.")
 		.def("get_hist_total", &get_hist_total,
 			 "Get historical totals for this model run.")
@@ -192,6 +188,6 @@ void epiworldpy::export_database(
 		.def("get_hist_transition_matrix", &get_hist_transition_matrix,
 			 "Get historical transitions in a tabular format.")
 		.def("get_transition_probability",
-			 &epiworld::DataBase<int>::get_transition_probability,
+			 &DataBase<int>::get_transition_probability,
 			 "Get the transition probably.");
 }

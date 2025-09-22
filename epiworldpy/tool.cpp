@@ -31,59 +31,34 @@ static auto new_tool(std::string name, double prevalence, bool as_proportion,
 	return tool;
 }
 
-static auto get_name(epiworld::Tool<int> &self) -> std::string {
-	return self.get_name();
-}
-
-static void set_name(epiworld::Tool<int> &self, std::string name) {
-	self.set_name(std::move(name));
-}
-
-static void set_susceptibility_reduction(epiworld::Tool<int> &self,
-										 double susceptibility_reduction) {
-	self.set_susceptibility_reduction(susceptibility_reduction);
-}
-
-static void set_transmission_reduction(epiworld::Tool<int> &self,
-									   double transmission_reduction) {
-	self.set_transmission_reduction(transmission_reduction);
-}
-
-static void set_recovery_enhancer(epiworld::Tool<int> &self,
-								  double recovery_enhancer) {
-	self.set_recovery_enhancer(recovery_enhancer);
-}
-
-static void set_death_reduction(epiworld::Tool<int> &self,
-								double death_reduction) {
-	self.set_death_reduction(death_reduction);
-}
-
-static void print_tool(epiworld::Tool<int> &self) { self.print(); }
-
 void epiworldpy::export_tool(pybind11::class_<epiworld::Tool<int>> &c) {
 	c.def(py::init(&new_tool), "Create a new tool", py::arg("name"),
 		  py::arg("prevalence"), py::arg("as_proportion"),
 		  py::arg("susceptibility_reduction") = 0,
 		  py::arg("transmission_reduction") = 0,
 		  py::arg("recovery_enhancer") = 0, py::arg("death_reduction") = 0)
-		.def("get_name", &get_name, "Get the tool name.")
-		.def("set_name", &set_name, "Set the tool name.", py::arg("name"))
-		.def("set_susceptibility_reduction", &set_susceptibility_reduction,
+		.def("get_name", &Tool<int>::get_name, "Get the tool name.")
+		.def("set_name", &Tool<int>::set_name, "Set the tool name.",
+			 py::arg("name"))
+		.def("set_susceptibility_reduction",
+			 py::overload_cast<float>(&Tool<int>::set_susceptibility_reduction),
 			 "Sets the reduction in agent susceptibility associated with this "
 			 "tool.",
 			 py::arg("susceptibility_reduction"))
-		.def("set_transmission_reduction", &set_transmission_reduction,
+		.def("set_transmission_reduction",
+			 py::overload_cast<float>(&Tool<int>::set_transmission_reduction),
 			 "Sets the reduction in agent transmission associated with this "
 			 "tool.",
 			 py::arg("transmission_reduction"))
-		.def("set_recovery_enhancer", &set_recovery_enhancer,
+		.def("set_recovery_enhancer",
+			 py::overload_cast<float>(&Tool<int>::set_recovery_enhancer),
 			 "Sets the boost in agent recovery associated with this "
 			 "tool.",
 			 py::arg("recovery_enhancer"))
-		.def("set_death_reduction", &set_death_reduction,
+		.def("set_death_reduction",
+			 py::overload_cast<float>(&Tool<int>::set_death_reduction),
 			 "Sets the reduction in agent mortality associated with this "
 			 "tool.",
 			 py::arg("death_reduction"))
-		.def("print", &print_tool, "Print information about this tool.");
+		.def("print", &Tool<int>::print, "Print information about this tool.");
 }

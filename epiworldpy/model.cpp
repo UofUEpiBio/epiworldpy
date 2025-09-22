@@ -1,88 +1,63 @@
 #include "model.hpp"
 #include "agent-meat-state.hpp"
 
-#define MODEL_OF(m, model, description)                                        \
-	py::class_<epimodels::Model##model<int>, Model<int>>(m, "Model" #model,    \
-														 description)
-
 using namespace epiworldpy;
 using namespace epiworld;
 namespace py = pybind11;
 
-static auto get_db(Model<int> &self) -> std::shared_ptr<DataBase<int>> {
-	return {&self.get_db(),
-			[](DataBase<int> *) { /* do nothing, no delete */ }};
+template <typename T, typename... Args>
+void export_model_with_init(py::class_<T, Model<int>> &c, const char *doc,
+							Args &&...args) {
+	c.def(py::init<Args...>(), doc, std::forward<Args>(args)...);
 }
 
-static void update_susceptible(Agent<int> *p, Model<int> *m) {
+template <typename T>
+auto model_of(py::module &m, const char *name, const char *doc)
+	-> py::class_<T, Model<int>> {
+	return py::class_<T, Model<int>>(m, (std::string("Model") + name).c_str(),
+									 doc);
+}
 
+template <typename ModelT, typename... Args>
+void bind_model(py::module &m, const char *pyname, const char *doc,
+				const char *ctor_doc, Args &&...args) {
+	auto cls = model_of<ModelT>(m, pyname, doc);
+	cls.def(py::init<std::decay_t<Args>...>(), ctor_doc,
+			std::forward<Args>(args)...);
+}
+
+template <bool Local>
+static void update_susceptible_impl(Agent<int> *p, Model<int> *m) {
 	Virus<int> *virus = sampler::sample_virus_single<int>(p, m);
-
+	if constexpr (Local) {
+		if (virus == nullptr)
+			return;
+	}
 	if (virus != nullptr) {
 		p->set_virus(*virus, m);
 	}
 }
 
-static void update_exposed(Agent<int> *p, Model<int> *m) {
-	if (p->get_virus() == nullptr)
-		throw std::logic_error(
-			std::string("Using the -default_update_exposed- on agents WITHOUT "
-						"viruses makes no sense! ") +
-			std::string("Agent id ") + std::to_string(p->get_id()) +
-			std::string(" has no virus registered."));
-
-	auto &virus = p->get_virus();
-	m->array_double_tmp[0u] =
-		virus->get_prob_death(m) * (1.0 - p->get_death_reduction(virus, m));
-
-	m->array_double_tmp[1u] =
-		1.0 - (1.0 - virus->get_prob_recovery(m)) *
-				  (1.0 - p->get_recovery_enhancer(virus, m));
-
-	int which = roulette(2u, m);
-
-	if (which < 0) {
-		return;
-	}
-
-	if (which == 0u) {
-		p->rm_agent_by_virus(m);
-	} else {
-		p->rm_virus(m);
-	}
-}
-
-static void local_default_update_susceptible(Agent<int> *p, Model<int> *m) {
-	Virus<int> *virus = sampler::sample_virus_single<int>(p, m);
-
-	if (virus == nullptr)
-		return;
-
-	p->set_virus(*virus, m);
-}
-
-static void local_default_update_exposed(Agent<int> *p, Model<int> *m) {
+template <bool Local>
+static void update_exposed_impl(Agent<int> *p, Model<int> *m) {
 	if (p->get_virus() == nullptr) {
-		throw std::logic_error(
-			std::string("Using the -default_update_exposed- on agents WITHOUT "
-						"viruses makes no sense! ") +
-			std::string("Agent id ") + std::to_string(p->get_id()) +
-			std::string(" has no virus registered."));
+		throw std::logic_error("Using the default_update_exposed on an agent "
+							   "without a virus. Agent id " +
+							   std::to_string(p->get_id()));
 	}
 
 	auto &virus = p->get_virus();
-	m->array_double_tmp[0u] =
+	m->array_double_tmp[0] =
 		virus->get_prob_death(m) * (1.0 - p->get_death_reduction(virus, m));
-
-	m->array_double_tmp[1u] =
+	m->array_double_tmp[1] =
 		1.0 - (1.0 - virus->get_prob_recovery(m)) *
 				  (1.0 - p->get_recovery_enhancer(virus, m));
 
-	int which = roulette(2u, m);
+	int which = roulette(2, m);
 	if (which < 0)
 		return;
 
-	if (which == 0u) {
+	if (which == 0) {
 		p->rm_agent_by_virus(m);
 	} else {
 		p->rm_virus(m);
@@ -97,13 +72,13 @@ void epiworldpy::export_update_fun(
 			 return (std::function<void(Agent<int> *, Model<int> *)>)nullptr;
 		 })
 		.def_static("default_update_susceptible",
-					[]() {
-						return (std::function<void(Agent<int> *, Model<int> *)>)
-							local_default_update_susceptible;
+					[] {
+						return std::function<void(Agent<int> *, Model<int> *)>(
+							update_susceptible_impl<true>);
 					})
-		.def_static("default_update_exposed", []() {
-			return (std::function<void(Agent<int> *, Model<int> *)>)
-				local_default_update_exposed;
+		.def_static("default_update_exposed", [] {
+			return std::function<void(Agent<int> *, Model<int> *)>(
+				update_exposed_impl<true>);
 		});
 }
 
@@ -139,10 +114,27 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 		.def("run", &Model<int>::run,
 			 "Run the model according to the previously specific parameters.",
 			 py::arg("ndays"), py::arg("seed") = 1u)
-		.def("get_db", &get_db,
+		.def("get_db", py::overload_cast<>(&Model<int>::get_db),
+			 py::return_value_policy::reference_internal,
 			 "Get the data from the model run, which may then be queried with "
-			 "associated methods.",
-			 py::return_value_policy::reference);
+			 "associated methods.");
+}
+
+template <typename T> struct ModelNamedArg {
+	using type = T;
+	const char *name;
+};
+
+template <typename T>
+constexpr auto make_arg(const char *name) -> ModelNamedArg<T> {
+	return {name};
+}
+
+template <typename ModelT, typename... Args>
+void export_model_(pybind11::class_<ModelT, epiworld::Model<int>> &c,
+				   const char *name, Args... args) {
+	c.def(py::init<typename Args::type...>(), py::arg(args.name)...,
+		  py::doc((std::string("Create a ") + name + " Model").c_str()));
 }
 
 void epiworldpy::export_all_models(pybind11::module &m) {
@@ -152,136 +144,110 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 	 * a loop.
 	 */
 
-	auto diffnet = MODEL_OF(m, DiffNet, "A network diffusion model.");
-	auto seir = MODEL_OF(m, SEIR,
-						 "A model with four compartments: susceptible, "
-						 "exposed, infectious, and recovered.");
-	auto seirconn = MODEL_OF(
-		m, SEIRCONN,
+	auto diffnet = model_of<epimodels::ModelDiffNet<int>>(
+		m, "DiffNet", "A network diffusion model.");
+	auto seir = model_of<epimodels::ModelSEIR<int>>(
+		m, "SEIR",
 		"A model with four compartments: susceptible, exposed, infectious, and "
 		"recovered.");
-	auto seird = MODEL_OF(m, SEIRD,
-						  "A model with five compartments: susceptible, "
-						  "exposed, infectious, recovered, and dead.");
-	auto sir = MODEL_OF(m, SIR,
-						"A model with three compartments: "
-						"susceptible, infectious, and recovered.");
-	auto sirconn = MODEL_OF(m, SIRCONN,
-							"A model with three compartments: susceptible, "
-							"infectious, and recovered.");
-	auto sird = MODEL_OF(m, SIRD,
-						 "A model with four compartments: susceptible, "
-						 "infectious, recovered, and dead.");
-	auto sirdconn = MODEL_OF(m, SIRDCONN,
-							 "A model with four compartments: susceptible, "
-							 "infectious, recovered, and dead.");
-	auto sis = MODEL_OF(
-		m, SIS, "A model wth two compartments: susceptible and infectious.");
-	auto sisd = MODEL_OF(
-		m, SISD,
+	auto seirconn = model_of<epimodels::ModelSEIRCONN<int>>(
+		m, "SEIRCONN",
+		"A model with four compartments: susceptible, exposed, infectious, and "
+		"recovered.");
+	auto seird = model_of<epimodels::ModelSEIRD<int>>(
+		m, "SEIRD",
+		"A model with five compartments: susceptible, exposed, infectious, "
+		"recovered, and dead.");
+	auto sir = model_of<epimodels::ModelSIR<int>>(
+		m, "SIR",
+		"A model with three compartments: susceptible, infectious, and "
+		"recovered.");
+	auto sirconn = model_of<epimodels::ModelSIRCONN<int>>(
+		m, "SIRCONN",
+		"A model with three compartments: susceptible, infectious, and "
+		"recovered.");
+	auto sird = model_of<epimodels::ModelSIRD<int>>(
+		m, "SIRD",
+		"A model with four compartments: susceptible, infectious, recovered, "
+		"and dead.");
+	auto sirdconn = model_of<epimodels::ModelSIRDCONN<int>>(
+		m, "SIRDCONN",
+		"A model with four compartments: susceptible, infectious, recovered, "
+		"and dead.");
+	auto sis = model_of<epimodels::ModelSIS<int>>(
+		m, "SIS", "A model wth two compartments: susceptible and infectious.");
+	auto sisd = model_of<epimodels::ModelSISD<int>>(
+		m, "SISD",
 		"A model wth three compartments: susceptible, infectious, and death.");
-	auto surv = MODEL_OF(
-		m, SURV,
+	auto surv = model_of<epimodels::ModelSURV<int>>(
+		m, "SURV",
 		"A model where agents may be isolated, even when asymptomatic.");
 
-	epiworldpy::export_diffnet(diffnet);
-	epiworldpy::export_seir(seir);
-	epiworldpy::export_seirconn(seirconn);
-	epiworldpy::export_seird(seird);
-	epiworldpy::export_sir(sir);
-	epiworldpy::export_sirconn(sirconn);
-	epiworldpy::export_sird(sird);
-	epiworldpy::export_sirdconn(sirdconn);
-	epiworldpy::export_sis(sis);
-	epiworldpy::export_sisd(sisd);
-	epiworldpy::export_surv(surv);
-}
+	export_model_<epimodels::ModelDiffNet<int>>(
+		diffnet, "DiffNet", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("prob_adopt"),
+		make_arg<bool>("normalize_exposure"), make_arg<double *>("data"),
+		make_arg<int>("data_ncols"), make_arg<std::vector<size_t>>("data_cols"),
+		make_arg<std::vector<double>>("params"));
 
-void epiworldpy::export_diffnet(MODEL_CHILD_TYPE(DiffNet) & c) {
-	c.def(py::init<std::string, double, double, bool, double *, int,
-				   std::vector<size_t>, std::vector<double>>(),
-		  "Create a new DiffNet model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("prob_adopt"), py::arg("normalize_exposure"), py::arg("data"),
-		  py::arg("data_ncols"), py::arg("data_cols"), py::arg("params"));
-}
+	export_model_<epimodels::ModelSEIR<int>>(
+		seir, "SEIR", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
 
-void epiworldpy::export_seir(MODEL_CHILD_TYPE(SEIR) & c) {
-	c.def(py::init<std::string, double, double, double, double>(),
-		  "Create a new SEIR model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("incubation_days"),
-		  py::arg("recovery_rate"));
-}
+	export_model_<epimodels::ModelSEIRCONN<int>>(
+		seirconn, "SEIRCONN", make_arg<std::string>("name"), make_arg<int>("n"),
+		make_arg<double>("prevalence"), make_arg<double>("contact_rate"),
+		make_arg<double>("transmission_rate"),
+		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
 
-void epiworldpy::export_seirconn(MODEL_CHILD_TYPE(SEIRCONN) & c) {
-	c.def(py::init<std::string, int, double, double, double, double, double>(),
-		  "Create a new SEIRCONN model.", py::arg("name"), py::arg("n"),
-		  py::arg("prevalence"), py::arg("contact_rate"),
-		  py::arg("transmission_rate"), py::arg("incubation_days"),
-		  py::arg("recovery_rate"));
-}
+	export_model_<epimodels::ModelSEIRD<int>>(
+		seird, "SEIRD", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"),
+		make_arg<double>("death_rate"));
 
-void epiworldpy::export_seird(MODEL_CHILD_TYPE(SEIRD) & c) {
-	c.def(py::init<std::string, double, double, double, double, double>(),
-		  "Create a new SEIRD model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("incubation_days"),
-		  py::arg("recovery_rate"), py::arg("death_rate"));
-}
+	export_model_<epimodels::ModelSIR<int>>(
+		sir, "SIR", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"));
 
-void epiworldpy::export_sir(MODEL_CHILD_TYPE(SIR) & c) {
-	c.def(py::init<std::string, double, double, double>(),
-		  "Create a new SIR model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"));
-}
+	export_model_<epimodels::ModelSIRCONN<int>>(
+		sirconn, "SIRCONN", make_arg<std::string>("name"), make_arg<int>("n"),
+		make_arg<double>("prevalence"), make_arg<double>("contact_rate"),
+		make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"));
 
-void epiworldpy::export_sirconn(MODEL_CHILD_TYPE(SIRCONN) & c) {
-	c.def(py::init<std::string, int, double, double, double, double>(),
-		  "Create a new SIRCONN model.", py::arg("name"), py::arg("n"),
-		  py::arg("prevalence"), py::arg("contact_rate"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"));
-}
+	export_model_<epimodels::ModelSIRD<int>>(
+		sird, "SIRD", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
-void epiworldpy::export_sird(MODEL_CHILD_TYPE(SIRD) & c) {
-	c.def(py::init<std::string, double, double, double, double>(),
-		  "Create a new SIRD model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"),
-		  py::arg("death_rate"));
-}
+	export_model_<epimodels::ModelSIRDCONN<int>>(
+		sirdconn, "SIRDCONN", make_arg<std::string>("name"), make_arg<int>("n"),
+		make_arg<double>("prevalence"), make_arg<double>("contact_rate"),
+		make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
-void epiworldpy::export_sirdconn(MODEL_CHILD_TYPE(SIRDCONN) & c) {
-	c.def(py::init<std::string, int, double, double, double, double, double>(),
-		  "Create a new SIRDCONN model.", py::arg("name"), py::arg("n"),
-		  py::arg("prevalence"), py::arg("contact_rate"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"),
-		  py::arg("death_rate"));
-}
+	export_model_<epimodels::ModelSIS<int>>(
+		sis, "SIS", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"));
 
-void epiworldpy::export_sis(MODEL_CHILD_TYPE(SIS) & c) {
-	c.def(py::init<std::string, double, double, double>(),
-		  "Create a new SIS model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"));
-}
+	export_model_<epimodels::ModelSISD<int>>(
+		sisd, "SISD", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
-void epiworldpy::export_sisd(MODEL_CHILD_TYPE(SISD) & c) {
-	c.def(py::init<std::string, double, double, double, double>(),
-		  "Create a new SISD model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("transmission_rate"), py::arg("recovery_rate"),
-		  py::arg("death_rate"));
-}
-
-void epiworldpy::export_surv(MODEL_CHILD_TYPE(SURV) & c) {
-	/*
-	 * TODO: I noticed that epiworld::epimodels::ModelSURV is overloaded to
-	 * accept a variable number of arguments, should this be expressed on the
-	 * Python side? It isn't in R, as far as I can tell, and I don't know how
-	 * concerning symmetry is.
-	 */
-	c.def(py::init<std::string, double, double, double, double, double, double,
-				   double, double, double, double, double, double>(),
-		  "Create a new SURV model.", py::arg("name"), py::arg("prevalence"),
-		  py::arg("efficacy_vax"), py::arg("latent_period"),
-		  py::arg("prob_symptoms"), py::arg("prop_vaccinated"),
-		  py::arg("prop_vax_redux_transm"), py::arg("infect_period"),
-		  py::arg("prop_vax_redux_infect"), py::arg("surveillance_prob"),
-		  py::arg("transmission_rate"), py::arg("prob_death"),
-		  py::arg("prob_noreinfect"));
+	export_model_<epimodels::ModelSURV<int>>(
+		surv, "SURV", make_arg<std::string>("name"),
+		make_arg<double>("prevalence"), make_arg<double>("efficacy_vax"),
+		make_arg<double>("latent_period"), make_arg<double>("prob_symptoms"),
+		make_arg<double>("prop_vaccinated"),
+		make_arg<double>("prop_vax_redux_transm"),
+		make_arg<double>("infect_period"),
+		make_arg<double>("prop_vax_redux_infect"),
+		make_arg<double>("surveillance_prob"),
+		make_arg<double>("transmission_rate"), make_arg<double>("prob_death"),
+		make_arg<double>("prob_noreinfect"));
 }

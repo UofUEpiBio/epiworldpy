@@ -7,7 +7,6 @@ python_add_library(_core MODULE
     entity.cpp
     main.cpp
     model.cpp
-    saver.cpp
     tool.cpp
     virus.cpp
     WITH_SOABI)
