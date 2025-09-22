@@ -229,6 +229,7 @@ reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
+plt.figure(figsize=(10, 6))
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
@@ -370,6 +371,7 @@ def update(frame):
     ax.set_title(f"COVID-19 SEIR Model Agent Contact (Day {frame})")
 
 ani = FuncAnimation(fig, update, frames=int(days/3), interval=200, repeat=False)
+plt.figure(figsize=(10, 6))
 plt.show()
 ```
 
