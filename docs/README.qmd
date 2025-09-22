@@ -3,8 +3,7 @@ format: gfm
 title: "epiworldpy"
 fig-format: svg
 toc: true
-toc-depth: 2
-toc-location: left
+toc-depth: 1
 ---
 
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
@@ -31,26 +30,6 @@ From the package’s description:
 > rates as a function of agents’ features, providing great complexity for the model
 > dynamics. Furthermore, epiworldR is ideal for simulation studies featuring large
 > populations.
-
-Current available models:
-
-1. `ModelDiffNet`
-2. `ModelSEIR`
-3. `ModelSEIRCONN`
-4. `ModelSEIRD`
-5. `ModelSEIRDCONN`
-6. `ModelSEIRMixing`
-7. `ModelSIR`
-8. `ModelSIRCONN`
-9. `ModelSIRD`
-10. `ModelSIRDCONN`
-11. `ModelSIRLogit`
-12. `ModelSIRMixing`
-13. `ModelSIS`
-14. `ModelSISD`
-15. `ModelSURV`
-
-Bindings exist for other languages, [namely R](https://uofuepibio.github.io/epiworldR).
 
 # Installation
 
