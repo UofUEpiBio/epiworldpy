@@ -1,6 +1,10 @@
 ---
 format: gfm
-title: "epiworldPy"
+title: "epiworldpy"
+fig-format: svg
+toc: true
+toc-depth: 2
+toc-location: left
 ---
 
 [![](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml/badge.svg)](https://github.com/UofUEpiBio/epiworldpy/actions/workflows/pip.yaml)
@@ -380,7 +384,7 @@ plt.show()
 
 <!-- I couldn't figure out a way to get Quarto to do animations correctly so we're
   hardcoding a GIF. -->
-![](docs/README_files/figure-markdown_strict/contact-visualization-output-1.gif)
+![](docs/README_files/figure-commonmark/contact-visualization-output-1.gif)
 
 ## Multiple Simulations
 
