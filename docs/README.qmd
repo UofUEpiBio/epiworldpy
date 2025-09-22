@@ -232,6 +232,8 @@ reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
+plt.figure(figsize=(10, 6))
+packs = []
 for virus_id in virus_ids:
     virus_rows = reproductive_data[reproductive_data[:, 0] == virus_id]
 
@@ -244,9 +246,11 @@ for virus_id in virus_ids:
 
         average_rts.append(day_rows[:, 3].mean())
 
-    plt.plot(days, average_rts, label=f"Virus {virus_id}")
+    packs += ([days, average_rts], {label=f"Virus {virus_id}"})
 
-plt.figure(figsize=(10, 6))
+for pack in packs:
+    plot.plot(*(pack[0]), **(pack[1]))
+
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
 plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
