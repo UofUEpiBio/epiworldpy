@@ -1,0 +1,66 @@
+HeaderFileExtensions: [ 'h', 'hpp' ]
+ImplementationFileExtensions: [ 'c', 'cpp', 'ipp' ]
+WarningsAsErrors: 'bugprone-*,modernize-*'
+HeaderFilterRegex: '^(frontends/cpp)/'
+FormatStyle: file
+
+Checks: >
+  clang-analyzer-*,
+  misc-*,
+  -misc-non-private-member-variables-in-classes,
+  -misc-no-recursion,
+  modernize-*,
+  -modernize-use-if-init
+  performance-*,
+  readability-*,
+  -readability-identifier-length,
+  bugprone-*,
+  -bugprone-move-forwarding-reference,
+  cppcoreguidelines-*,
+  -cppcoreguidelines-pro-type-vararg,
+
+CheckOptions:
+  - key: misc-unused-headers.HeaderFileExtensions
+    value: 'h;hh;hpp;inc;ipp;inl;tcc'
+
+  # snake_case
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.ConstexprVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key: readability-identifier-naming.MemberCase
+    value: lower_case
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.NamespaceCase
+    value: lower_case
+  - key: readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumConstantCase
+    value: UPPER_CASE
+
+  # camelBack
+  - key: readability-identifier-naming.TypeCase
+    value: CamelCase
+  - key: readability-identifier-naming.ClassCase
+    value: CamelCase
+  - key: readability-identifier-naming.StructCase
+    value: CamelCase
+  - key: readability-identifier-naming.EnumCase
+    value: CamelCase
+  - key: readability-identifier-naming.TemplateParameterCase
+    value: CamelCase
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: CamelCase
+  - key: readability-identifier-naming.StaticConstantCase
+    value: CamelCase
+
+  # UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.GlobalVariableCase
+    value: UPPER_CASE
+ - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE

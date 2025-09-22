@@ -1,0 +1,8 @@
+Diagnostics:
+  ClangTidy:
+    Add: [modernize-*, performance-*]
+    Remove: [cppcoreguidelines-avoid-magic-numbers]
+    CheckOptions:
+      readability-identifier-naming.VariableCase: CamelCase
+
+  Suppress: unused-includes
