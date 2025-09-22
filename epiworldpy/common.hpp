@@ -71,7 +71,7 @@ static auto strings_to_pydict(std::vector<std::string> strings)
 	pybind11::array indexes(idx.size(), idx.data());
 
 	pybind11::dict d;
-	d["values"] = std::move(values);
+	d["values"] = std::move(pybind11::array(values));
 	d["indexes"] = std::move(indexes);
 	return d;
 }

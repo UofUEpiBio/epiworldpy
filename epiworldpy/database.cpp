@@ -23,26 +23,26 @@ static auto get_hist_total(DataBase<int> &self) -> py::dict {
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_reproductive_number(DataBase<int> &self)
-	-> std::vector<std::vector<std::map<int, int>>> {
+static auto get_reproductive_number(DataBase<int> &self) -> py::array_t<int> {
 	auto raw_rt = self.get_reproductive_number();
 
-	/* Preallocate: [virus][day] -> { source: R } */
-	std::vector<std::vector<std::map<int, int>>> result(
-		self.get_n_viruses(),
-		std::vector<std::map<int, int>>(self.get_model()->today() + 1));
+	auto nrows = static_cast<ssize_t>(raw_rt.size());
+	ssize_t ncols = 4;
 
+	py::array_t<long long> arr({nrows, ncols});
+	auto buf = arr.mutable_unchecked<2>();
+
+	ssize_t i = 0;
 	for (const auto &kv : raw_rt) {
 		const auto &key = kv.first;
-		int virus_id = key[0];
-		int source = key[1];
-		int exposure_day = key[2];
-		int effective_rn = kv.second;
-
-		result[virus_id][exposure_day][source] = effective_rn;
+		buf(i, 0) = static_cast<long long>(key[0]);
+		buf(i, 1) = static_cast<long long>(key[2]);
+		buf(i, 2) = static_cast<long long>(key[1]);
+		buf(i, 3) = static_cast<long long>(kv.second);
+		++i;
 	}
 
-	return result;
+	return arr;
 }
 
 static auto get_transmissions(DataBase<int> &self) -> py::dict {
