@@ -119,7 +119,7 @@ virus.run(50, 1912)
     |Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x11bb611f0>
+    <epiworldpy._core.epimodels.ModelSIR at 0x1061e1d70>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -238,7 +238,7 @@ model.run(100, 132)
     Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x11ba266f0>
+    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10e237e30>
 
 We can get the effective reproductive number, over time, too:
 
@@ -250,6 +250,7 @@ reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
+packs = []
 for virus_id in virus_ids:
     virus_rows = reproductive_data[reproductive_data[:, 0] == virus_id]
 
@@ -262,9 +263,12 @@ for virus_id in virus_ids:
 
         average_rts.append(day_rows[:, 3].mean())
 
-    plt.plot(days, average_rts, label=f"Virus {virus_id}")
+    packs.append(([days, average_rts], {'label': f"Virus {virus_id}"}))
 
 plt.figure(figsize=(10, 6))
+for pack in packs:
+    plt.plot(*(pack[0]), **(pack[1]))
+
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
 plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
@@ -273,14 +277,8 @@ plt.grid(True)
 plt.show()
 ```
 
-    /var/folders/6g/frtsq7pd5r368n_lt_skpk7m0000gn/T/ipykernel_88332/1408085989.py:26: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
-      plt.legend()
-
-<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-2.svg"
-id="rt-visualization-1" />
-
-<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-3.svg"
-id="rt-visualization-2" />
+<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-1.svg"
+id="rt-visualization" />
 
 Let’s do the same for generation time:
 
