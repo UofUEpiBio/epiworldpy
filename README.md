@@ -119,7 +119,7 @@ virus.run(50, 1912)
     |Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x11ba1e5b0>
+    <epiworldpy._core.epimodels.ModelSIR at 0x11bb611f0>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -238,7 +238,7 @@ model.run(100, 132)
     Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10fd94030>
+    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x11ba266f0>
 
 We can get the effective reproductive number, over time, too:
 
@@ -247,7 +247,6 @@ reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
-plt.figure(figsize=(10, 6))
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
@@ -265,6 +264,7 @@ for virus_id in virus_ids:
 
     plt.plot(days, average_rts, label=f"Virus {virus_id}")
 
+plt.figure(figsize=(10, 6))
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
 plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
@@ -273,8 +273,14 @@ plt.grid(True)
 plt.show()
 ```
 
-<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-1.svg"
-id="rt-visualization" />
+    /var/folders/6g/frtsq7pd5r368n_lt_skpk7m0000gn/T/ipykernel_88332/1408085989.py:26: UserWarning: No artists with labels found to put in legend.  Note that artists whose label start with an underscore are ignored when legend() is called with no argument.
+      plt.legend()
+
+<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-2.svg"
+id="rt-visualization-1" />
+
+<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-3.svg"
+id="rt-visualization-2" />
 
 Let’s do the same for generation time:
 
