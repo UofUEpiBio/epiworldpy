@@ -119,7 +119,7 @@ virus.run(50, 1912)
     |Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x10fd5d0b0>
+    <epiworldpy._core.epimodels.ModelSIR at 0x11bb678f0>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -234,11 +234,11 @@ model = epimodels.ModelSEIRCONN(
 model.run(100, 132)
 ```
 
-Computing some key statistics.
+    _________________________________________________________________________
+    Running the model...
+    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-``` python
-# ...
-```
+    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x11bb64bf0>
 
 We can get the effective reproductive number, over time, too:
 
@@ -247,11 +247,11 @@ reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
-virus_ids = np.unique(reproductive_number[:, 0])
-days = np.unique(reproductive_number[:, 1])
+virus_ids = np.unique(reproductive_data[:, 0])
+days = np.unique(reproductive_data[:, 1])
 
 for virus_id in virus_ids:
-    virus_rows = reproductive_number[reproductive_number[:, 0] == virus_id]
+    virus_rows = reproductive_data[reproductive_data[:, 0] == virus_id]
 
     average_rts = []
     for d in days:
@@ -272,6 +272,9 @@ plt.grid(True)
 plt.show()
 ```
 
+<img src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/rt-visualization-output-1.svg"
+id="rt-visualization" />
+
 Let’s do the same for generation time:
 
 ``` python
@@ -281,7 +284,7 @@ generation_time = model.get_db().get_generation_time()
 agents = generation_time['agents']
 viruses = generation_time['viruses']
 times = generation_time['times']
-gentimes = generation_time['gentimes']
+gentimes = generation_time['generation_times']
 
 # Data formatting
 unique_viruses = np.unique(viruses)
@@ -310,6 +313,10 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
+
+<img
+src="https://raw.githubusercontent.com/UofUEpiBio/epiworldpy/refs/heads/main/docs/README_files/figure-commonmark/gentime-visualization-output-1.svg"
+id="gentime-visualization" />
 
 ## Transmission Network
 
