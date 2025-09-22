@@ -23,5 +23,3 @@ compile_commands.json
 *.sqlite
 *.log
 *.zarr/
-*_files
-!README_files
