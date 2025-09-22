@@ -12,9 +12,10 @@ format:
 update:
 	rsync -avz ../epiworld/include/epiworld include/
 
-README.md: docs/README.qmd
+README.md: docs/README.qmd docs/_quarto.yml scripts/ppquarto.pl
 	quarto render docs/README.qmd
 	mv docs/README.md .
+	perl scripts/ppquarto.pl README.md README.md
 
 .PHONY: compile_commands.json
 compile_commands.json:
