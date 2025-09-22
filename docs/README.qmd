@@ -56,7 +56,7 @@ see the API documentation page [on the website][api].
 
 [api]: https://uofuepibio.github.io/epiworldpy
 
-# Existing Alternatives
+## Existing Alternatives
 
 Several alternatives to epiworldPy exist and provide researchers with a
 range of options, each with its own unique features and strengths,
