@@ -6,7 +6,7 @@ build:
 
 .PHONY: format
 format:
-	find src -iname '*.hpp' -o -iname '*.cpp' | xargs clang-format -i
+	find epiworldpy -path epiworldpy/include -prune -o \( -iname '*.hpp' -o -iname '*.cpp' \) -print | xargs clang-format -i
 
 .PHONY: update
 update:
