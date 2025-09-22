@@ -7,10 +7,10 @@ name = "epiworldpy"
 version = "0.6.0-0"
 description = "Python bindings for epiworld"
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 dependencies = [
     "pybind11>=3.0",
-    "numpy>=2.3"
+    "numpy>=2.1.0"
 ]
 
 authors = [
