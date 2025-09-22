@@ -7,6 +7,7 @@ project(
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Find Python for configuring and building
 find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
