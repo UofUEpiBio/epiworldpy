@@ -206,7 +206,6 @@ any other agent:
 ```{python}
 #| label: fully-connected-graph
 #| fig-cap: ""
-#| eval: false
 model = epimodels.ModelSEIRCONN(
   name              = 'hypothetical',
   prevalence        = 0.01,
@@ -221,27 +220,20 @@ model = epimodels.ModelSEIRCONN(
 model.run(100, 132)
 ```
 
-Computing some key statistics.
-
-```{python}
-# ...
-```
-
 We can get the effective reproductive number, over time, too:
 
 ```{python}
 #| label: rt-visualization
-#| eval: false
 #| fig-cap: ""
 reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
-virus_ids = np.unique(reproductive_number[:, 0])
-days = np.unique(reproductive_number[:, 1])
+virus_ids = np.unique(reproductive_data[:, 0])
+days = np.unique(reproductive_data[:, 1])
 
 for virus_id in virus_ids:
-    virus_rows = reproductive_number[reproductive_number[:, 0] == virus_id]
+    virus_rows = reproductive_data[reproductive_data[:, 0] == virus_id]
 
     average_rts = []
     for d in days:
@@ -266,7 +258,6 @@ Let's do the same for generation time:
 
 ```{python}
 #| label: gentime-visualization
-#| eval: false
 #| fig-cap: ""
 from collections import defaultdict
 
@@ -274,7 +265,7 @@ generation_time = model.get_db().get_generation_time()
 agents = generation_time['agents']
 viruses = generation_time['viruses']
 times = generation_time['times']
-gentimes = generation_time['gentimes']
+gentimes = generation_time['generation_times']
 
 # Data formatting
 unique_viruses = np.unique(viruses)
