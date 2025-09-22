@@ -18,7 +18,7 @@ agent-based models. Some of the main features include:
 - Transmission can be a function of agents’ features.
 - Out-of-the-box parallelization for multiple simulations.
 
-*See the [intro][docs/intro.md] for cool graphs!*
+*See the [intro](docs/intro.md) for demos!*
 
 [epiworld]: https://github.com/UofUEpiBio/epiworld
 
@@ -47,7 +47,7 @@ pip install .
 
 ## Quickstart
 
-For a quickstart, please see the [intro][docs/intro.md].
+For a quickstart, please see the [intro](docs/intro.md).
 
 ## Documentation
 
