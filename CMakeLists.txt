@@ -1,30 +1,27 @@
-cmake_minimum_required(VERSION 3.15...3.26)
+cmake_minimum_required(VERSION 3.15)
 
 project(
   ${SKBUILD_PROJECT_NAME}
   VERSION ${SKBUILD_PROJECT_VERSION}
   LANGUAGES CXX)
 
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
-find_package(pybind11 CONFIG REQUIRED)
-
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# Include the include/epiworld library
-include_directories(include/epiworld)
+# Find Python for configuring and building
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 
-python_add_library(_core MODULE
-    src/database.cpp
-    src/diagram.cpp
-    src/entity.cpp
-    src/main.cpp
-    src/model.cpp
-    src/saver.cpp
-    src/tool.cpp
-    src/virus.cpp
-    WITH_SOABI)
-target_link_libraries(_core PRIVATE pybind11::headers)
-target_compile_definitions(_core PRIVATE VERSION_INFO=${PROJECT_VERSION})
+# Add venv pybind11 for development
+execute_process(
+  COMMAND ${Python_EXECUTABLE} -c
+    "import sysconfig; print(sysconfig.get_path('platlib'))"
+  OUTPUT_VARIABLE PYTHON_SITE_PACKAGES
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+message(STATUS "Python site-packages: ${PYTHON_SITE_PACKAGES}")
+list(APPEND CMAKE_PREFIX_PATH "${PYTHON_SITE_PACKAGES}/pybind11/share/cmake/pybind11")
 
-install(TARGETS _core DESTINATION epiworldpy)
+# Use pybind11 from venv or system
+find_package(pybind11 CONFIG REQUIRED)
+
+add_subdirectory("epiworldpy")
