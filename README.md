@@ -17,7 +17,7 @@ models. Some of the main features include:
 - Transmission can be a function of agents’ features.
 - Out-of-the-box parallelization for multiple simulations.
 
-*See the \[intro\]\[docs/intro.md\] for cool graphs!*
+*See the [intro](docs/intro.md) for demos!*
 
 ## Installation
 
@@ -42,7 +42,7 @@ pip install .
 
 ## Quickstart
 
-For a quickstart, please see the \[intro\]\[docs/intro.md\].
+For a quickstart, please see the [intro](docs/intro.md).
 
 ## Documentation
 
@@ -50,7 +50,7 @@ This is a short introduction to epiworldPy; for complete documentation,
 see the API documentation page [on the
 website](https://uofuepibio.github.io/epiworldpy).
 
-# Existing Alternatives
+## Existing Alternatives
 
 Several alternatives to epiworldPy exist and provide researchers with a
 range of options, each with its own unique features and strengths,
