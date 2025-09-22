@@ -306,7 +306,7 @@ void epiworldpy::export_database(
 			 "Get today's transition matrix.")
 		.def("get_today_virus", &get_today_virus, "Get today's virus data.")
 		//.def("get_today_total",
-		//pybind11::detail::overload_cast_impl<epiworld_fast_uint>()(&epiworld::DataBase<int>::get_today_total),
+		// pybind11::detail::overload_cast_impl<epiworld_fast_uint>()(&epiworld::DataBase<int>::get_today_total),
 		//"Get today's total data.")
 		.def("get_today_total", &get_today_total, "Get today's total data.")
 		.def("size", &epiworld::DataBase<int>::size,
