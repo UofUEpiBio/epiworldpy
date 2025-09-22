@@ -3,12 +3,6 @@
 
 - [Installation](#installation)
 - [Examples](#examples)
-  - [SIR model using a random graph](#sir-model-using-a-random-graph)
-  - [SEIR model with a fully connected
-    graph](#seir-model-with-a-fully-connected-graph)
-  - [Transmission Network](#transmission-network)
-  - [Multiple Simulations](#multiple-simulations)
-  - [Saving Database Results](#saving-database-results)
 - [API](#api)
 - [Existing Alternatives](#existing-alternatives)
 - [Code of Conduct](#code-of-conduct)
@@ -40,27 +34,6 @@ From the package’s description:
 > agents’ features, providing great complexity for the model dynamics.
 > Furthermore, epiworldR is ideal for simulation studies featuring large
 > populations.
-
-Current available models:
-
-1.  `ModelDiffNet`
-2.  `ModelSEIR`
-3.  `ModelSEIRCONN`
-4.  `ModelSEIRD`
-5.  `ModelSEIRDCONN`
-6.  `ModelSEIRMixing`
-7.  `ModelSIR`
-8.  `ModelSIRCONN`
-9.  `ModelSIRD`
-10. `ModelSIRDCONN`
-11. `ModelSIRLogit`
-12. `ModelSIRMixing`
-13. `ModelSIS`
-14. `ModelSISD`
-15. `ModelSURV`
-
-Bindings exist for other languages, [namely
-R](https://uofuepibio.github.io/epiworldR).
 
 # Installation
 
@@ -119,7 +92,7 @@ virus.run(50, 1912)
     |Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x1061e1d70>
+    <epiworldpy._core.epimodels.ModelSIR at 0x10e248b70>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -238,7 +211,7 @@ model.run(100, 132)
     Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10e237e30>
+    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10e2434f0>
 
 We can get the effective reproductive number, over time, too:
 
