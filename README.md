@@ -119,7 +119,7 @@ virus.run(50, 1912)
     |Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x11bb678f0>
+    <epiworldpy._core.epimodels.ModelSIR at 0x11ba1e5b0>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -238,7 +238,7 @@ model.run(100, 132)
     Running the model...
     |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
-    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x11bb64bf0>
+    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10fd94030>
 
 We can get the effective reproductive number, over time, too:
 
@@ -247,6 +247,7 @@ reproductive_data = model.get_db().get_reproductive_number()
 reproductive_data = reproductive_data[reproductive_data[:, 0] == 0]
 
 # Start the plotting!
+plt.figure(figsize=(10, 6))
 virus_ids = np.unique(reproductive_data[:, 0])
 days = np.unique(reproductive_data[:, 1])
 
@@ -389,6 +390,7 @@ def update(frame):
     ax.set_title(f"COVID-19 SEIR Model Agent Contact (Day {frame})")
 
 ani = FuncAnimation(fig, update, frames=int(days/3), interval=200, repeat=False)
+plt.figure(figsize=(10, 6))
 plt.show()
 ```
 
