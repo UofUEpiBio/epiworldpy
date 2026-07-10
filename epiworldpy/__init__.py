@@ -2,10 +2,29 @@
 # |       Base C++ Extension Publication     |
 # |##########################################|
 
-from ._core import Virus  # type: ignore[import]
+from ._core import (  # type: ignore[import]
+    Agent,
+    DataBase,
+    Entity,
+    Model,
+    ModelDiagram,
+    Tool,
+    UpdateFun,
+    Virus,
+)
 from . import epimodels
 
-__all__ = ["Virus", "epimodels"]
+__all__ = [
+    "Agent",
+    "DataBase",
+    "Entity",
+    "Model",
+    "ModelDiagram",
+    "Tool",
+    "UpdateFun",
+    "Virus",
+    "epimodels",
+]
 
 # |##########################################|
 # |     Platform-independent saver module    |

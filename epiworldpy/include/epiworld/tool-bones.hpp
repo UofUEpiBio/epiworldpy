@@ -1,4 +1,3 @@
-
 #ifndef EPIWORLD_TOOL_BONES_HPP
 #define EPIWORLD_TOOL_BONES_HPP
 
@@ -15,23 +14,6 @@ template<typename TSeq>
 class Tool;
 
 /**
- * @brief Helper class to store the functions avoiding
- * multiple shared_pointers (we have only one for the four of these)
- */
-template<typename TSeq>
-class ToolFunctions {
-public:
-    ToolFun<TSeq> susceptibility_reduction = nullptr;
-    ToolFun<TSeq> transmission_reduction   = nullptr;
-    ToolFun<TSeq> recovery_enhancer        = nullptr;
-    ToolFun<TSeq> death_reduction          = nullptr;
-
-    ToolToAgentFun<TSeq> dist = nullptr;
-
-    ToolFunctions() = default;
-};
-
-/**
  * @brief Tools for defending the agent against the virus
  * 
  * @tparam TSeq Type of sequence
@@ -40,9 +22,7 @@ template<typename TSeq>
 class Tool {
     friend class Agent<TSeq>;
     friend class Model<TSeq>;
-    friend void default_add_tool<TSeq>(Event<TSeq> & a, Model<TSeq> * m);
-    friend void default_rm_tool<TSeq>(Event<TSeq> & a, Model<TSeq> * m);
-private:
+protected:
 
     Agent<TSeq> * agent = nullptr;
     int pos_in_agent        = -99; ///< Location in the agent
@@ -54,8 +34,12 @@ private:
     EPI_TYPENAME_TRAITS(TSeq, int) sequence = 
         EPI_TYPENAME_TRAITS(TSeq, int)(); ///< Sequence of the tool
 
-    std::shared_ptr<ToolFunctions<TSeq>> tool_functions = 
-        std::make_shared< ToolFunctions<TSeq> >();
+    ToolFun<TSeq> susceptibility_reduction = nullptr;
+    ToolFun<TSeq> transmission_reduction   = nullptr;
+    ToolFun<TSeq> recovery_enhancer        = nullptr;
+    ToolFun<TSeq> death_reduction          = nullptr;
+
+    ToolToAgentFun<TSeq> dist = nullptr;
 
     epiworld_fast_int state_init = -99;
     epiworld_fast_int state_post = -99;
@@ -74,6 +58,8 @@ public:
         bool as_proportion
     );
 
+    virtual ~Tool() = default;
+
     void set_sequence(TSeq d);
     void set_sequence(std::shared_ptr<TSeq> d);
     EPI_TYPENAME_TRAITS(TSeq, int) get_sequence();
@@ -87,29 +73,35 @@ public:
      * @return epiworld_double 
      */
     ///@{
-    epiworld_double get_susceptibility_reduction(VirusPtr<TSeq> v, Model<TSeq> * model);
-    epiworld_double get_transmission_reduction(VirusPtr<TSeq> v, Model<TSeq> * model);
-    epiworld_double get_recovery_enhancer(VirusPtr<TSeq> v, Model<TSeq> * model);
-    epiworld_double get_death_reduction(VirusPtr<TSeq> v, Model<TSeq> * model);
+    virtual epiworld_double get_susceptibility_reduction(VirusPtr<TSeq> & v, Model<TSeq> * model);
+    virtual epiworld_double get_transmission_reduction(VirusPtr<TSeq> & v, Model<TSeq> * model);
+    virtual epiworld_double get_recovery_enhancer(VirusPtr<TSeq> & v, Model<TSeq> * model);
+    virtual epiworld_double get_death_reduction(VirusPtr<TSeq> & v, Model<TSeq> * model);
     
-    void set_susceptibility_reduction_fun(ToolFun<TSeq> fun);
-    void set_transmission_reduction_fun(ToolFun<TSeq> fun);
-    void set_recovery_enhancer_fun(ToolFun<TSeq> fun);
-    void set_death_reduction_fun(ToolFun<TSeq> fun);
+    virtual void set_susceptibility_reduction_fun(ToolFun<TSeq> fun);
+    virtual void set_transmission_reduction_fun(ToolFun<TSeq> fun);
+    virtual void set_recovery_enhancer_fun(ToolFun<TSeq> fun);
+    virtual void set_death_reduction_fun(ToolFun<TSeq> fun);
 
-    void set_susceptibility_reduction(epiworld_double * prob);
-    void set_transmission_reduction(epiworld_double * prob);
-    void set_recovery_enhancer(epiworld_double * prob);
-    void set_death_reduction(epiworld_double * prob);
+    virtual void set_susceptibility_reduction(std::string param);
+    virtual void set_transmission_reduction(std::string param);
+    virtual void set_recovery_enhancer(std::string param);
+    virtual void set_death_reduction(std::string param);
 
-    void set_susceptibility_reduction(epiworld_double prob);
-    void set_transmission_reduction(epiworld_double prob);
-    void set_recovery_enhancer(epiworld_double prob);
-    void set_death_reduction(epiworld_double prob);
+    // Deleting pointer versions to avoid mistakes
+    virtual void set_susceptibility_reduction(epiworld_double * prob) = delete;
+    virtual void set_transmission_reduction(epiworld_double * prob) = delete;
+    virtual void set_recovery_enhancer(epiworld_double * prob) = delete;
+    virtual void set_death_reduction(epiworld_double * prob) = delete;
+
+    virtual void set_susceptibility_reduction(epiworld_double prob);
+    virtual void set_transmission_reduction(epiworld_double prob);
+    virtual void set_recovery_enhancer(epiworld_double prob);
+    virtual void set_death_reduction(epiworld_double prob);
     ///@}
 
     void set_name(std::string name);
-    std::string get_name() const;
+    virtual std::string get_name() const;
 
     Agent<TSeq> * get_agent();
     int get_id() const;
@@ -129,6 +121,8 @@ public:
 
     void distribute(Model<TSeq> * model);
     void set_distribution(ToolToAgentFun<TSeq> fun);
+
+    virtual std::unique_ptr<Tool<TSeq>> clone_ptr() const; 
 
 };
 

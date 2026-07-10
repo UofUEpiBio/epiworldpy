@@ -1,62 +1,26 @@
 #ifndef EPIWORLD_MODEL_BONES_HPP
 #define EPIWORLD_MODEL_BONES_HPP
 
-template<typename TSeq>
-class Agent;
+#include <memory>
+#include <vector>
+#include <functional>
+#include <string>
+#include <map>
+#include "config.hpp"
+
+#include "agent-bones.hpp"
+#include "virus-bones.hpp"
+#include "viruses-bones.hpp"
+#include "tool-bones.hpp"
+#include "database-bones.hpp"
+#include "queue-bones.hpp"
+#include "globalevent-bones.hpp"
+#include "contacttracing-bones.hpp"
 
 template<typename TSeq>
 class AgentsSample;
 
-template<typename TSeq>
-class Virus;
-
-template<typename TSeq>
-class Viruses;
-
-template<typename TSeq>
-class Viruses_const;
-
-template<typename TSeq>
-class Tool;
-
 class AdjList;
-
-template<typename TSeq>
-class DataBase;
-
-template<typename TSeq>
-class Queue;
-
-template<typename TSeq>
-struct Event;
-
-template<typename TSeq>
-class GlobalEvent;
-
-template<typename TSeq>
-inline epiworld_double susceptibility_reduction_mixer_default(
-    Agent<TSeq>* p,
-    VirusPtr<TSeq> v,
-    Model<TSeq>* m
-    );
-template<typename TSeq>
-inline epiworld_double transmission_reduction_mixer_default(
-    Agent<TSeq>* p,
-    VirusPtr<TSeq> v,
-    Model<TSeq>* m
-    );
-template<typename TSeq>
-inline epiworld_double recovery_enhancer_mixer_default(
-    Agent<TSeq>* p,
-    VirusPtr<TSeq> v,
-    Model<TSeq>* m
-    );
-template<typename TSeq>
-inline epiworld_double death_reduction_mixer_default(
-    Agent<TSeq>* p,
-    VirusPtr<TSeq> v,
-    Model<TSeq>* m
-    );
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 inline std::function<void(size_t,Model<TSeq>*)> make_save_run(
@@ -69,7 +33,10 @@ inline std::function<void(size_t,Model<TSeq>*)> make_save_run(
     bool transmission = false,
     bool transition = false,
     bool reproductive = false,
-    bool generation = false
+    bool generation = false,
+    bool active_cases = false,
+    bool outbreak_size = false,
+    bool hospitalizations = false
     );
 
 // template<typename TSeq>
@@ -93,6 +60,7 @@ class Model {
     friend class AgentsSample<TSeq>;
     friend class DataBase<TSeq>;
     friend class Queue<TSeq>;
+
 protected:
 
     std::string name = ""; ///< Name of the model
@@ -138,12 +106,11 @@ protected:
     std::vector< ToolPtr<TSeq> > tools = {};
 
     std::vector< Entity<TSeq> > entities = {};
-    std::vector< Entity<TSeq> > entities_backup = {};
 
-    std::shared_ptr< std::mt19937 > engine = std::make_shared< std::mt19937 >();
+    std::shared_ptr< epi_xoshiro256ss > engine = std::make_shared< epi_xoshiro256ss >();
 
-    std::uniform_real_distribution<> runifd      =
-        std::uniform_real_distribution<> (0.0, 1.0);
+    epiworld_double runifd_a = 0.0;
+    epiworld_double runifd_b = 1.0;
     std::normal_distribution<>       rnormd      =
         std::normal_distribution<>(0.0);
     std::gamma_distribution<>        rgammad     =
@@ -154,6 +121,9 @@ protected:
         std::exponential_distribution<>();
     std::binomial_distribution<> rbinomd         =
         std::binomial_distribution<>();
+    int rbinomd_n = 1;
+    epiworld_double rbinomd_fast_lambda = 0.0;
+    bool rbinomd_use_poisson = false;
     std::negative_binomial_distribution<> rnbinomd =
         std::negative_binomial_distribution<>();
     std::geometric_distribution<> rgeomd          =
@@ -191,13 +161,20 @@ protected:
     std::chrono::duration<epiworld_double,std::micro> time_elapsed =
         std::chrono::duration<epiworld_double,std::micro>::zero();
     epiworld_fast_uint n_replicates = 0u;
+    int last_seed = 0;
     void chrono_start();
     void chrono_end();
 
-    std::vector<GlobalEvent<TSeq>> globalevents;
+    std::vector<GlobalEventPtr<TSeq>> globalevents;
 
     Queue<TSeq> queue;
     bool use_queuing   = true;
+    size_t sim_id = 0u;
+    void set_sim_id(size_t id);
+
+    std::unique_ptr<ContactTracing> contact_tracing;
+    bool use_contact_tracing = false;
+    size_t contact_tracing_max_contacts = EPI_MAX_TRACKING;
 
     /**
      * @brief Variables used to keep track of the events
@@ -214,22 +191,34 @@ protected:
      * @param tool_ Tool pointer included in the action
      * @param entity_ Entity pointer included in the action
      * @param new_state_ New state of the agent
-     * @param call_ Function the action will call
      * @param queue_ Change in the queue
-     * @param idx_agent_ Location of agent in object.
-     * @param idx_object_ Location of object in agent.
+      * @param action_ Action to execute when processing the event
      */
-    void events_add(
+    void _add_event(
         Agent<TSeq> * agent_,
         VirusPtr<TSeq> virus_,
         ToolPtr<TSeq> tool_,
         Entity<TSeq> * entity_,
         epiworld_fast_int new_state_,
         epiworld_fast_int queue_,
-        EventFun<TSeq> call_,
-        int idx_agent_,
-        int idx_object_
+          EventAction action_
         );
+
+    /**
+     * @name Default event handlers
+     *
+     * These member functions implement the default behavior for each
+     * event action (add/remove virus, tool, entity, or change state).
+     */
+    ///@{
+    void _event_add_virus(Event<TSeq> & a);
+    void _event_add_tool(Event<TSeq> & a);
+    void _event_add_entity(Event<TSeq> & a);
+    void _event_rm_virus(Event<TSeq> & a);
+    void _event_rm_tool(Event<TSeq> & a);
+    void _event_rm_entity(Event<TSeq> & a);
+    void _event_change_state(Event<TSeq> & a);
+    ///@}
 
     /**
      * @name Tool Mixers
@@ -240,27 +229,33 @@ protected:
      * the susceptibility for a given virus.
      *
      */
-    MixerFun<TSeq> susceptibility_reduction_mixer = susceptibility_reduction_mixer_default<TSeq>;
-    MixerFun<TSeq> transmission_reduction_mixer = transmission_reduction_mixer_default<TSeq>;
-    MixerFun<TSeq> recovery_enhancer_mixer = recovery_enhancer_mixer_default<TSeq>;
-    MixerFun<TSeq> death_reduction_mixer = death_reduction_mixer_default<TSeq>;
+    virtual epiworld_double susceptibility_reduction_mixer(
+        Agent<TSeq> * agent, VirusPtr<TSeq> & virus
+    );
+    virtual epiworld_double transmission_reduction_mixer(
+        Agent<TSeq> * agent, VirusPtr<TSeq> & virus
+    );
+    virtual epiworld_double recovery_enhancer_mixer(
+        Agent<TSeq> * agent, VirusPtr<TSeq> & virus
+    );
+    virtual epiworld_double death_reduction_mixer(
+        Agent<TSeq> * agent, VirusPtr<TSeq> & virus
+    );
 
     /**
      * @brief Advanced usage: Makes a copy of data and returns it as undeleted pointer
      *
      * @param copy
      */
-    virtual Model<TSeq> * clone_ptr();
+    virtual std::unique_ptr<Model<TSeq>> clone_ptr();
 
 public:
 
-
-    std::vector<epiworld_double> array_double_tmp;
-    std::vector<Virus<TSeq> * > array_virus_tmp;
+    std::array<epiworld_double, 1024u * 2u> array_double_tmp;
+    std::array<Virus<TSeq> *, 1024u * 2u> array_virus_tmp;
 
     Model();
     Model(const Model<TSeq> & m);
-    Model(Model<TSeq> & m);
     Model(Model<TSeq> && m);
     Model<TSeq> & operator=(const Model<TSeq> & m);
 
@@ -280,7 +275,7 @@ public:
 
     DataBase<TSeq> & get_db();
     const DataBase<TSeq> & get_db() const;
-    epiworld_double & operator()(std::string pname);
+    epiworld_double operator()(std::string pname);
 
     size_t size() const;
 
@@ -291,8 +286,8 @@ public:
      * @param s Seed
      */
     ///@{
-    void set_rand_engine(std::shared_ptr< std::mt19937 > & eng);
-    std::shared_ptr< std::mt19937 > & get_rand_endgine();
+    void set_rand_engine(std::shared_ptr< epi_xoshiro256ss > & eng);
+    std::shared_ptr< epi_xoshiro256ss > & get_rand_endgine();
     void seed(size_t s);
     void set_rand_norm(epiworld_double mean, epiworld_double sd);
     void set_rand_unif(epiworld_double a, epiworld_double b);
@@ -303,8 +298,6 @@ public:
     void set_rand_nbinom(int n, epiworld_double p);
     void set_rand_geom(epiworld_double p);
     void set_rand_poiss(epiworld_double lambda);
-    epiworld_double runif();
-    epiworld_double runif(epiworld_double a, epiworld_double b);
     epiworld_double rnorm();
     epiworld_double rnorm(epiworld_double mean, epiworld_double sd);
     epiworld_double rgamma();
@@ -313,7 +306,47 @@ public:
     epiworld_double rexp(epiworld_double lambda);
     epiworld_double rlognormal();
     epiworld_double rlognormal(epiworld_double mean, epiworld_double shape);
+
+    /**
+     * @brief Draw from the currently configured uniform distribution.
+     * @return A random draw from the configured uniform distribution.
+     * @details
+     * These uniform draws make use of Lemire's algorithm for fast
+     * uniform integer generation, which is both faster and more accurate than
+     * the common `std::uniform_int_distribution` approach.
+     * 
+     * 
+     * Lemire, D. (2019). Fast Random Integer Generation in an Interval.
+     * ACM Trans. Model. Comput. Simul., 29(1), 3:1-3:12.
+     * <https://doi.org/10.1145/3230636>
+     */
+    epiworld_double runif();
+    epiworld_double runif(epiworld_double a, epiworld_double b);
+    int runif_int(int a, int b);
+    uint32_t runif_index(uint32_t n);
+    /**
+     * @brief Draw from the currently configured binomial distribution.
+     * @details When `EPI_FAST_BINOM` is enabled (default), this uses
+     * `rpoiss(lambda)` with `lambda = n * p` after `set_rand_binom(n, p)` in the
+     * rare-event regime `p <= 0.01` and `n * p * p <= 0.1`. Define
+     * `EPI_NO_FAST_BINOM` before including epiworld to disable this behavior.
+     * @return A random draw from the configured binomial distribution, or from
+     * its Poisson approximation when the fast path is active.
+     */
     int rbinom();
+    /**
+     * @brief Draw from a binomial distribution with parameters `n` and `p`.
+     * @details When `EPI_FAST_BINOM` is enabled (default), this uses
+     * `rpoiss(lambda)` with `lambda = n * p` in the rare-event regime
+     * `p <= 0.01` and `n * p * p <= 0.1`. This preserves the mean and is often
+     * substantially faster in practice while remaining very accurate in that
+     * region. Define `EPI_NO_FAST_BINOM` before including epiworld to disable
+     * this behavior and force the exact binomial draw.
+     * @param n Number of trials.
+     * @param p Success probability.
+     * @return A random draw from the binomial distribution, or from its
+     * Poisson approximation when the fast path is active.
+     */
     int rbinom(int n, epiworld_double p);
     int rnbinom();
     int rnbinom(int n, epiworld_double p);
@@ -322,6 +355,17 @@ public:
     int rpoiss();
     int rpoiss(epiworld_double lambda);
     ///@}
+
+    /**
+     * @brief Sample from a set of probabilities stored in array_double_tmp.
+     * @details Uses a cumulative probability approach: draws a uniform random
+     * number and walks through array_double_tmp[0..n-1], accumulating
+     * probabilities until the draw is exceeded. If no event fires, returns n
+     * (meaning "none of the above").
+     * @param n Number of probability entries in array_double_tmp to consider.
+     * @return Index in [0, n] of the sampled event (n = no event).
+     */
+    size_t sample_from_probs(size_t n);
 
     /**
      * @name Add Virus/Tool to the model
@@ -410,6 +454,7 @@ public:
     std::vector< Entity<TSeq> > & get_entities();
 
     Entity<TSeq> & get_entity(size_t entity_id, int * entity_pos = nullptr);
+    const Entity<TSeq> & get_entity(size_t entity_id, int * entity_pos = nullptr) const;
 
     Model<TSeq> & agents_smallworld(
         epiworld_fast_uint n = 1000,
@@ -418,7 +463,40 @@ public:
         epiworld_double p = .01
         );
     void agents_empty_graph(epiworld_fast_uint n = 1000);
+
+    /**
+     * @brief Initialize agents using a Stochastic Block Model (SBM).
+     *
+     * Creates agents and connects them according to an SBM defined by
+     * `block_sizes` and `mixing_matrix`.
+     *
+     * @param block_sizes Number of agents per block.
+     * @param mixing_matrix Mixing matrix of size K*K; row sums give average
+     *   expected degree per group.
+     * @param row_major If `true`, matrix is row-major; otherwise column-major.
+     * @return Reference to this Model.
+     *
+     * @see rgraph_sbm
+     */
+    Model<TSeq> & agents_sbm(
+        const std::vector< size_t > & block_sizes,
+        const std::vector< double > & mixing_matrix,
+        bool row_major = true
+        );
     ///@}
+
+    /**
+     * @name Initialize agents using a Bernoulli random graph
+     * @param n Number of agents.
+     * @param p Probability of tie formation.
+     * @param d Whether the graph is directed or not.
+     * @return Reference to this Model.
+     */
+    Model<TSeq> & agents_bernoulli(
+        epiworld_fast_uint n,
+        epiworld_double p,
+        bool d = false
+    );
 
     /**
      * @name Functions to run the model
@@ -432,12 +510,12 @@ public:
     ///@{
     void update_state();
     void mutate_virus();
-    void next();
+    virtual void next();
     virtual Model<TSeq> & run(
         epiworld_fast_uint ndays,
         int seed = -1
     ); ///< Runs the simulation (after initialization)
-    void run_multiple( ///< Multiple runs of the simulation
+    Model<TSeq> & run_multiple( ///< Multiple runs of the simulation
         epiworld_fast_uint ndays,
         epiworld_fast_uint nexperiments,
         int seed_ = -1,
@@ -452,6 +530,7 @@ public:
     size_t get_n_tools() const; ///< Number of tools in the model
     epiworld_fast_uint get_ndays() const;
     epiworld_fast_uint get_n_replicates() const;
+    size_t get_sim_id() const;
     size_t get_n_entities() const;
     void set_ndays(epiworld_fast_uint ndays);
     bool get_verbose() const;
@@ -488,6 +567,10 @@ public:
      * @param fn_transmission Filename. Transmission history.
      * @param fn_transition   Filename. Markov transition history.
      * @param fn_reproductive_number Filename. Case by case reproductive number
+     * @param fn_generation_time Filename. Generation time data.
+     * @param fn_active_cases Filename. Active cases data.
+     * @param fn_outbreak_size Filename. Outbreak size data.
+     * @param fn_hospitalizations Filename. Hospitalization data.
      */
     void write_data(
         std::string fn_virus_info,
@@ -498,7 +581,10 @@ public:
         std::string fn_transmission,
         std::string fn_transition,
         std::string fn_reproductive_number,
-        std::string fn_generation_time
+        std::string fn_generation_time,
+        std::string fn_active_cases,
+        std::string fn_outbreak_size,
+        std::string fn_hospitalizations
         ) const;
 
     /**
@@ -544,16 +630,21 @@ public:
      * @details
      *
      * The functions `get_state` return the current values for the
-     * states included in the model.
+     * states included in the model. The function `set_state_function`
+     * replaces the update function associated with an existing state.
      *
      * @param lab `std::string` Name of the state.
      *
-     * @return `add_state*` returns nothing.
+     * @return `add_state*` returns the ID (index) of the registered state.
+     * @return `set_state_function` returns a reference to the model.
      * @return `get_state_*` returns a vector of pairs with the
      * states and their labels.
      */
     ///@{
-    void add_state(std::string lab, UpdateFun<TSeq> fun = nullptr);
+    epiworld_fast_int state_of(std::string_view name);
+    epiworld_fast_int add_state(std::string lab, UpdateFun<TSeq> fun = nullptr);
+    Model<TSeq> & set_state_function(epiworld_fast_uint state, UpdateFun<TSeq> fun = nullptr);
+    Model<TSeq> & set_state_function(std::string_view name, UpdateFun<TSeq> fun = nullptr);
     const std::vector< std::string > & get_states() const;
     size_t get_n_states() const;
     const std::vector< UpdateFun<TSeq> > & get_state_fun() const;
@@ -612,11 +703,8 @@ public:
         epiworld_double initial_val, std::string pname, bool overwrite = false
     );
     Model<TSeq> & read_params(std::string fn, bool overwrite = false);
-    epiworld_double get_param(epiworld_fast_uint k);
     epiworld_double get_param(std::string pname);
-    // void set_param(size_t k, epiworld_double val);
     void set_param(std::string pname, epiworld_double val);
-    // epiworld_double par(epiworld_fast_uint k);
     epiworld_double par(std::string pname) const;
     ///@}
 
@@ -658,7 +746,7 @@ public:
         );
 
     void add_globalevent(
-        GlobalEvent<TSeq> action
+        GlobalEvent<TSeq> & action
     );
 
     GlobalEvent<TSeq> & get_globalevent(std::string name); ///< Retrieve a global action by name
@@ -686,22 +774,31 @@ public:
     ///@}
 
     /**
-     * @name Get the susceptibility reduction object
+     * @name Contact tracing
+     * @details When contact tracing is on, the model will track contacts
+     * between agents. Users must actively record contacts in their update
+     * functions by calling `get_contact_tracing().add_contact(...)`.
+     * Contact tracing is off by default.
      *
-     * @param v
-     * @return epiworld_double
+     * @param max_contacts Maximum number of contacts to track per agent
+     * (default: EPI_MAX_TRACKING). Only used when turning tracing on.
      */
     ///@{
-    void set_susceptibility_reduction_mixer(MixerFun<TSeq> fun);
-    void set_transmission_reduction_mixer(MixerFun<TSeq> fun);
-    void set_recovery_enhancer_mixer(MixerFun<TSeq> fun);
-    void set_death_reduction_mixer(MixerFun<TSeq> fun);
+    Model<TSeq> & contact_tracing_on(size_t max_contacts = EPI_MAX_TRACKING); ///< Activates contact tracing.
+    Model<TSeq> & contact_tracing_off(); ///< Deactivates contact tracing.
+    bool is_contact_tracing_on() const; ///< Query if contact tracing is on.
+    ContactTracing & get_contact_tracing(); ///< Retrieve the `ContactTracing` object.
     ///@}
 
     const std::vector< VirusPtr<TSeq> > & get_viruses() const;
     const std::vector< ToolPtr<TSeq> > & get_tools() const;
     Virus<TSeq> & get_virus(size_t id);
+    Virus<TSeq> & get_virus(std::string_view name);
     Tool<TSeq> & get_tool(size_t id);
+    Tool<TSeq> & get_tool(std::string_view name);
+
+    bool has_virus(std::string_view name) const;
+    bool has_tool(std::string_view name) const;
 
     /**
      * @brief Set the agents data object
@@ -748,6 +845,56 @@ public:
         const std::string & fn_output = "",
         bool self = false
     );
+
+    /**
+     * @brief Record a hospitalization event for an agent.
+     * 
+     * @param agent Reference to the agent being hospitalized.
+     * 
+     * @details
+     * This is a wrapper for `DataBase::record_hospitalization()`.
+     * For each hospitalization, the method records:
+     * - The current date from the model
+     * - The virus ID from the agent's virus
+     * - For each tool the agent has, a separate record with weight = 1/N
+     *   where N is the number of tools
+     * - If the agent has no tools, a single record with tool_id = -1 and
+     *   weight = 1.0
+     */
+    void record_hospitalization(Agent<TSeq> & agent);
+
+    /**
+     * @brief Get the full time series of hospitalization data.
+     * 
+     * @param date Output vector for dates.
+     * @param virus_id Output vector for virus IDs.
+     * @param tool_id Output vector for tool IDs.
+     * @param count Output vector for counts (number of hospitalized individuals).
+     * @param weight Output vector for summed weights (fractional contribution
+     *   based on tool distribution).
+     * 
+     * @details
+     * This is a wrapper for `DataBase::get_hospitalizations()`.
+     * Returns the full time series of hospitalization data. For each unique 
+     * (virus_id, tool_id) combination observed, returns an entry for every 
+     * day from 0 to ndays-1.
+     * 
+     * The `count` vector contains the actual number of individuals hospitalized 
+     * for that (date, virus_id, tool_id) combination. This is useful for 
+     * answering questions like "how many total people were hospitalized?" 
+     * regardless of their tools.
+     * 
+     * The `weight` vector contains fractional contributions: if an agent has N 
+     * tools, each tool gets weight = 1/N. Summing weights across all tool_ids 
+     * for a given date and virus_id gives the total number of hospitalizations.
+     */
+    void get_hospitalizations(
+        std::vector<int> & date,
+        std::vector<int> & virus_id,
+        std::vector<int> & tool_id,
+        std::vector<int> & count,
+        std::vector<double> & weight
+    ) const;
 
 
 };

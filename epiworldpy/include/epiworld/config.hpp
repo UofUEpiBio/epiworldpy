@@ -35,10 +35,17 @@
     #define epiworld_fast_uint unsigned long long int
 #endif
 
+// By default, `Model::rbinom` will use a Poisson approximation in the
+// rare-event regime where p <= 0.01 and n * p^2 <= 0.1. Advanced users can
+// disable this by defining EPI_NO_FAST_BINOM before including epiworld.
+#if !defined(EPI_NO_FAST_BINOM) && !defined(EPI_FAST_BINOM)
+    #define EPI_FAST_BINOM
+#endif
+
 #define EPI_DEFAULT_TSEQ int
 
 #ifndef EPI_MAX_TRACKING
-    #define EPI_MAX_TRACKING 100
+    #define EPI_MAX_TRACKING 200
 #endif
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
@@ -63,13 +70,10 @@ template<typename TSeq = EPI_DEFAULT_TSEQ>
 class Tool;
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
-class Tools;
-
-template<typename TSeq = EPI_DEFAULT_TSEQ>
-class Tools_const;
-
-template<typename TSeq = EPI_DEFAULT_TSEQ>
 class Entity;
+
+template<typename TSeq = EPI_DEFAULT_TSEQ>
+class GlobalEvent;
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 using VirusPtr = std::shared_ptr< Virus< TSeq > >;
@@ -78,10 +82,16 @@ template<typename TSeq = EPI_DEFAULT_TSEQ>
 using ToolPtr = std::shared_ptr< Tool< TSeq > >;
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
-using ToolFun = std::function<epiworld_double(Tool<TSeq>&,Agent<TSeq>*,VirusPtr<TSeq>,Model<TSeq>*)>;
+using EntityPtr = std::shared_ptr< Entity< TSeq > >;
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
-using MixerFun = std::function<epiworld_double(Agent<TSeq>*,VirusPtr<TSeq>,Model<TSeq>*)>;
+using GlobalEventPtr = std::shared_ptr< GlobalEvent< TSeq > >;
+
+template<typename TSeq = EPI_DEFAULT_TSEQ>
+using ToolFun = std::function<epiworld_double(Tool<TSeq>&,Agent<TSeq>*,VirusPtr<TSeq>&,Model<TSeq>*)>;
+
+template<typename TSeq = EPI_DEFAULT_TSEQ>
+using MixerFun = std::function<epiworld_double(Agent<TSeq>*,VirusPtr<TSeq>&,Model<TSeq>*)>;
 
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 using MutFun = std::function<bool(Agent<TSeq>*,Virus<TSeq>&,Model<TSeq>*)>;
@@ -104,6 +114,16 @@ struct Event;
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 using EventFun = std::function<void(Event<TSeq>&,Model<TSeq>*)>;
 
+enum class EventAction : uint8_t {
+    AddVirus,
+    AddTool,
+    AddEntity,
+    RemoveVirus,
+    RemoveTool,
+    RemoveEntity,
+    ChangeState
+};
+
 /**
  * @brief Decides how to distribute viruses at initialization
  */
@@ -124,8 +144,8 @@ using EntityToAgentFun = std::function<void(Entity<TSeq>&,Model<TSeq>*)>;
 
 /**
  * @brief Event data for update an agent
- * 
- * @tparam TSeq 
+ *
+ * @tparam TSeq
  */
 template<typename TSeq = EPI_DEFAULT_TSEQ>
 struct Event {
@@ -135,15 +155,13 @@ struct Event {
     Entity<TSeq> * entity;
     epiworld_fast_int new_state;
     epiworld_fast_int queue;
-    EventFun<TSeq> call;
-    int idx_agent;
-    int idx_object;
+    EventAction action;
 public:
 /**
      * @brief Construct a new Event object
-     * 
+     *
      * All the parameters are rather optional.
-     * 
+     *
      * @param agent_ Agent over who the action will happen
      * @param virus_ Virus to add
      * @param tool_ Tool to add
@@ -151,9 +169,7 @@ public:
      * @param tool_idx Index of tool to be removed (if needed)
      * @param new_state_ Next state
      * @param queue_ Efect on the queue
-     * @param call_ The action call (if needed)
-     * @param idx_agent_ Location of agent in object.
-     * @param idx_object_ Location of object in agent.
+     * @param action_ The action to execute
      */
     Event(
         Agent<TSeq> * agent_,
@@ -162,19 +178,17 @@ public:
         Entity<TSeq> * entity_,
         epiworld_fast_int new_state_,
         epiworld_fast_int queue_,
-        EventFun<TSeq> & call_,
-        int idx_agent_,
-        int idx_object_
+        EventAction action_
     ) : agent(agent_), virus(virus_), tool(tool_), entity(entity_),
         new_state(new_state_),
-        queue(queue_), call(call_), idx_agent(idx_agent_), idx_object(idx_object_) {
+        queue(queue_), action(action_) {
             return;
         };
 };
 
 /**
- * @name Constants in epiworld 
- * 
+ * @name Constants in epiworld
+ *
  * @details The following are the default values some probabilities and
  * rates take when no value has been specified in the model.
  */

@@ -146,6 +146,46 @@ static auto get_today_total(DataBase<int> &self) -> py::dict {
 					 make_dict_entry("counts", *counts));
 }
 
+static auto get_active_cases(DataBase<int> &self) -> py::dict {
+	auto dates = new std::vector<int>();
+	auto virus_id = new std::vector<int>();
+	auto counts = new std::vector<int>();
+
+	self.get_active_cases(*dates, *virus_id, *counts);
+
+	return make_dict(make_dict_entry("dates", *dates),
+					 make_dict_entry("virus_id", *virus_id),
+					 make_dict_entry("counts", *counts));
+}
+
+static auto get_outbreak_size(DataBase<int> &self) -> py::dict {
+	auto dates = new std::vector<int>();
+	auto virus_id = new std::vector<int>();
+	auto size = new std::vector<int>();
+
+	self.get_outbreak_size(*dates, *virus_id, *size);
+
+	return make_dict(make_dict_entry("dates", *dates),
+					 make_dict_entry("virus_id", *virus_id),
+					 make_dict_entry("size", *size));
+}
+
+static auto get_hospitalizations(DataBase<int> &self) -> py::dict {
+	auto dates = new std::vector<int>();
+	auto virus_id = new std::vector<int>();
+	auto tool_id = new std::vector<int>();
+	auto count = new std::vector<int>();
+	auto weight = new std::vector<double>();
+
+	self.get_hospitalizations(*dates, *virus_id, *tool_id, *count, *weight);
+
+	return make_dict(make_dict_entry("dates", *dates),
+					 make_dict_entry("virus_id", *virus_id),
+					 make_dict_entry("tool_id", *tool_id),
+					 make_dict_entry("count", *count),
+					 make_dict_entry("weight", *weight));
+}
+
 void epiworldpy::export_database(
 	py::class_<DataBase<int>, std::shared_ptr<DataBase<int>>> &c) {
 	c.def("add_user_data",
@@ -163,7 +203,29 @@ void epiworldpy::export_database(
 			 "Get the number of viruses.")
 		.def("record_transmission", &DataBase<int>::record_transmission,
 			 "Record a transmission event.")
-		.def("write_data", &DataBase<int>::write_data, "Write some data.")
+		.def(
+			"write_data",
+			[](const DataBase<int> &db, std::string fn_virus_info,
+			   std::string fn_virus_hist, std::string fn_tool_info,
+			   std::string fn_tool_hist, std::string fn_total_hist,
+			   std::string fn_transmission, std::string fn_transition,
+			   std::string fn_reproductive_number,
+			   std::string fn_generation_time, std::string fn_active_cases,
+			   std::string fn_outbreak_size, std::string fn_hospitalizations) {
+				db.write_data(fn_virus_info, fn_virus_hist, fn_tool_info,
+							  fn_tool_hist, fn_total_hist, fn_transmission,
+							  fn_transition, fn_reproductive_number,
+							  fn_generation_time, fn_active_cases,
+							  fn_outbreak_size, fn_hospitalizations);
+			},
+			"Write data to files.", py::arg("fn_virus_info"),
+			py::arg("fn_virus_hist"), py::arg("fn_tool_info"),
+			py::arg("fn_tool_hist"), py::arg("fn_total_hist"),
+			py::arg("fn_transmission"), py::arg("fn_transition"),
+			py::arg("fn_reproductive_number"), py::arg("fn_generation_time"),
+			py::arg("fn_active_cases") = std::string(""),
+			py::arg("fn_outbreak_size") = std::string(""),
+			py::arg("fn_hospitalizations") = std::string(""))
 		.def("get_hist_virus", &get_hist_virus, "Get historical virus data.")
 		.def("get_hist_tool", &get_hist_tool, "Get historical tool data.")
 		.def("get_today_transition_matrix", &get_today_transition_matrix,
@@ -186,8 +248,17 @@ void epiworldpy::export_database(
 		.def("get_generation_time", &get_generation_time,
 			 "Get generation times over time for every virus in the model.")
 		.def("get_hist_transition_matrix", &get_hist_transition_matrix,
-			 "Get historical transitions in a tabular format.")
+			 "Get historical transitions in a tabular format.",
+			 py::arg("skip_zeros") = false)
+		.def("get_active_cases", &get_active_cases,
+			 "Get active (currently infected) cases over time per virus.")
+		.def("get_outbreak_size", &get_outbreak_size,
+			 "Get the total outbreak size per virus over time.")
+		.def("get_hospitalizations", &get_hospitalizations,
+			 "Get hospitalization data over time (requires a model that tracks "
+			 "hospitalizations, e.g. SEIRNetworkQuarantine).")
 		.def("get_transition_probability",
 			 &DataBase<int>::get_transition_probability,
-			 "Get the transition probably.");
+			 "Get the transition probability matrix as a flat vector.",
+			 py::arg("print") = false, py::arg("normalize") = true);
 }

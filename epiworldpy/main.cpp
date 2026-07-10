@@ -5,6 +5,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h> // silently fails when removed.
 
+#include "agent.hpp"
 #include "database.hpp"
 #include "diagram.hpp"
 #include "entity.hpp"
@@ -20,6 +21,8 @@ using namespace epiworld;
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 PYBIND11_MODULE(_core, m) {
+	auto agent = py::class_<Agent<int>>(
+		m, "Agent", "An individual agent in the simulation.");
 	auto update_fun =
 		py::class_<UpdateFun<int>>(m, "UpdateFun", "Model update functions.");
 	auto model = py::class_<Model<int>>(
@@ -30,11 +33,12 @@ PYBIND11_MODULE(_core, m) {
 	auto diagram = py::class_<ModelDiagram, std::shared_ptr<ModelDiagram>>(
 		m, "ModelDiagram", "Exporting a diagram from a model.");
 	auto entity = py::class_<Entity<int>, std::shared_ptr<Entity<int>>>(
-		m, "Entity", "Unknown.");
+		m, "Entity", "An entity (population group) in the simulation.");
 	auto tool =
 		py::class_<Tool<int>>(m, "Tool", "A tool for modifying virus spread.");
 	auto virus = py::class_<Virus<int>>(m, "Virus", "A virus.");
 
+	epiworldpy::export_agent(agent);
 	epiworldpy::export_update_fun(update_fun);
 	epiworldpy::export_model(model);
 	epiworldpy::export_database(database);

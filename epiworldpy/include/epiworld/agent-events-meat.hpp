@@ -1,15 +1,14 @@
 #ifndef EPIWORLD_AGENT_EVENTS_MEAT_HPP
 #define EPIWORLD_AGENT_EVENTS_MEAT_HPP
 
-
 template<typename TSeq>
-inline void default_add_virus(Event<TSeq> & a, Model<TSeq> * m)
+inline void Model<TSeq>::_event_add_virus(Event<TSeq> & a)
 {
 
     Agent<TSeq> *  p = a.agent;
     VirusPtr<TSeq> & v = a.virus;
     
-    m->get_db().record_transmission(
+    db.record_transmission(
         v->get_agent() ? v->get_agent()->get_id() : -1,
         p->get_id(),
         v->get_id(),
@@ -17,31 +16,32 @@ inline void default_add_virus(Event<TSeq> & a, Model<TSeq> * m)
     );
     
     p->virus = std::move(v);
-    p->virus->set_date(m->today());
+    p->virus->set_date(today());
     p->virus->set_agent(p);
 
     // Change of state needs to be recorded and updated on the
     // tools.
     if ((a.new_state != -99) && (static_cast<int>(p->state) != a.new_state))
     {
-        auto & db = m->get_db();
         db.update_state(p->state_prev, a.new_state);
 
-        for (size_t i = 0u; i < p->n_tools; ++i)
+        // For tool counts, use current state (p->state) not state_prev
+        // because state_prev may be stale if multiple changes occurred today
+        for (size_t i = 0u; i < p->tools.size(); ++i)
             db.update_tool(
                 p->tools[i]->get_id(),
-                p->state_prev,
+                p->state,
                 a.new_state
             );
     }
 
     // Lastly, we increase the daily count of the virus
     #ifdef EPI_DEBUG
-    m->get_db().today_virus.at(p->virus->get_id()).at(
+    db.today_virus.at(p->virus->get_id()).at(
         a.new_state != -99 ? a.new_state : p->state
     )++;
     #else
-    m->get_db().today_virus[p->virus->get_id()][
+    db.today_virus[p->virus->get_id()][
         a.new_state != -99 ? a.new_state : p->state
     ]++;
     #endif
@@ -49,42 +49,36 @@ inline void default_add_virus(Event<TSeq> & a, Model<TSeq> * m)
 }
 
 template<typename TSeq>
-inline void default_add_tool(Event<TSeq> & a, Model<TSeq> * m)
+inline void Model<TSeq>::_event_add_tool(Event<TSeq> & a)
 {
 
     Agent<TSeq> * p = a.agent;
     ToolPtr<TSeq> & t = a.tool;
     
     // Update tool accounting
-    p->n_tools++;
-    size_t n_tools = p->n_tools;
+    p->tools.emplace_back(std::move(t));
+    size_t tool_pos = p->tools.size() - 1u;
 
-    if (n_tools <= p->tools.size())
-        p->tools[n_tools - 1] = std::move(t);
-    else
-        p->tools.emplace_back(std::move(t));
-
-    n_tools--;
-
-    p->tools[n_tools]->set_date(m->today());
-    p->tools[n_tools]->set_agent(p, n_tools);
+    p->tools[tool_pos]->set_date(today());
+    p->tools[tool_pos]->set_agent(p, tool_pos);
 
     // Change of state needs to be recorded and updated on the
     // tools.
     if ((a.new_state != -99) && static_cast<int>(p->state) != a.new_state)
     {
-        auto & db = m->get_db();
         db.update_state(p->state_prev, a.new_state);
 
+        // For virus counts, use current state (p->state) not state_prev
+        // because state_prev may be stale if multiple changes occurred today
         if (p->virus)
             db.update_virus(
                 p->virus->get_id(),
-                p->state_prev,
+                p->state,
                 a.new_state
             );
     }
 
-    m->get_db().today_tool[p->tools.back()->get_id()][
+    db.today_tool[p->tools[tool_pos]->get_id()][
         a.new_state != -99 ? a.new_state : p->state
     ]++;
 
@@ -92,14 +86,14 @@ inline void default_add_tool(Event<TSeq> & a, Model<TSeq> * m)
 }
 
 template<typename TSeq>
-inline void default_rm_virus(Event<TSeq> & a, Model<TSeq> * model)
+inline void Model<TSeq>::_event_rm_virus(Event<TSeq> & a)
 {
 
     Agent<TSeq> * p    = a.agent;
     VirusPtr<TSeq> & v = a.virus;
 
     // Calling the virus action over the removed virus
-    v->post_recovery(model);
+    v->post_recovery(this);
 
     p->virus = nullptr;
 
@@ -107,24 +101,25 @@ inline void default_rm_virus(Event<TSeq> & a, Model<TSeq> * model)
     // tools.
     if ((a.new_state != -99) && (static_cast<int>(p->state) != a.new_state))
     {
-        auto & db = model->get_db();
         db.update_state(p->state_prev, a.new_state);
 
-        for (size_t i = 0u; i < p->n_tools; ++i)
+        // For tool counts, use current state (p->state) not state_prev
+        // because state_prev may be stale if multiple changes occurred today
+        for (size_t i = 0u; i < p->tools.size(); ++i)
             db.update_tool(
                 p->tools[i]->get_id(),
-                p->state_prev,
+                p->state,
                 a.new_state
             );
     }
 
-    // The counters of the virus only needs to decrease.
-    // We use the previous state of the agent as that was
-    // the state when the virus was added.
+    // The counter of the removed virus must be decremented from the
+    // agent's current state (pre-transition), not state_prev.
+    // state_prev may refer to an earlier same-day state.
     #ifdef EPI_DEBUG
-    model->get_db().today_virus.at(v->get_id()).at(p->state_prev)--;
+    db.today_virus.at(v->get_id()).at(p->state)--;
     #else
-    model->get_db().today_virus[v->get_id()][p->state_prev]--;
+    db.today_virus[v->get_id()][p->state]--;
     #endif
 
     
@@ -133,69 +128,88 @@ inline void default_rm_virus(Event<TSeq> & a, Model<TSeq> * model)
 }
 
 template<typename TSeq>
-inline void default_rm_tool(Event<TSeq> & a, Model<TSeq> * m)
+inline void Model<TSeq>::_event_rm_tool(Event<TSeq> & a)
 {
 
-    Agent<TSeq> * p   = a.agent;    
-    ToolPtr<TSeq> & t = a.agent->tools[a.tool->pos_in_agent];
+    Agent<TSeq> * p = a.agent;
+    ToolPtr<TSeq> & t = a.tool;
+    bool removed = false;
 
-    if (--p->n_tools > 0)
+    if (t)
     {
-        p->tools[p->n_tools]->pos_in_agent = t->pos_in_agent;
-        std::swap(
-            p->tools[t->pos_in_agent],
-            p->tools[p->n_tools]
-            );
+        // Remove tool(s) by id, following an erase/remove approach.
+        auto new_end = std::remove_if(
+            p->tools.begin(),
+            p->tools.end(),
+            [&t](const ToolPtr<TSeq> & tool_ptr) -> bool
+            {
+                return tool_ptr && (tool_ptr->get_id() == t->get_id());
+            }
+        );
+
+        removed = (new_end != p->tools.end());
+        p->tools.erase(new_end, p->tools.end());
+
+        for (size_t i = 0u; i < p->tools.size(); ++i)
+            p->tools[i]->pos_in_agent = static_cast<int>(i);
     }
 
     // Change of state needs to be recorded and updated on the
     // tools.
     if ((a.new_state != -99) && (static_cast<int>(p->state) != a.new_state))
     {
-        auto & db = m->get_db();
         db.update_state(p->state_prev, a.new_state);
 
+        // For virus counts, use current state (p->state) not state_prev
+        // because state_prev may be stale if multiple changes occurred today
         if (p->virus)
             db.update_virus(
                 p->virus->get_id(),
-                p->state_prev,
+                p->state,
                 a.new_state
             );
     }
 
-    // Lastly, we increase the daily count of the tool.
-    // Like rm_virus, we use the previous state of the agent
-    // as that was the state when the tool was added.
-    #ifdef EPI_DEBUG
-    m->get_db().today_tool.at(t->get_id()).at(p->state_prev)--;
-    #else
-    m->get_db().today_tool[t->get_id()][p->state_prev]--;
-    #endif
+    // Like rm_virus, remove the tool count from the agent's current
+    // state (pre-transition). Using state_prev can underflow when
+    // the agent changed state earlier in the day.
+    if (removed)
+    {
+        #ifdef EPI_DEBUG
+        db.today_tool.at(t->get_id()).at(p->state)--;
+        #else
+        db.today_tool[t->get_id()][p->state]--;
+        #endif
+
+        t->agent = nullptr;
+        t->pos_in_agent = -99;
+    }
 
     return;
 
 }
 
 template<typename TSeq>
-inline void default_change_state(Event<TSeq> & a, Model<TSeq> * m)
+inline void Model<TSeq>::_event_change_state(Event<TSeq> & a)
 {
 
     Agent<TSeq> * p = a.agent;
 
     if ((a.new_state != -99) && (static_cast<int>(p->state) != a.new_state))
     {
-        auto & db = m->get_db();
         db.update_state(p->state_prev, a.new_state);
 
+        // For virus and tool counts, use current state (p->state) not state_prev
+        // because state_prev may be stale if multiple changes occurred today
         if (p->virus)
             db.update_virus(
-                p->virus->get_id(), p->state_prev, a.new_state
+                p->virus->get_id(), p->state, a.new_state
             );
 
-        for (size_t i = 0u; i < p->n_tools; ++i)
+        for (size_t i = 0u; i < p->tools.size(); ++i)
             db.update_tool(
                 p->tools[i]->get_id(),
-                p->state_prev,
+                p->state,
                 a.new_state
             );
 
@@ -204,7 +218,7 @@ inline void default_change_state(Event<TSeq> & a, Model<TSeq> * m)
 }
 
 template<typename TSeq>
-inline void default_add_entity(Event<TSeq> & a, Model<TSeq> *)
+inline void Model<TSeq>::_event_add_entity(Event<TSeq> & a)
 {
 
     Agent<TSeq> *  p = a.agent;
@@ -216,114 +230,55 @@ inline void default_add_entity(Event<TSeq> & a, Model<TSeq> *)
 
         if (p->get_n_entities() > e->size()) // Slower search through the agent
         {
-            for (size_t i = 0u; i < e->size(); ++i)
-                if(static_cast<int>(e->operator[](i)) == p->get_id())
+            for (size_t agent_id : e->get_agents())
+                if(static_cast<int>(agent_id) == p->get_id())
                     throw std::logic_error("An entity cannot be reassigned to an agent.");
         }
         else                                 // Slower search through the entity
         {
-            for (size_t i = 0u; i < p->get_n_entities(); ++i)
-                if(p->get_entity(i).get_id() == e->get_id())
+            for (size_t entity_id : p->get_entities())
+                if(static_cast<int>(entity_id) == e->get_id())
                     throw std::logic_error("An entity cannot be reassigned to an agent.");
         }
 
         // It means that agent and entity were not associated.
     }
 
-    // Adding the entity to the agent
-    if (++p->n_entities <= p->entities.size())
-    {
+    // Adding the to agent and the entity
+    p->entities.push_back(static_cast<size_t>(e->get_id()));
+    e->agents.push_back(static_cast<size_t>(p->get_id()));
 
-        p->entities[p->n_entities - 1]           = e->get_id();
-        p->entities_locations[p->n_entities - 1] = e->n_agents;
-
-    } else
-    {
-        p->entities.push_back(e->get_id());
-        p->entities_locations.push_back(e->n_agents);
-    }
-
-    // Adding the agent to the entity
-    // Adding the entity to the agent
-    if (++e->n_agents <= e->agents.size())
-    {
-
-        e->agents[e->n_agents - 1]          = p->get_id();
-        // Adjusted by '-1' since the list of entities in the agent just grew.
-        e->agents_location[e->n_agents - 1] = p->n_entities - 1;
-
-    } else
-    {
-        e->agents.push_back(p->get_id());
-        e->agents_location.push_back(p->n_entities - 1);
-    }
-
-    // Today was the last modification
-    // e->date_last_add_or_remove = m->today();
-    
 }
 
 template<typename TSeq>
-inline void default_rm_entity(Event<TSeq> & a, Model<TSeq> * m)
+inline void Model<TSeq>::_event_rm_entity(Event<TSeq> & a)
 {
-    
-    Agent<TSeq> *  p = a.agent;    
-    Entity<TSeq> * e = a.entity;
-    size_t idx_agent_in_entity = a.idx_agent;
-    size_t idx_entity_in_agent = a.idx_object;
 
-    if (--p->n_entities > 0)
-    {
+    Agent<TSeq> &  p = *a.agent;
+    Entity<TSeq> & e = *a.entity;
 
-        // When we move the end entity to the new location, the 
-        // moved entity needs to reflect the change, i.e., where the
-        // entity will now be located in the agent
-        size_t agent_location_in_last_entity  =
-            p->entities_locations[p->n_entities];
+    // Remove entity from agent's entity list
+    p.entities.erase(
+        std::remove(
+            p.entities.begin(),
+            p.entities.end(),
+            static_cast<size_t>(e.get_id())
+        ),
+        p.entities.end()
+    );
 
-        Entity<TSeq> * last_entity =
-            &m->get_entity(p->entities[p->n_entities]); ///< Last entity of the agent
-
-        // The end entity will be located where the removed was
-        last_entity->agents_location[agent_location_in_last_entity] =
-            idx_entity_in_agent;
-
-        // We now make the swap
-        std::swap(
-            p->entities[p->n_entities],
-            p->entities[idx_entity_in_agent]
-        );
-
-    }
-
-    if (--e->n_agents > 0)
-    {
-
-        // When we move the end agent to the new location, the 
-        // moved agent needs to reflect the change, i.e., where the
-        // agent will now be located in the entity
-        size_t entity_location_in_last_agent = e->agents_location[e->n_agents];
-        
-        Agent<TSeq> * last_agent  =
-            &m->get_agents()[e->agents[e->n_agents]]; ///< Last agent of the entity
-
-        // The end entity will be located where the removed was
-        last_agent->entities_locations[entity_location_in_last_agent] =
-            idx_agent_in_entity;
-
-        // We now make the swap
-        std::swap(
-            e->agents[e->n_agents],
-            e->agents[idx_agent_in_entity]
-        );
-
-    }
-
-    // Setting the date of the last removal
-    // e->date_last_add_or_remove = m->today();
+    // Remove agent from entity's agent list
+    e.agents.erase(
+        std::remove(
+            e.agents.begin(),
+            e.agents.end(),
+            static_cast<size_t>(p.get_id())
+        ),
+        e.agents.end()
+    );
 
     return;
 
-};
+}
 
 #endif

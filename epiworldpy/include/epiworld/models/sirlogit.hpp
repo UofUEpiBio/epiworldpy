@@ -1,11 +1,14 @@
-// #include "../epiworld.hpp"
-
 #ifndef EPIWORLD_MODELS_SIRLOGIT_HPP 
 #define EPIWORLD_MODELS_SIRLOGIT_HPP
 
+#include "../model-bones.hpp"
 
 /**
  * @brief Template for a Susceptible-Infected-Removed (SIR) model
+ * 
+ * ![Model Diagram](../assets/img/sirlogit.png)
+ * 
+ * @ingroup special_models
  * 
  * @details
  * In this model, infection and recoveru probabilities are computed
@@ -32,16 +35,14 @@
  
 */
 template<typename TSeq = EPI_DEFAULT_TSEQ>
-class ModelSIRLogit : public epiworld::Model<TSeq>
+class ModelSIRLogit : public Model<TSeq>
 {
-private:
+public:
     static const int SUSCEPTIBLE = 0;
     static const int INFECTED    = 1;
     static const int RECOVERED   = 2;
 
-public:
-
-    ModelSIRLogit() {};
+    ModelSIRLogit() = delete;
 
     /**
       * @param vname Name of the virus.
@@ -53,7 +54,6 @@ public:
       * @param coef_recover_cols Vector<unsigned int>. Ids of recover vars.
     */
     ModelSIRLogit(
-        ModelSIRLogit<TSeq> & model,
         const std::string & vname,
         double * data,
         size_t ncols,
@@ -66,27 +66,9 @@ public:
         epiworld_double prevalence
     );
 
-    ModelSIRLogit(
-        const std::string & vname,
-        double * data,
-        size_t ncols,
-        std::vector< double > coefs_infect,
-        std::vector< double > coefs_recover,
-        std::vector< size_t > coef_infect_cols,
-        std::vector< size_t > coef_recover_cols,
-        epiworld_double transmission_rate,
-        epiworld_double recovery_rate,
-        epiworld_double prevalence
-    );
+    std::unique_ptr< Model<TSeq> > clone_ptr() override;
 
-    ModelSIRLogit<TSeq> & run(
-        epiworld_fast_uint ndays,
-        int seed = -1
-    );
-
-    Model<TSeq> * clone_ptr();
-
-    void reset();
+    void reset() override;
     
     std::vector< double > coefs_infect;
     std::vector< double > coefs_recover;
@@ -95,29 +77,11 @@ public:
 
 };
 
-
-
 template<typename TSeq>
-inline ModelSIRLogit<TSeq> & ModelSIRLogit<TSeq>::run(
-    epiworld_fast_uint ndays,
-    int seed
-)
-{
-
-    Model<TSeq>::run(ndays, seed);
-    return *this;
-
-}
-
-template<typename TSeq>
-inline Model<TSeq> * ModelSIRLogit<TSeq>::clone_ptr()
+inline std::unique_ptr<Model<TSeq>> ModelSIRLogit<TSeq>::clone_ptr()
 {
     
-    ModelSIRLogit<TSeq> * ptr = new ModelSIRLogit<TSeq>(
-        *dynamic_cast<const ModelSIRLogit<TSeq>*>(this)
-        );
-
-    return dynamic_cast< Model<TSeq> *>(ptr);
+    return std::make_unique<ModelSIRLogit<TSeq>>(*this);
 
 }
 
@@ -167,7 +131,6 @@ inline void ModelSIRLogit<TSeq>::reset()
  */
 template<typename TSeq>
 inline ModelSIRLogit<TSeq>::ModelSIRLogit(
-    ModelSIRLogit<TSeq> & model,
     const std::string & vname,
     double * data,
     size_t ncols,
@@ -188,22 +151,22 @@ inline ModelSIRLogit<TSeq>::ModelSIRLogit(
         throw std::logic_error("No columns specified for coef_recover_cols.");
 
     // Saving the variables
-    model.set_agents_data(
+    this->set_agents_data(
         data, ncols
     );
 
-    model.coefs_infect = coefs_infect;
-    model.coefs_recover = coefs_recover;
-    model.coef_infect_cols = coef_infect_cols;
-    model.coef_recover_cols = coef_recover_cols;
+    this->coefs_infect = coefs_infect;
+    this->coefs_recover = coefs_recover;
+    this->coef_infect_cols = coef_infect_cols;
+    this->coef_recover_cols = coef_recover_cols;
 
-    epiworld::UpdateFun<TSeq> update_susceptible = [](
-        epiworld::Agent<TSeq> * p, epiworld::Model<TSeq> * m
+    UpdateFun<TSeq> update_susceptible = [](
+        Agent<TSeq> * p, Model<TSeq> * m
         ) -> void
         {
 
             // Getting the right type
-            ModelSIRLogit<TSeq> * _m = dynamic_cast<ModelSIRLogit<TSeq>*>(m);
+            ModelSIRLogit<TSeq> * _m = model_cast<ModelSIRLogit<TSeq>,TSeq>(m);
 
             // Exposure coefficient
             const double coef_exposure = _m->coefs_infect[0u];
@@ -213,9 +176,10 @@ inline ModelSIRLogit<TSeq>::ModelSIRLogit(
 
             double baseline = 0.0;
             for (size_t k = 0u; k < _m->coef_infect_cols.size(); ++k)
-                baseline += p->operator[](k) * _m->coefs_infect[k + 1u];
+                baseline += p->operator()(k, *m) * _m->coefs_infect[k + 1u];
 
-            for (auto & neighbor: p->get_neighbors()) 
+            auto & m_ref = *m;
+            for (auto & neighbor: p->get_neighbors(*m)) 
             {
                 
                 if (neighbor->get_virus() == nullptr)
@@ -231,9 +195,9 @@ inline ModelSIRLogit<TSeq>::ModelSIRLogit(
                 /* And it is a function of susceptibility_reduction as well */ 
                 m->array_double_tmp[nviruses_tmp] =
                     baseline +
-                    (1.0 - p->get_susceptibility_reduction(v, m)) * 
-                    v->get_prob_infecting(m) * 
-                    (1.0 - neighbor->get_transmission_reduction(v, m))  *
+                    (1.0 - p->get_susceptibility_reduction(v, m_ref)) *
+                    v->get_prob_infecting(m) *
+                    (1.0 - neighbor->get_transmission_reduction(v, m_ref))  *
                     coef_exposure
                     ; 
 
@@ -255,19 +219,19 @@ inline ModelSIRLogit<TSeq>::ModelSIRLogit(
             if (which < 0)
                 return;
 
-            p->set_virus(*m->array_virus_tmp[which], m);
+            p->set_virus(*m, *m->array_virus_tmp[which]);
 
             return;
 
         };
 
-    epiworld::UpdateFun<TSeq> update_infected = [](
-        epiworld::Agent<TSeq> * p, epiworld::Model<TSeq> * m
+    UpdateFun<TSeq> update_infected = [](
+        Agent<TSeq> * p, Model<TSeq> * m
         ) -> void
         {
 
             // Getting the right type
-            ModelSIRLogit<TSeq> * _m = dynamic_cast<ModelSIRLogit<TSeq>*>(m);
+            ModelSIRLogit<TSeq> * _m = model_cast<ModelSIRLogit<TSeq>,TSeq>(m);
 
             // Computing recovery probability once
             double prob    = 0.0;
@@ -275,80 +239,41 @@ inline ModelSIRLogit<TSeq>::ModelSIRLogit(
             #pragma omp simd reduction(+:prob)
             #endif
             for (size_t i = 0u; i < _m->coefs_recover.size(); ++i)
-                prob += p->operator[](i) * _m->coefs_recover[i];
+                prob += p->operator()(i, *m) * _m->coefs_recover[i];
 
             // Computing logis
             prob = 1.0/(1.0 + std::exp(-prob));
 
             if (prob > m->runif())
-                p->rm_virus(m);
+                p->rm_virus(*m);
             
             return;
 
         };
 
     // state
-    model.add_state("Susceptible", update_susceptible);
-    model.add_state("Infected", update_infected);
-    model.add_state("Recovered");
+    this->add_state("Susceptible", update_susceptible);
+    this->add_state("Infected", update_infected);
+    this->add_state("Recovered");
 
     // Setting up parameters
-    // model.add_param(contact_rate, "Contact rate");
-    model.add_param(transmission_rate, "Transmission rate");
-    model.add_param(recovery_rate, "Recovery rate");
-    // model.add_param(prob_reinfection, "Prob. Reinfection");
+    // this->add_param(contact_rate, "Contact rate");
+    this->add_param(transmission_rate, "Transmission rate");
+    this->add_param(recovery_rate, "Recovery rate");
+    // this->add_param(prob_reinfection, "Prob. Reinfection");
     
     // Preparing the virus -------------------------------------------
-    epiworld::Virus<TSeq> virus(vname, prevalence, true);
-    virus.set_state(
-        ModelSIRLogit<TSeq>::INFECTED,
-        ModelSIRLogit<TSeq>::RECOVERED,
-        ModelSIRLogit<TSeq>::RECOVERED
-        );
+    Virus<TSeq> virus(vname, prevalence, true);
+    virus.set_state(INFECTED, RECOVERED, RECOVERED);
 
-    virus.set_prob_infecting(&model("Transmission rate"));
-    virus.set_prob_recovery(&model("Recovery rate"));
+    virus.set_prob_infecting("Transmission rate");
+    virus.set_prob_recovery("Recovery rate");
 
     // virus.set_prob
 
-    model.add_virus(virus);
+    this->add_virus(virus);
 
-    model.set_name("Susceptible-Infected-Removed (SIR) (logit)");
-
-    return;
-
-}
-
-template<typename TSeq>
-inline ModelSIRLogit<TSeq>::ModelSIRLogit(
-    const std::string & vname,
-    double * data,
-    size_t ncols,
-    std::vector< double > coefs_infect,
-    std::vector< double > coefs_recover,
-    std::vector< size_t > coef_infect_cols,
-    std::vector< size_t > coef_recover_cols,
-    epiworld_double transmission_rate,
-    epiworld_double recovery_rate,
-    epiworld_double prevalence
-    )
-{
-
-    ModelSIRLogit(
-        *this,
-        vname,
-        data,
-        ncols,
-        coefs_infect,
-        coefs_recover,
-        coef_infect_cols,
-        coef_recover_cols,
-        transmission_rate,
-        recovery_rate,
-        prevalence
-    );
-
-    return;
+    this->set_name("Susceptible-Infected-Removed (SIR) (logit)");
 
 }
 

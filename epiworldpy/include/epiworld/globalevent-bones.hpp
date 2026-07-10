@@ -1,8 +1,8 @@
 #ifndef EPIWORLD_GLOBALEVENT_BONES_HPP
 #define EPIWORLD_GLOBALEVENT_BONES_HPP
 
-// template<typename TSeq = EPI_DEFAULT_TSEQ>
-// using GlobalFun = std::function<void(Model<TSeq>*)>;
+#include <string>
+#include "config.hpp"
 
 /**
  * @brief Template for a Global Event
@@ -30,9 +30,9 @@ public:
      */
     GlobalEvent(GlobalFun<TSeq> fun, std::string name, int day = -99);
     
-    ~GlobalEvent() {};
+    virtual ~GlobalEvent() = default;
 
-    void operator()(Model<TSeq> * m, int day);
+    virtual void operator()(Model<TSeq> * m, int day);
 
     void set_name(std::string name);
     std::string get_name() const;
@@ -45,6 +45,8 @@ public:
     // Comparison operators
     bool operator==(const GlobalEvent<TSeq> & other) const;
     bool operator!=(const GlobalEvent<TSeq> & other) const;
+
+    virtual std::unique_ptr<GlobalEvent<TSeq>> clone_ptr() const;
 
 };
 

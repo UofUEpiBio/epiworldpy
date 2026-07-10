@@ -1,8 +1,12 @@
 #ifndef EPIWORLD_MODELS_INIT_FUNCTIONS_HPP
 #define EPIWORLD_MODELS_INIT_FUNCTIONS_HPP
 
+#include "../model-bones.hpp"
+
 /**
  * @brief Creates an initial function for the SIR-like models
+ * @ingroup model_utilities
+ * 
  * The function is used for the initial states of the model.
 */
 template<typename TSeq>
@@ -53,8 +57,8 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sir(
 
         // Setting up the initial states
         for (auto & agent : sample)
-            agent->change_state(model, 2, Queue<TSeq>::NoOne);
-        
+            agent->change_state(*model, 2, Queue<TSeq>::NoOne);
+
         // Running the events
         model->events_run();
 
@@ -68,6 +72,8 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sir(
 
 /**
  * @brief Creates an initial function for the SIR-like models
+ * @ingroup model_utilities
+ *
  * The function is used for the initial states of the model.
 */
 template<typename TSeq>
@@ -117,7 +123,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sird(
         // we only need to change recovered
         size_t nrecovered = prop[0u] * tot_left * n;
         size_t ndeceased  = prop[01] * tot_left * n;
-        
+
         AgentsSample<TSeq> sample_recover(
             *model,
             nrecovered,
@@ -127,7 +133,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sird(
 
         // Setting up the initial states
         for (auto & agent : sample_recover)
-            agent->change_state(model, 2, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 2, Queue<TSeq>::NoOne);
 
         AgentsSample<TSeq> sample_deceased(
             *model,
@@ -138,7 +144,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sird(
 
         // Setting up the initial states
         for (auto & agent : sample_deceased)
-            agent->change_state(model, 3, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 3, Queue<TSeq>::NoOne);
         
         // Running the events
         model->events_run();
@@ -154,6 +160,8 @@ inline std::function<void(Model<TSeq>*)> create_init_function_sird(
 
 /**
  * @brief Creates an initial function for the SEIR-like models
+ * @ingroup model_utilities
+ * 
  * The function is used for the initial states of the model.
 */
 template<typename TSeq>
@@ -204,7 +212,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seir(
 
         // Setting up the initial states
         for (auto & agent : sample_suscept)
-            agent->change_state(model, 3, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 3, Queue<TSeq>::NoOne);
 
         AgentsSample<TSeq> sample_exposed(
             *model,
@@ -215,8 +223,8 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seir(
 
         // Setting up the initial states
         for (auto & agent : sample_exposed)
-            agent->change_state(model, 2, Queue<TSeq>::NoOne);
-        
+            agent->change_state(*model, 2, Queue<TSeq>::NoOne);
+
         // Running the events
         model->events_run();
 
@@ -230,6 +238,8 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seir(
 
 /**
  * @brief Creates an initial function for the SEIR-like models
+ * @ingroup model_utilities
+ *
  * The function is used for the initial states of the model.
 */
 template<typename TSeq>
@@ -287,7 +297,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seird(
 
         // Setting up the initial states
         for (auto & agent : sample_suscept)
-            agent->change_state(model, 3, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 3, Queue<TSeq>::NoOne);
 
         AgentsSample<TSeq> sample_exposed(
             *model,
@@ -298,7 +308,7 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seird(
 
         // Setting up the initial states
         for (auto & agent : sample_exposed)
-            agent->change_state(model, 2, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 2, Queue<TSeq>::NoOne);
 
         // Running the events
         model->events_run();
@@ -310,10 +320,10 @@ inline std::function<void(Model<TSeq>*)> create_init_function_seird(
             {0u},
             true
             );
-        
+
         // Setting up the initial states
         for (auto & agent : sample_deceased)
-            agent->change_state(model, 4, Queue<TSeq>::NoOne);
+            agent->change_state(*model, 4, Queue<TSeq>::NoOne);
         
         // Running the events
         model->events_run();

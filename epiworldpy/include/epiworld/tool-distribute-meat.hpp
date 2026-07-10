@@ -29,8 +29,7 @@ inline ToolToAgentFun<TSeq> distribute_tool_to_set(
         for (auto i: agents_ids)
         {
             model->get_agent(i).add_tool(
-                tool,
-                const_cast<Model<TSeq> * >(model)
+                *model, tool
                 );
         }
     };
@@ -92,16 +91,13 @@ inline ToolToAgentFun<TSeq> distribute_tool_randomly(
             auto & population = model->get_agents();
             for (int i = 0u; i < n_to_distribute; ++i)
             {
-                int loc = static_cast<epiworld_fast_uint>(
-                    floor(model->runif() * n--)
-                    );
+                int loc = model->runif_index(n--);
 
-                if ((loc > 0) && (loc == n))
-                    loc--;
+                if ((n > 0) && (loc >= n))
+                    loc = n - 1;
                 
                 population[idx[loc]].add_tool(
-                    tool,
-                    const_cast< Model<TSeq> * >(model)
+                    *model, tool
                     );
                 
                 std::swap(idx[loc], idx[n]);
@@ -109,6 +105,94 @@ inline ToolToAgentFun<TSeq> distribute_tool_randomly(
             }
 
         };
+
+}
+
+/**
+ * Function template to distribute a tool to agents in each entity of a model.
+ * 
+ * @tparam TSeq The sequence type used in the model.
+ * @param prevalence A vector of prevalences for each entity in the model.
+ * @param as_proportion Flag indicating whether the prevalences are given as
+ * proportions or absolute values.
+ * @return A lambda function that distributes the tool to agents in each entity
+ * of the model.
+ */
+template<typename TSeq = EPI_DEFAULT_TSEQ>
+inline ToolToAgentFun<TSeq> distribute_tool_to_entities(
+    std::vector< double > prevalence,
+    bool as_proportion = true
+)
+{
+
+    // Checking proportions are within range
+    if (prevalence.size() == 0)
+        throw std::range_error("Prevalence vector cannot be empty");
+
+    if (as_proportion)
+    {
+        for (auto p: prevalence)
+        {
+            if ((p < 0.0) || (p > 1.0))
+                throw std::range_error("Proportions must be between 0 and 1");
+        }
+    }
+    else
+    {
+        for (auto p: prevalence)
+        {
+            if (p < 0.0)
+                throw std::range_error("Count values in prevalence must be non-negative");
+        }
+    }
+
+    return [prevalence, as_proportion](
+        Tool<TSeq> & tool, Model<TSeq> * model
+    ) -> void 
+    { 
+
+        // Checking the number of entities
+        if (prevalence.size() != model->get_entities().size())
+            throw std::range_error(
+                "Prevalence vector size (" + std::to_string(prevalence.size()) +
+                ") does not match number of entities (" + std::to_string(model->get_entities().size()) + ")"
+                );
+
+        // Adding action
+        auto & entities = model->get_entities();
+        auto & population = model->get_agents();
+        for (size_t e = 0; e < entities.size(); ++e)
+        {
+            auto & entity_e = entities[e];
+            auto agent_ids = entity_e.get_agents_ids();
+            double prevalence_e = prevalence[e];
+            size_t n = agent_ids.size();
+            size_t n_to_distribute;
+            if (as_proportion)
+                n_to_distribute = static_cast<size_t>(std::floor(prevalence_e * n));
+            else
+                n_to_distribute = static_cast<size_t>(prevalence_e);
+
+            if (n_to_distribute > n)
+                n_to_distribute = n;
+
+            std::vector< size_t > idx = agent_ids;
+            for (size_t i = 0u; i < n_to_distribute; ++i)
+            {
+                size_t loc = model->runif_index(n--);
+
+                if ((n > 0) && (loc >= n))
+                    loc = n - 1;
+                
+                population[idx[loc]].add_tool(
+                    *model, tool
+                    );
+                
+                std::swap(idx[loc], idx[n]);
+
+            }
+        }
+    };
 
 }
 #endif

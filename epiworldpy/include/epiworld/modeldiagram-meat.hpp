@@ -1,6 +1,8 @@
 #ifndef EPIWORLD_MODELDIAGRAM_MEAT_HPP
 #define EPIWORLD_MODELDIAGRAM_MEAT_HPP
 
+#include "modeldiagram-bones.hpp"
+
 inline void ModelDiagram::read_transitions(
     const std::string & fn_transition
 ) {
@@ -87,8 +89,7 @@ inline void ModelDiagram::transition_probability(
     // Generating the transition matrix
     states = std::vector< std::string >(states_set.begin(), states_set.end());
     size_t n_states = states.size();
-    tprob.resize(n_states * n_states);
-    std::fill(tprob.begin(), tprob.end(), 0.0);
+    tprob.assign(n_states * n_states, 0.0);
 
     std::vector< epiworld_double > rowsum(n_states, 0.0);
     for (size_t i = 0; i < n_states; ++i)
@@ -151,7 +152,7 @@ inline void ModelDiagram::draw_mermaid(
     for (size_t i = 0u; i < states.size(); ++i)
         states_ids.push_back("s" + std::to_string(i));
 
-    std::string graph = "flowchart LR\n";
+    std::string graph = "flowchart TB\n";
 
     // Declaring the states
     for (size_t i = 0u; i < states.size(); ++i)

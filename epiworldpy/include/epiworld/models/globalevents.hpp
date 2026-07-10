@@ -1,10 +1,13 @@
 #ifndef EPIWORLD_GLOBALEVENTS_HPP
 #define EPIWORLD_GLOBALEVENTS_HPP
 
+#include "../model-bones.hpp"
+
 // This function creates a global action that distributes a tool
 // to agents with probability p.
 /**
  * @brief Global event that distributes a tool to agents with probability p.
+ * @ingroup model_utilities
  * 
  * @tparam TSeq Sequence type (should match `TSeq` across the model)
  * @param p Probability of distributing the tool.
@@ -30,7 +33,7 @@ inline std::function<void(Model<TSeq>*)> globalevent_tool(
 
             // Adding the tool
             if (model->runif() < p)
-                agent.add_tool(tool, model);
+                agent.add_tool(*model, tool);
             
         
         }
@@ -53,6 +56,7 @@ inline std::function<void(Model<TSeq>*)> globalevent_tool(
 /**
  * @brief Global event that distributes a tool to agents with probability
  * p = 1 / (1 + exp(-\sum_i coef_i * agent(vars_i))).
+ * @ingroup model_utilities
  * 
  * @tparam TSeq Sequence type (should match `TSeq` across the model)
  * @param coefs Vector of coefficients.
@@ -85,13 +89,13 @@ inline std::function<void(Model<TSeq>*)> globalevent_tool_logit(
             #pragma omp parallel for reduction(+:p)
             #endif
             for (size_t i = 0u; i < coefs.size(); ++i)
-                p += coefs.at(i) * agent(vars[i]);
+                p += coefs.at(i) * agent(vars[i], *model);
 
             p = 1.0 / (1.0 + std::exp(-p));
 
             // Adding the tool
             if (model->runif() < p)
-                agent.add_tool(tool, model);
+                agent.add_tool(*model, tool);
             
         
         }
@@ -112,6 +116,7 @@ inline std::function<void(Model<TSeq>*)> globalevent_tool_logit(
 // A global action that updates a parameter in the model.
 /**
  * @brief Global event that updates a parameter in the model.
+ * @ingroup model_utilities
  * 
  * @tparam TSeq Sequence type (should match `TSeq` across the model)
  * @param param Parameter to update.

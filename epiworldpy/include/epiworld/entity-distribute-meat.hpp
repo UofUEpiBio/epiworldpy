@@ -65,15 +65,13 @@ inline EntityToAgentFun<TSeq> distribute_entity_randomly(
         int n_left = n;
         for (int i = 0; i < n_to_sample; ++i)
         {
-            int loc = static_cast<epiworld_fast_uint>(
-                floor(m->runif() * n_left--)
-                );
+            int loc = m->runif_index(n_left--);
 
             // Correcting for possible overflow
-            if ((loc > 0) && (loc >= n_left))
+            if ((n_left > 0) && (loc > n_left))
                 loc = n_left - 1;
 
-            m->get_agent(idx[loc]).add_entity(e, m);
+            m->get_agent(idx[loc]).add_entity(*m, e);
 
             std::swap(idx[loc], idx[n_left]);
 
@@ -106,10 +104,10 @@ inline EntityToAgentFun<TSeq> distribute_entity_to_range(
         return [from, to](Entity<TSeq> & e, Model<TSeq> * m) -> void {
 
             auto & agents = m->get_agents();
-            for (size_t i = from; i < to; ++i)
+            for (int i = from; i < to; ++i)
             {
                 if (agents[i].get_n_entities() == 0)
-                    e.add_agent(&agents[i], m);
+                    e.add_agent(&agents[i], *m);
                 else
                     throw std::logic_error(
                         "Agent " + std::to_string(i) + " already has an entity."
@@ -127,11 +125,11 @@ inline EntityToAgentFun<TSeq> distribute_entity_to_range(
         return [from, to](Entity<TSeq> & e, Model<TSeq> * m) -> void {
 
             auto & agents = m->get_agents();
-            for (size_t i = from; i < to; ++i)
+            for (int i = from; i < to; ++i)
             {
-                e.add_agent(&agents[i], m);
+                e.add_agent(&agents[i], *m);
             }
-            
+
             return;
 
         };
@@ -151,7 +149,7 @@ inline EntityToAgentFun<TSeq> distribute_entity_to_set(
 
         for (const auto & i: *idx_shared)
         {
-            e.add_agent(&m->get_agent(i), m);
+            e.add_agent(&m->get_agent(i), *m);
         }
 
     };

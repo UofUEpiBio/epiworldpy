@@ -116,20 +116,22 @@ inline const Model<TSeq> & Model<TSeq>::print(bool lite) const
     
     if (rewire_fun)
     {
-        printf_epiworld("Rewiring            : on (%.2f)\n\n", rewire_prop);
+        printf_epiworld("Rewiring            : on (%.2f)\n", rewire_prop);
     } else {
-        printf_epiworld("Rewiring            : off\n\n");
+        printf_epiworld("Rewiring            : off\n");
     }
+
+    printf_epiworld("Last seed used      : %i\n\n", static_cast<int>(last_seed));
     
     // Printing Global events
     printf_epiworld("Global events:\n");
     for (auto & a : globalevents)
     {
-        if (a.get_day() < 0)
+        if (a->get_day() < 0)
         {
-            printf_epiworld(" - %s (runs daily)\n", a.get_name().c_str());
+            printf_epiworld(" - %s (runs daily)\n", a->get_name().c_str());
         } else {
-            printf_epiworld(" - %s (day %i)\n", a.get_name().c_str(), a.get_day());
+            printf_epiworld(" - %s (day %i)\n", a->get_name().c_str(), a->get_day());
         }
     }
 

@@ -193,21 +193,21 @@ inline AgentsSample<TSeq>::AgentsSample(
 
     // Computing the cumulative sum of counts across entities
     size_t agents_in_entities = 0;
-    Entities<TSeq> entities_a = agent->get_entities();
+    const auto & entities_a = agent->get_entities();
 
     std::vector< size_t > cum_agents_count(entities_a.size(), 0);
     int idx = -1;
-    for (auto & e : entities_a)
+    for (const Entity<TSeq> & e : entities_a)
     {
         if (++idx == 0)
-            cum_agents_count[idx] = (e->size() - 1u);
+            cum_agents_count[idx] = (e.size() - 1u);
         else
             cum_agents_count[idx] = (
-                (e->size() - 1u) + 
+                (e.size() - 1u) + 
                 cum_agents_count[idx - 1]
             );
 
-        agents_in_entities += (e->size() - 1u);
+        agents_in_entities += (e.size() - 1u);
     }
 
     if (truncate)
@@ -233,7 +233,7 @@ inline AgentsSample<TSeq>::AgentsSample(
     {
 
         // Sampling a single agent from the set of entities
-        int jth = std::floor(model->runif() * agents_in_entities);
+        int jth = model->runif_index(agents_in_entities);
         for (size_t e = 0u; e < cum_agents_count.size(); ++e)
         {
             
@@ -302,20 +302,23 @@ inline Agent<TSeq> * AgentsSample<TSeq>::operator()(size_t i)
 template<typename TSeq>
 inline typename std::vector< Agent<TSeq> * >::iterator AgentsSample<TSeq>::begin()
 {
-
-    if (sample_size > 0u)
-        return agents->begin();
-    else
-        return agents->end();
-
+    // Check for null pointer
+    if (agents == nullptr)
+        return typename std::vector< Agent<TSeq> * >::iterator{};
+    
+    return agents->begin();
 }
 
 template<typename TSeq>
 inline typename std::vector< Agent<TSeq> * >::iterator AgentsSample<TSeq>::end()
 {
-
-    return agents->begin() + sample_size;
-
+    // Check for null pointer
+    if (agents == nullptr)
+        return typename std::vector< Agent<TSeq> * >::iterator{};
+    
+    // Ensure we don't go beyond the actual vector size
+    size_t actual_end = std::min(sample_size, agents->size());
+    return agents->begin() + actual_end;
 }
 
 template<typename TSeq>
@@ -446,7 +449,10 @@ inline void AgentsSample<TSeq>::sample_n(size_t n)
         for (size_t i = 0u; i < n; ++i)
         {
 
-            size_t ith_ = static_cast<size_t>(model->runif() * ((*agents_left_n)--));
+            size_t ith_ = static_cast<size_t>(
+                model->runif() * ((*agents_left_n)--)
+            );
+
             size_t ith  = agents_left->operator[](ith_);
             agents->operator[](i) = &model->population[entity->agents[ith]];
 

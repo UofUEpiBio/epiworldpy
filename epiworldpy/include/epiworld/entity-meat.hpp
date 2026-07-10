@@ -4,34 +4,34 @@
 template<typename TSeq>
 inline void Entity<TSeq>::add_agent(
     Agent<TSeq> & p,
-    Model<TSeq> * model
+    Model<TSeq> & model
     )
 {
 
     // Need to add it to the events, through the individual
-    p.add_entity(*this, model);    
+    p.add_entity(model, *this);
 
 }
 
 template<typename TSeq>
 inline void Entity<TSeq>::add_agent(
     Agent<TSeq> * p,
-    Model<TSeq> * model
+    Model<TSeq> & model
     )
 {
-    p->add_entity(*this, model);
+    p->add_entity(model, *this);
 }
 
 template<typename TSeq>
-inline void Entity<TSeq>::rm_agent(size_t idx, Model<TSeq> * model)
+inline void Entity<TSeq>::rm_agent(size_t idx, Model<TSeq> & model)
 {
-    if (idx >= n_agents)
+    if (idx >= size())
         throw std::out_of_range(
             "Trying to remove agent "+ std::to_string(idx) +
-            " out of " + std::to_string(n_agents)
+            " out of " + std::to_string(size())
             );
 
-    model->get_agents()[agents[idx]].rm_entity(*this, model);
+    model.population[agents[idx]].rm_entity(model, *this);
 
     return;
 }
@@ -39,7 +39,7 @@ inline void Entity<TSeq>::rm_agent(size_t idx, Model<TSeq> * model)
 template<typename TSeq>
 inline size_t Entity<TSeq>::size() const noexcept
 {
-    return n_agents;
+    return agents.size();
 }
 
 template<typename TSeq>
@@ -55,49 +55,43 @@ inline std::vector< epiworld_double > & Entity<TSeq>::get_location()
 }
 
 template<typename TSeq>
-inline typename std::vector< Agent<TSeq> * >::iterator Entity<TSeq>::begin()
+inline typename std::vector< size_t >::iterator Entity<TSeq>::begin()
 {
-
-    if (n_agents == 0)
-        return agents.end();
 
     return agents.begin();
 
 }
 
 template<typename TSeq>
-inline typename std::vector< Agent<TSeq> * >::iterator Entity<TSeq>::end()
+inline typename std::vector< size_t >::iterator Entity<TSeq>::end()
 {
-    return agents.begin() + n_agents;
+    return agents.end();
 }
 
 template<typename TSeq>
-inline typename std::vector< Agent<TSeq> * >::const_iterator Entity<TSeq>::begin() const
+inline typename std::vector< size_t >::const_iterator Entity<TSeq>::begin() const
 {
-
-    if (n_agents == 0)
-        return agents.end();
 
     return agents.begin();
 
 }
 
 template<typename TSeq>
-inline typename std::vector< Agent<TSeq> * >::const_iterator Entity<TSeq>::end() const
+inline typename std::vector< size_t >::const_iterator Entity<TSeq>::end() const
 {
-    return agents.begin() + n_agents;
+    return agents.end();
 }
 
 template<typename TSeq>
 size_t Entity<TSeq>::operator[](size_t i)
 {
-    if (n_agents <= i)
+    if (agents.size() <= i)
         throw std::logic_error(
             "There are not that many agents in this entity. " +
-            std::to_string(n_agents) + " <= " + std::to_string(i)
+            std::to_string(agents.size()) + " <= " + std::to_string(i)
             );
 
-    return i;
+    return agents[i];
 }
 
 template<typename TSeq>
@@ -165,8 +159,7 @@ inline void Entity<TSeq>::reset()
 {
 
     this->agents.clear();
-    this->n_agents = 0u;
-    this->agents_location.clear();
+    this->agents.shrink_to_fit();
 
     return;
 
@@ -179,10 +172,10 @@ inline bool Entity<TSeq>::operator==(const Entity<TSeq> & other) const
     if (id != other.id)
         return false;
 
-    if (n_agents != other.n_agents)
+    if (agents.size() != other.agents.size())
         return false;
 
-    for (size_t i = 0u; i < n_agents; ++i)
+    for (size_t i = 0u; i < agents.size(); ++i)
     {
         if (agents[i] != other.agents[i])
             return false;
@@ -236,7 +229,13 @@ inline void Entity<TSeq>::distribute(Model<TSeq> * model)
 }
 
 template<typename TSeq>
-inline std::vector< size_t > & Entity<TSeq>::get_agents()
+inline const std::vector< size_t > & Entity<TSeq>::get_agents() const
+{
+    return agents;
+}
+
+template<typename TSeq>
+inline const std::vector< size_t > & Entity<TSeq>::get_agents_ids() const
 {
     return agents;
 }
@@ -249,7 +248,7 @@ inline void Entity<TSeq>::print() const
         "Entity '%s' (id %i) with %i agents.\n",
         this->entity_name.c_str(),
         static_cast<int>(id),
-        static_cast<int>(n_agents)
+        static_cast<int>(agents.size())
     );
 }
 

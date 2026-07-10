@@ -10,23 +10,6 @@ class Virus;
 template<typename TSeq>
 class Model;
 
-template<typename TSeq>
-class VirusFunctions {
-public:
-    MutFun<TSeq>          mutation                 = nullptr;
-    PostRecoveryFun<TSeq> post_recovery            = nullptr;
-    VirusFun<TSeq>        probability_of_infecting = nullptr;
-    VirusFun<TSeq>        probability_of_recovery  = nullptr;
-    VirusFun<TSeq>        probability_of_death     = nullptr;
-    VirusFun<TSeq>        incubation               = nullptr;
-
-    // Information about how distribution works
-    VirusToAgentFun<TSeq> dist = nullptr;
-
-    VirusFunctions() = default;
-
-};
-
 /**
  * @brief Virus
  * 
@@ -42,8 +25,6 @@ class Virus {
     friend class Agent<TSeq>;
     friend class Model<TSeq>;
     friend class DataBase<TSeq>;
-    friend void default_add_virus<TSeq>(Event<TSeq> & a, Model<TSeq> * m);
-    friend void default_rm_virus<TSeq>(Event<TSeq> & a, Model<TSeq> * m);
 private:
     
     Agent<TSeq> * agent = nullptr;
@@ -62,8 +43,15 @@ private:
     epiworld_fast_int queue_post    = -Queue<TSeq>::Everyone; ///< Change of state when removed from agent.
     epiworld_fast_int queue_removed = -Queue<TSeq>::Everyone; ///< Change of state when agent is removed
 
-    std::shared_ptr< VirusFunctions<TSeq> > virus_functions = 
-        std::make_shared< VirusFunctions<TSeq> >();
+    MutFun<TSeq>          mutation                 = nullptr;
+    PostRecoveryFun<TSeq> post_recovery_fun        = nullptr;
+    VirusFun<TSeq>        probability_of_infecting = nullptr;
+    VirusFun<TSeq>        probability_of_recovery  = nullptr;
+    VirusFun<TSeq>        probability_of_death     = nullptr;
+    VirusFun<TSeq>        incubation               = nullptr;
+
+    // Information about how distribution works
+    VirusToAgentFun<TSeq> dist = nullptr;
         
 public:
 
@@ -129,17 +117,24 @@ public:
     void post_recovery(Model<TSeq> * model);
     void set_post_recovery(PostRecoveryFun<TSeq> fun);
     void set_post_immunity(epiworld_double prob);
-    void set_post_immunity(epiworld_double * prob);
+    void set_post_immunity(std::string param);
 
     void set_prob_infecting_fun(VirusFun<TSeq> fun);
     void set_prob_recovery_fun(VirusFun<TSeq> fun);
     void set_prob_death_fun(VirusFun<TSeq> fun);
     void set_incubation_fun(VirusFun<TSeq> fun);
     
-    void set_prob_infecting(const epiworld_double * prob);
-    void set_prob_recovery(const epiworld_double * prob);
-    void set_prob_death(const epiworld_double * prob);
-    void set_incubation(const epiworld_double * prob);
+    void set_prob_infecting(std::string param);
+    void set_prob_recovery(std::string param);
+    void set_prob_death(std::string param);
+    void set_incubation(std::string param);
+
+    // Deleting pointer versions to avoid mistakes
+    void set_prob_infecting(epiworld_double * prob) = delete;
+    void set_prob_recovery(epiworld_double * prob) = delete;
+    void set_prob_death(epiworld_double * prob) = delete;
+    void set_incubation(epiworld_double * prob) = delete;
+    void set_post_immunity(epiworld_double * prob) = delete;
     
     void set_prob_infecting(epiworld_double prob);
     void set_prob_recovery(epiworld_double prob);
@@ -180,13 +175,13 @@ public:
         epiworld_fast_int * init,
         epiworld_fast_int * end,
         epiworld_fast_int * removed = nullptr
-        );
+        ) const;
 
     void get_queue(
         epiworld_fast_int * init,
         epiworld_fast_int * end,
         epiworld_fast_int * removed = nullptr
-        );
+        ) const;
     ///@}
 
     bool operator==(const Virus<TSeq> & other) const;
@@ -202,6 +197,8 @@ public:
     void set_distribution(VirusToAgentFun<TSeq> fun);
     ///@}
 
+    virtual ~Virus() = default;
+    virtual std::unique_ptr<Virus<TSeq>> clone_ptr() const;
 
 };
 

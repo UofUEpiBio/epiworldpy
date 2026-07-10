@@ -26,8 +26,7 @@ inline VirusToAgentFun<TSeq> distribute_virus_to_set(
         for (auto i: agents_ids)
         {
             model->get_agent(i).set_virus(
-                virus,
-                const_cast<Model<TSeq> * >(model)
+                *model, virus
                 );
         }
     };
@@ -109,20 +108,17 @@ inline VirusToAgentFun<TSeq> distribute_virus_randomly(
         for (int i = 0; i < n_to_sample; ++i)
         {
 
-            int loc = static_cast<epiworld_fast_uint>(
-                floor(model->runif() * (n_available--))
-                );
+            int loc = model->runif_index(n_available--);
 
             // Correcting for possible overflow
-            if ((loc > 0) && (loc >= n_available))
+            if ((n_available > 0) && (loc >= n_available))
                 loc = n_available - 1;
 
             Agent<TSeq> & agent = population[idx[loc]];
             
             // Adding action
             agent.set_virus(
-                virus,
-                const_cast<Model<TSeq> * >(model)
+                *model, virus
                 );
 
             // Adjusting sample
@@ -133,5 +129,94 @@ inline VirusToAgentFun<TSeq> distribute_virus_randomly(
     };
 
 }
+
+/**
+ * Function template to distribute a virus to agents in each entity of a model.
+ * 
+ * @tparam TSeq The sequence type used in the model.
+ * @param prevalence A vector of prevalences for each entity in the model.
+ * @param as_proportion Flag indicating whether the prevalences are given as
+ * proportions or absolute values.
+ * @return A lambda function that distributes the virus to agents in each entity
+ * of the model.
+ */
+template<typename TSeq = EPI_DEFAULT_TSEQ>
+inline VirusToAgentFun<TSeq> distribute_virus_to_entities(
+    std::vector< double > prevalence,
+    bool as_proportion = true
+)
+{
+
+    // Checking proportions are within range
+    if (prevalence.size() == 0)
+        throw std::range_error("Prevalence vector cannot be empty");
+
+    if (as_proportion)
+    {
+        for (auto p: prevalence)
+        {
+            if ((p < 0.0) || (p > 1.0))
+                throw std::range_error("Proportions must be between 0 and 1");
+        }
+    }
+    else
+    {
+        for (auto p: prevalence)
+        {
+            if (p < 0.0)
+                throw std::range_error("Count values in prevalence must be non-negative");
+        }
+    }
+
+    return [prevalence, as_proportion](
+        Virus<TSeq> & virus, Model<TSeq> * model
+    ) -> void 
+    { 
+
+        // Checking the number of entities
+        if (prevalence.size() != model->get_entities().size())
+            throw std::range_error(
+                "Prevalence vector size (" + std::to_string(prevalence.size()) +
+                ") does not match number of entities (" + std::to_string(model->get_entities().size()) + ")"
+                );
+
+        // Adding action
+        auto & entities = model->get_entities();
+        auto & population = model->get_agents();
+        for (size_t e = 0; e < entities.size(); ++e)
+        {
+            auto & entity_e = entities[e];
+            auto agents_ids = entity_e.get_agents_ids();
+            double prevalence_e = prevalence[e];
+            size_t n = agents_ids.size();
+            size_t n_to_distribute;
+            if (as_proportion)
+                n_to_distribute = static_cast<size_t>(std::floor(prevalence_e * n));
+            else
+                n_to_distribute = static_cast<size_t>(prevalence_e);
+
+            if (n_to_distribute > n)
+                n_to_distribute = n;
+
+            std::vector< size_t > idx = agents_ids;
+            for (size_t i = 0u; i < n_to_distribute; ++i)
+            {
+                size_t loc = model->runif_index(n--);
+
+                if ((n > 0) && (loc >= n))
+                    loc = n - 1;
+                
+                population[idx[loc]].set_virus(
+                    *model, virus
+                    );
+                
+                std::swap(idx[loc], idx[n]);
+
+            }
+        }
+    };
+
+}
+
 
 #endif
