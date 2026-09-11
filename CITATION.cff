@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "epiworldpy"
+version: "0.15.0-0"
+authors:
+  - family-names: "Vega Yon"
+    given-names: "George G."
+    orcid: "https://orcid.org/0000-0002-3171-0844"
+  - family-names: "Banks"
+    given-names: "Olivia"
+abstract: "Python bindings for epiworld."
+license: "MIT"
+repository-code: "https://github.com/UofUEpiBio/epiworldpy"
+keywords:
+  - "epidemiology"
+  - "agent-based models"
+  - "Python"
