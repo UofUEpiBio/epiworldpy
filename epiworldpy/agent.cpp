@@ -86,6 +86,44 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 				self.add_tool(model, tool);
 			},
 			"Give the agent a tool.", py::arg("model"), py::arg("tool"))
-		.def("mutate_virus", &Agent<int>::mutate_virus,
-			 "Trigger a virus mutation on this agent.");
+		// Agent::mutate_virus() calls Virus::mutate() without the model it
+		// needs and does not compile, so we mutate the virus directly.
+		.def(
+			"mutate_virus",
+			[](Agent<int> &self, Model<int> &model) {
+				if (self.get_virus() == nullptr)
+					throw std::logic_error("Agent " +
+										   std::to_string(self.get_id()) +
+										   " has no virus to mutate.");
+				self.get_virus()->mutate(&model);
+			},
+			"Trigger a mutation of the agent's virus.", py::arg("model"))
+		.def("has_neighbor", &Agent<int>::has_neighbor,
+			 "Check if an agent (by ID) is one of this agent's neighbors.",
+			 py::arg("neighbor_id"))
+		.def("get_neighbors", &Agent<int>::get_neighbors,
+			 py::return_value_policy::reference_internal,
+			 "Get the list of this agent's neighbors.", py::arg("model"))
+		.def(
+			"rm_tool",
+			[](Agent<int> &self, Model<int> &model, epiworld_fast_uint tool_idx) {
+				self.rm_tool(model, tool_idx);
+			},
+			"Remove a tool from the agent by its position in get_tools().",
+			py::arg("model"), py::arg("tool_idx"))
+		.def(
+			"add_entity",
+			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
+				self.add_entity(model, entity);
+			},
+			"Add the agent to an entity.", py::arg("model"), py::arg("entity"))
+		.def(
+			"rm_entity",
+			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
+				self.rm_entity(model, entity);
+			},
+			"Remove the agent from an entity.", py::arg("model"),
+			py::arg("entity"))
+		.def("get_entities", &Agent<int>::get_entities,
+			 "Get the IDs of the entities this agent belongs to.");
 }

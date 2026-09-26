@@ -29,14 +29,12 @@ namespace epiworldpy {
 template <typename T>
 auto vector_to_pylist(std::vector<T> &vec) -> pybind11::list {
 	pybind11::list out;
-	for (auto &v : *vec) {
+	for (auto &v : vec) {
 		out.append(v);
 	}
 
-	pybind11::capsule free_when_done(
-		vec, [](void *v) { delete reinterpret_cast<std::vector<T> *>(v); });
-
-	out.attr("_capsule") = free_when_done;
+	// The list holds copies, so the (heap-allocated) vector can go now.
+	delete &vec;
 
 	return out;
 }

@@ -1,9 +1,11 @@
 #include "virus.hpp"
 
+#include <pybind11/functional.h>
 #include <pybind11/numpy.h>
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include <optional>
 #include <utility>
 
 using namespace epiworld;
@@ -14,13 +16,15 @@ namespace py = pybind11;
 static auto new_virus(std::string name, double prevalence, bool as_proportion,
 					  double prob_infecting, double prob_recovery,
 					  double prob_death, double post_immunity,
-					  double incubation) -> Virus<int> {
+					  std::optional<double> incubation) -> Virus<int> {
 	Virus<int> virus(std::move(name), prevalence, as_proportion);
 
 	virus.set_prob_infecting(prob_infecting);
 	virus.set_prob_recovery(prob_recovery);
 	virus.set_prob_death(prob_death);
-	virus.set_incubation(incubation);
+	if (incubation.has_value()) {
+		virus.set_incubation(*incubation);
+	}
 
 	if (post_immunity > 0.0) {
 		virus.set_post_immunity(post_immunity);
@@ -60,7 +64,7 @@ void epiworldpy::export_virus(py::class_<Virus<int>> &c) {
 		  py::arg("prevalence"), py::arg("as_proportion"),
 		  py::arg("prob_infecting"), py::arg("prob_recovery"),
 		  py::arg("prob_death"), py::arg("post_immunity") = 0.0,
-		  py::arg("incubation") = 0.0)
+		  py::arg("incubation") = py::none())
 		.def("get_id", &Virus<int>::get_id, "Get the ID of this virus.")
 		.def("get_name", &Virus<int>::get_name, "Get the virus name.")
 		.def("set_name", &Virus<int>::set_name, "Set the virus name.",
