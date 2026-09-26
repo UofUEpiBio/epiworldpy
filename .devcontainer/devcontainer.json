@@ -1,0 +1,32 @@
+// For format details, see https://aka.ms/devcontainer.json.
+{
+	"name": "epiworldpy",
+	"build": {
+		"dockerfile": "Containerfile",
+		"context": ".."
+	},
+
+	"remoteUser": "vscode",
+
+	"workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+
+	"postCreateCommand": "bash .devcontainer/post-create.sh",
+
+	"features": {
+		"ghcr.io/devcontainers/features/github-cli:1": {}
+	},
+
+	"customizations": {
+		"vscode": {
+			"settings": {
+				"python.defaultInterpreterPath": "/home/vscode/.venv/bin/python"
+			},
+			"extensions": [
+				"ms-python.python",
+				"ms-vscode.cpptools",
+				"ms-vscode.cmake-tools",
+				"github.vscode-github-actions"
+			]
+		}
+	}
+}
