@@ -166,7 +166,7 @@ static auto new_virus_fun(
 
 static auto new_random_distribution(double prevalence, bool as_proportion)
 	-> VirusToAgentFun<int> {
-	return distribute_virus_randomly(prevalence);
+	return distribute_virus_randomly(prevalence, as_proportion);
 }
 
 static auto new_distribute_to_set(std::vector<size_t> ids)

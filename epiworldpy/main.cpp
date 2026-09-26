@@ -23,6 +23,9 @@ using namespace epiworld;
 PYBIND11_MODULE(_core, m) {
 	auto agent = py::class_<Agent<int>>(
 		m, "Agent", "An individual agent in the simulation.");
+	auto native_update_fun = py::class_<epiworldpy::NativeUpdateFun>(
+		m, "NativeUpdateFun",
+		"A state update function implemented in C++ (see UpdateFun).");
 	auto update_fun =
 		py::class_<UpdateFun<int>>(m, "UpdateFun", "Model update functions.");
 	auto model = py::class_<Model<int>>(
@@ -39,6 +42,7 @@ PYBIND11_MODULE(_core, m) {
 	auto virus = py::class_<Virus<int>>(m, "Virus", "A virus.");
 
 	epiworldpy::export_agent(agent);
+	epiworldpy::export_native_update_fun(native_update_fun);
 	epiworldpy::export_update_fun(update_fun);
 	epiworldpy::export_model(model);
 	epiworldpy::export_database(database);
