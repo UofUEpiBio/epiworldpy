@@ -270,11 +270,11 @@ transmission. Infected individuals recover at a 0.5 rate:
 import networkx as nx
 from matplotlib.animation import FuncAnimation
 
-model = epiworld.ModelSIR(
+model = epimodels.ModelSIR(
   name           = "hypothetical",
   prevalence     = .01,
   transmission_rate = 0.5,
-  recovery       = 0.5
+  recovery_rate  = 0.5
 )
 
 model.agents_smallworld(n = 500, k = 10, d = False, p = 0.01)

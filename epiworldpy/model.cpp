@@ -29,40 +29,32 @@ void bind_model(py::module &m, const char *pyname, const char *doc,
 			std::forward<Args>(args)...);
 }
 
-template <bool Local>
-static void update_susceptible_impl(Agent<int> *p, Model<int> *m) {
-	Virus<int> *virus = sampler::sample_virus_single<int>(p, m);
-	if constexpr (Local) {
-		if (virus == nullptr)
-			return;
+static auto transmission_mode_to_str(TransmissionMode mode) -> std::string {
+	switch (mode) {
+	case TransmissionMode::automatic:
+		return "auto";
+	case TransmissionMode::push:
+		return "push";
+	case TransmissionMode::pull:
+		return "pull";
 	}
-	if (virus != nullptr) {
-		p->set_virus(*m, *virus);
-	}
+	throw std::logic_error("Unknown transmission mode.");
 }
 
-template <bool Local>
-static void update_exposed_impl(Agent<int> *p, Model<int> *m) {
-	if (p->get_virus() == nullptr) {
-		throw std::logic_error("Using the default_update_exposed on an agent "
-							   "without a virus. Agent id " +
-							   std::to_string(p->get_id()));
-	}
+static auto get_agents_in_state(const Model<int> &self,
+								epiworld_fast_uint state)
+	-> py::array_t<size_t> {
+	auto ids = self.get_agents_in_state(state);
+	return py::array_t<size_t>(ids.size(), ids.begin());
+}
 
-	auto &virus = p->get_virus();
-	m->array_double_tmp[0] =
-		virus->get_prob_death(m) * (1.0 - p->get_death_reduction(virus, *m));
-	m->array_double_tmp[1] =
-		1.0 - (1.0 - virus->get_prob_recovery(m)) *
-				  (1.0 - p->get_recovery_enhancer(virus, *m));
-
-	int which = roulette(2, m);
-	if (which < 0)
-		return;
-
-	// Both death and recovery now just remove the virus;
-	// models that track death should use model-specific update functions.
-	p->rm_virus(*m);
+static auto get_elapsed(const Model<int> &self, std::string unit)
+	-> py::dict {
+	epiworld_double last, total;
+	std::string abbr;
+	self.get_elapsed(std::move(unit), &last, &total, &abbr, false);
+	return py::dict(py::arg("last") = last, py::arg("total") = total,
+					py::arg("unit") = abbr);
 }
 
 static void run_multiple(Model<int> &m, int ndays, int nexperiments, int seed,
@@ -80,6 +72,8 @@ static void run_multiple(Model<int> &m, int ndays, int nexperiments, int seed,
 
 void epiworldpy::export_update_fun(
 	pybind11::class_<epiworld::UpdateFun<int>> &c) {
+	// Return epiworld's own functions (not copies): the model recognizes
+	// default_update_susceptible by address to enable push transmission.
 	c.def_static(
 		 "default",
 		 []() {
@@ -88,11 +82,11 @@ void epiworldpy::export_update_fun(
 		.def_static("default_update_susceptible",
 					[] {
 						return std::function<void(Agent<int> *, Model<int> *)>(
-							update_susceptible_impl<true>);
+							default_update_susceptible<int>);
 					})
 		.def_static("default_update_exposed", [] {
 			return std::function<void(Agent<int> *, Model<int> *)>(
-				update_exposed_impl<true>);
+				default_update_exposed<int>);
 		});
 }
 
@@ -247,7 +241,112 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			py::arg("fun"))
 		.def("get_db", py::overload_cast<>(&Model<int>::get_db),
 			 py::return_value_policy::reference_internal,
-			 "Get the data from the model run.");
+			 "Get the data from the model run.")
+		.def("size", &Model<int>::size, "Get the number of agents.")
+		.def("__len__", &Model<int>::size, "Get the number of agents.")
+		.def("seed", &Model<int>::seed,
+			 "Set the seed of the model's random number generator.",
+			 py::arg("s"))
+		.def("set_name", &Model<int>::set_name, "Set the name of the model.",
+			 py::arg("name"))
+		.def("get_agents_states", &Model<int>::get_agents_states,
+			 "Get the current state of every agent.")
+		.def("get_agents_in_state", &get_agents_in_state,
+			 "Get the IDs of the agents currently in a state (available once "
+			 "the model has been run).",
+			 py::arg("state"))
+		.def("is_directed", &Model<int>::is_directed,
+			 "Whether the network is directed.")
+		.def("add_edge", &Model<int>::add_edge,
+			 "Add an undirected tie between agents i and j. Safe to call "
+			 "during a run (e.g., from a global event). Returns False if "
+			 "the tie already existed.",
+			 py::arg("i"), py::arg("j"))
+		.def("rm_edge", &Model<int>::rm_edge,
+			 "Remove the tie between agents i and j. Safe to call during a "
+			 "run. Returns False if there was no tie.",
+			 py::arg("i"), py::arg("j"))
+		.def("has_edge", &Model<int>::has_edge,
+			 "Whether agents i and j are tied (i -> j if directed).",
+			 py::arg("i"), py::arg("j"))
+		.def(
+			"set_transmission_mode",
+			[](Model<int> &self, std::string_view mode,
+			   double kappa) -> Model<int> & {
+				return self.set_transmission_mode(mode, kappa);
+			},
+			py::return_value_policy::reference_internal,
+			"Set how network transmission is computed: 'auto' (default), "
+			"'push', or 'pull'. Both give the same distribution of "
+			"infections; 'pull' reproduces the random streams of "
+			"epiworld <= 0.15. kappa is the cost threshold used by 'auto'.",
+			py::arg("mode"), py::arg("kappa") = EPI_DEFAULT_TRANSMISSION_KAPPA)
+		.def(
+			"get_transmission_mode",
+			[](const Model<int> &self) {
+				return transmission_mode_to_str(self.get_transmission_mode());
+			},
+			"Get the transmission mode ('auto', 'push', or 'pull').")
+		.def(
+			"get_last_transmission_mode",
+			[](const Model<int> &self) {
+				return transmission_mode_to_str(
+					self.get_last_transmission_mode());
+			},
+			"Get the transmission mode used in the most recent step ('push' "
+			"or 'pull').")
+		.def("get_transmission_kappa", &Model<int>::get_transmission_kappa,
+			 "Get the threshold used by the 'auto' transmission mode.")
+		.def("has_param", &Model<int>::has_param,
+			 "Whether the model has a parameter with that name.",
+			 py::arg("pname"))
+		.def("has_globalevent", &Model<int>::has_globalevent,
+			 "Whether a global event with that name exists.", py::arg("name"))
+		.def("get_n_globalevents", &Model<int>::get_n_globalevents,
+			 "Get the number of global events registered.")
+		.def("queuing_on", &Model<int>::queuing_on,
+			 "Activate the queuing system (default).")
+		.def(
+			"queuing_off",
+			[](Model<int> &self) -> Model<int> & { return self.queuing_off(); },
+			py::return_value_policy::reference_internal,
+			"Deactivate the queuing system.")
+		.def("is_queuing_on", &Model<int>::is_queuing_on,
+			 "Whether the queuing system is on.")
+		.def("print_state_codes", &Model<int>::print_state_codes,
+			 "Print the state codes and labels.")
+		.def("get_elapsed", &get_elapsed,
+			 "Get the elapsed time of the last run and of all runs as a dict "
+			 "with keys 'last', 'total', and 'unit'.",
+			 py::arg("unit") = "auto")
+		.def(
+			"write_data",
+			[](const Model<int> &self, std::string fn_virus_info,
+			   std::string fn_virus_hist, std::string fn_tool_info,
+			   std::string fn_tool_hist, std::string fn_total_hist,
+			   std::string fn_transmission, std::string fn_transition,
+			   std::string fn_reproductive_number,
+			   std::string fn_generation_time, std::string fn_active_cases,
+			   std::string fn_outbreak_size, std::string fn_hospitalizations) {
+				self.write_data(fn_virus_info, fn_virus_hist, fn_tool_info,
+								fn_tool_hist, fn_total_hist, fn_transmission,
+								fn_transition, fn_reproductive_number,
+								fn_generation_time, fn_active_cases,
+								fn_outbreak_size, fn_hospitalizations);
+			},
+			"Write the model's data to files (empty filenames are skipped).",
+			py::arg("fn_virus_info") = std::string(""),
+			py::arg("fn_virus_hist") = std::string(""),
+			py::arg("fn_tool_info") = std::string(""),
+			py::arg("fn_tool_hist") = std::string(""),
+			py::arg("fn_total_hist") = std::string(""),
+			py::arg("fn_transmission") = std::string(""),
+			py::arg("fn_transition") = std::string(""),
+			py::arg("fn_reproductive_number") = std::string(""),
+			py::arg("fn_generation_time") = std::string(""),
+			py::arg("fn_active_cases") = std::string(""),
+			py::arg("fn_outbreak_size") = std::string(""),
+			py::arg("fn_hospitalizations") = std::string(""));
 }
 
 template <typename T> struct ModelNamedArg {

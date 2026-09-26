@@ -1,6 +1,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <utility>
 #include <stdexcept>
 #include <random>
 #include <cmath>
@@ -28,8 +29,8 @@
 
 /* Versioning */
 #define EPIWORLD_VERSION_MAJOR 0
-#define EPIWORLD_VERSION_MINOR 15
-#define EPIWORLD_VERSION_PATCH 1
+#define EPIWORLD_VERSION_MINOR 17
+#define EPIWORLD_VERSION_PATCH 0
 
 #define EPIWORLD_VERSION_PRERELEASE ""
 
@@ -120,12 +121,14 @@ namespace epiworld {
     #include "agent-meat-state.hpp"
     #include "agent-bones.hpp"
     #include "agent-meat.hpp"
+    #include "model-meat-transmission.hpp"
 
     #include "agentssample-bones.hpp"
 
     #include "tools/vaccine.hpp"
     #include "globalevents/quarantinetrigger-meat.hpp"
-    
+    #include "globalevents/bubbles-meat.hpp"
+
     #include "models/models.hpp"
 
 }

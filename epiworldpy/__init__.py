@@ -11,6 +11,7 @@ from ._core import (  # type: ignore[import]
     Tool,
     UpdateFun,
     Virus,
+    __epiworld_version__,
 )
 from . import epimodels
 

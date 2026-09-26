@@ -51,6 +51,8 @@ PYBIND11_MODULE(_core, m) {
 	auto m_epimodels = m.def_submodule("epimodels", "Epidemiological models.");
 	epiworldpy::export_all_models(m_epimodels);
 
+	m.attr("__epiworld_version__") = epiworld_version();
+
 #ifdef VERSION_INFO
 	/* Give the real version. */
 	m.attr("__version__") = MACRO_STRINGIFY(VERSION_INFO);

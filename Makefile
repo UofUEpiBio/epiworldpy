@@ -10,7 +10,7 @@ format:
 
 .PHONY: update
 update:
-	rsync -avz ../epiworld/include/epiworld include/
+	rsync -avz --delete ../epiworld/include/epiworld/ epiworldpy/include/epiworld/
 
 docs/intro.md: docs/intro.qmd scripts/ppquarto.pl
 	quarto render docs/intro.qmd

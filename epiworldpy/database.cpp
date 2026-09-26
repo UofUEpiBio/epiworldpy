@@ -12,18 +12,19 @@ using namespace pybind11::literals;
 namespace py = pybind11;
 
 static auto get_hist_total(DataBase<int> &self) -> py::dict {
-	auto states = new std::vector<std::string>;
+	auto states = std::vector<std::string>();
 	auto dates = new std::vector<int>;
 	auto counts = new std::vector<int>;
 
-	self.get_hist_total(dates, states, counts);
+	self.get_hist_total(dates, &states, counts);
 
 	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("states", *states),
+					 make_dict_entry("states", states),
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_reproductive_number(DataBase<int> &self) -> py::array_t<int> {
+static auto get_reproductive_number(DataBase<int> &self)
+	-> py::array_t<long long> {
 	auto raw_rt = self.get_reproductive_number();
 
 	auto nrows = static_cast<ssize_t>(raw_rt.size());
@@ -47,7 +48,7 @@ static auto get_reproductive_number(DataBase<int> &self) -> py::array_t<int> {
 
 static auto get_transmissions(DataBase<int> &self) -> py::dict {
 	auto dates = new std::vector<int>();
-	auto *sources = new std::vector<int>();
+	auto sources = new std::vector<int>();
 	auto targets = new std::vector<int>();
 	auto viruses = new std::vector<int>();
 	auto source_exposure_dates = new std::vector<int>();
@@ -57,6 +58,7 @@ static auto get_transmissions(DataBase<int> &self) -> py::dict {
 
 	return make_dict(
 		make_dict_entry("dates", *dates), make_dict_entry("sources", *sources),
+		make_dict_entry("targets", *targets),
 		make_dict_entry("viruses", *viruses),
 		make_dict_entry("source_exposure_dates", *source_exposure_dates));
 }
@@ -78,16 +80,16 @@ static auto get_generation_time(DataBase<int> &self) -> py::dict {
 static auto get_hist_transition_matrix(DataBase<int> &self, bool skip_zeros)
 	-> py::dict {
 
-	auto state_from = new std::vector<std::string>();
-	auto state_to = new std::vector<std::string>();
+	auto state_from = std::vector<std::string>();
+	auto state_to = std::vector<std::string>();
 	auto dates = new std::vector<int>();
 	auto counts = new std::vector<int>();
 
-	self.get_hist_transition_matrix(*state_from, *state_to, *dates, *counts,
+	self.get_hist_transition_matrix(state_from, state_to, *dates, *counts,
 									skip_zeros);
 
-	return make_dict(make_dict_entry("state_from", *state_from),
-					 make_dict_entry("state_to", *state_to),
+	return make_dict(make_dict_entry("state_from", state_from),
+					 make_dict_entry("state_to", state_to),
 					 make_dict_entry("dates", *dates),
 					 make_dict_entry("counts", *counts));
 }
@@ -96,13 +98,13 @@ static auto get_hist_virus(DataBase<int> &self) -> py::dict {
 	auto dates = new std::vector<int>();
 	auto ids = new std::vector<int>();
 	auto counts = new std::vector<int>();
-	auto states = new std::vector<std::string>();
+	auto states = std::vector<std::string>();
 
-	self.get_hist_virus(*dates, *ids, *states, *counts);
+	self.get_hist_virus(*dates, *ids, states, *counts);
 
 	return make_dict(
 		make_dict_entry("dates", *dates), make_dict_entry("ids", *ids),
-		make_dict_entry("states", *states), make_dict_entry("counts", *counts));
+		make_dict_entry("states", states), make_dict_entry("counts", *counts));
 }
 
 static auto get_hist_tool(DataBase<int> &self) -> py::dict {
@@ -125,24 +127,24 @@ static auto get_today_transition_matrix(DataBase<int> &self) -> py::dict {
 }
 
 static auto get_today_virus(DataBase<int> &self) -> py::dict {
-	auto states = new std::vector<std::string>();
+	auto states = std::vector<std::string>();
 	auto ids = new std::vector<int>();
 	auto counts = new std::vector<int>();
 
-	self.get_today_virus(*states, *ids, *counts);
+	self.get_today_virus(states, *ids, *counts);
 
-	return make_dict(make_dict_entry("states", *states),
+	return make_dict(make_dict_entry("states", states),
 					 make_dict_entry("ids", *ids),
 					 make_dict_entry("counts", *counts));
 }
 
 static auto get_today_total(DataBase<int> &self) -> py::dict {
 	auto counts = new std::vector<int>();
-	auto states = new std::vector<std::string>();
+	auto states = std::vector<std::string>();
 
-	self.get_today_total(states, counts);
+	self.get_today_total(&states, counts);
 
-	return make_dict(make_dict_entry("states", *states),
+	return make_dict(make_dict_entry("states", states),
 					 make_dict_entry("counts", *counts));
 }
 
