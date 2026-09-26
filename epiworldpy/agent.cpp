@@ -106,9 +106,8 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			 "Get the list of this agent's neighbors.", py::arg("model"))
 		.def(
 			"rm_tool",
-			[](Agent<int> &self, Model<int> &model, epiworld_fast_uint tool_idx) {
-				self.rm_tool(model, tool_idx);
-			},
+			[](Agent<int> &self, Model<int> &model,
+			   epiworld_fast_uint tool_idx) { self.rm_tool(model, tool_idx); },
 			"Remove a tool from the agent by its position in get_tools().",
 			py::arg("model"), py::arg("tool_idx"))
 		.def(

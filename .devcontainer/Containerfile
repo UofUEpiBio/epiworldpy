@@ -1,0 +1,33 @@
+FROM mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04
+
+ARG PYTHON_VERSION=3.12
+# The base image ships a non-root `vscode` user (and makes it the remoteUser).
+ARG USERNAME=vscode
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# uv manages Python and the virtual environment.
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+# Compilers and tools to build the pybind11 extension; clang-format for
+# `make format`; rsync for `make update`.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        cmake \
+        ninja-build \
+        clang-format \
+        rsync \
+        git \
+        gdb && \
+    rm -rf /var/lib/apt/lists/*
+
+USER $USERNAME
+
+# The virtual environment lives outside the workspace so it never clashes with
+# a host `.venv/` (which would hold binaries for the host's platform).
+ENV UV_PYTHON_INSTALL_DIR=/home/$USERNAME/.uv-python
+ENV VIRTUAL_ENV=/home/$USERNAME/.venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN uv python install ${PYTHON_VERSION} && \
+    uv venv --python ${PYTHON_VERSION} $VIRTUAL_ENV
