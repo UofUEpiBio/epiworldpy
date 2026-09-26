@@ -70,6 +70,12 @@ static void run_multiple(Model<int> &m, int ndays, int nexperiments, int seed,
 	m.run_multiple(ndays, nexperiments, seed, cb, reset, verbose, nthreads);
 }
 
+void epiworldpy::export_native_update_fun(
+	pybind11::class_<NativeUpdateFun> &c) {
+	c.def("__repr__",
+		  [](const NativeUpdateFun &) { return "<epiworldpy.NativeUpdateFun>"; });
+}
+
 void epiworldpy::export_update_fun(
 	pybind11::class_<epiworld::UpdateFun<int>> &c) {
 	// Return epiworld's own functions (not copies): the model recognizes
@@ -84,14 +90,46 @@ void epiworldpy::export_update_fun(
 						return std::function<void(Agent<int> *, Model<int> *)>(
 							default_update_susceptible<int>);
 					})
-		.def_static("default_update_exposed", [] {
-			return std::function<void(Agent<int> *, Model<int> *)>(
-				default_update_exposed<int>);
-		});
+		.def_static("default_update_exposed",
+					[] {
+						return std::function<void(Agent<int> *, Model<int> *)>(
+							default_update_exposed<int>);
+					})
+		.def_static(
+			"susceptible",
+			[](std::vector<epiworld_fast_uint> exclude) {
+				return NativeUpdateFun{
+					sampler::make_update_susceptible<int>(std::move(exclude))};
+			},
+			py::arg("exclude") = std::vector<epiworld_fast_uint>{},
+			"Update function for susceptible agents: each can be infected by "
+			"its neighbors' viruses, except by neighbors in a state listed in "
+			"`exclude` (e.g., latent or hospitalized). As with "
+			"default_update_susceptible(), the model may push infection from "
+			"the carriers instead when that is cheaper.")
+		.def_static(
+			"rate",
+			[](std::vector<std::string> param_names,
+			   std::vector<epiworld_fast_uint> target_states) {
+				return NativeUpdateFun{new_state_update_transition<int>(
+					std::move(param_names), std::move(target_states))};
+			},
+			py::arg("param_names"), py::arg("target_states"),
+			"Update function that moves an agent to target_states[i] with the "
+			"daily probability given by the model parameter param_names[i]. "
+			"With several targets, at most one transition happens per day, "
+			"chosen with epiworld's roulette.");
 }
 
 void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 	c.def(py::init<>(), "Create a new empty model.")
+		.def(
+			"add_state",
+			[](Model<int> &self, std::string lab, const NativeUpdateFun &fun) {
+				return self.add_state(std::move(lab), fun.fun);
+			},
+			py::arg("lab"), py::arg("fun"),
+			"Add a new state to the model. Returns the state index.")
 		.def("add_state",
 			 static_cast<epiworld_fast_int (epiworld::Model<>::*)(
 				 std::string, UpdateFun<int>)>(&Model<int>::add_state),
@@ -227,6 +265,24 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 				self.write_edgelist(fn);
 			},
 			"Write the network edge list to a file.", py::arg("fn"))
+		.def(
+			"set_state_function",
+			[](Model<int> &self, epiworld_fast_uint state,
+			   const NativeUpdateFun &fun) -> Model<int> & {
+				return self.set_state_function(state, fun.fun);
+			},
+			py::return_value_policy::reference_internal,
+			"Replace the update function for a state by index.",
+			py::arg("state"), py::arg("fun"))
+		.def(
+			"set_state_function",
+			[](Model<int> &self, std::string_view name,
+			   const NativeUpdateFun &fun) -> Model<int> & {
+				return self.set_state_function(name, fun.fun);
+			},
+			py::return_value_policy::reference_internal,
+			"Replace the update function for a state by name.", py::arg("name"),
+			py::arg("fun"))
 		.def("set_state_function",
 			 py::overload_cast<epiworld_fast_uint, UpdateFun<int>>(
 				 &Model<int>::set_state_function),

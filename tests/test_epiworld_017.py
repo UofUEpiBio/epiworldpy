@@ -93,6 +93,83 @@ class TestTransmissionMode:
         assert m.get_last_transmission_mode() == "push"
 
 
+class TestNativeUpdateFun:
+    @staticmethod
+    def make_seir(n=2000):
+        # SEIR from epiworld's own update functions: exposed agents do not
+        # transmit, and every transition runs in C++.
+        m = epiworld.Model()
+        m.add_param(0.25, "Incubation rate")
+        m.add_param(0.2, "Recovery rate")
+        m.add_state("S", epiworld.UpdateFun.susceptible(exclude=[1]))
+        m.add_state("E", epiworld.UpdateFun.rate(["Incubation rate"], [2]))
+        m.add_state("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
+        m.add_state("R")
+        virus = epiworld.Virus("v", 0.05, True, 0.5, 0.0, 0.0)
+        virus.set_state(1, 3, 3)
+        m.add_virus(virus)
+        m.agents_smallworld(n=n, k=10, d=False, p=0.01)
+        m.verbose_off()
+        return m
+
+    @pytest.mark.parametrize("mode", ["push", "pull"])
+    def test_seir_runs_natively(self, mode):
+        m = self.make_seir()
+        m.set_transmission_mode(mode)
+        m.run(DAYS, SEED)
+        # The susceptible sampler must reach the model unchanged, or the model
+        # could not recognize it and push.
+        assert m.get_last_transmission_mode() == mode
+        counts = m.get_db().get_today_total()["counts"]
+        assert counts.sum() == m.size()
+        assert counts[3] > 0  # someone recovered through the rate function
+
+    def test_push_and_pull_agree(self):
+        finals = {}
+        for mode in ("push", "pull"):
+            recovered = []
+            for seed in range(20):
+                m = self.make_seir(500)
+                m.set_transmission_mode(mode)
+                m.run(DAYS, seed)
+                recovered.append(m.get_db().get_today_total()["counts"][3])
+            finals[mode] = np.mean(recovered)
+        assert finals["push"] == pytest.approx(finals["pull"], rel=0.15)
+
+    def test_set_state_function(self):
+        m = self.make_seir()
+        m.set_state_function("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
+        m.set_state_function(0, epiworld.UpdateFun.susceptible([1]))
+        m.set_transmission_mode("push")
+        m.run(5, SEED)
+        assert m.get_last_transmission_mode() == "push"
+
+    def test_rate_competing_transitions(self):
+        m = epiworld.Model()
+        m.add_param(0.5, "to A")
+        m.add_param(0.5, "to B")
+        m.add_state("X", epiworld.UpdateFun.rate(["to A", "to B"], [1, 2]))
+        m.add_state("A")
+        m.add_state("B")
+        m.agents_empty_graph(1000)
+        m.verbose_off()
+        # Without a virus the queue would skip every agent.
+        m.queuing_off()
+        m.run(1, SEED)
+        # Each agent makes at most one transition, and equal rates reach both
+        # targets about equally often.
+        counts = m.get_db().get_today_total()["counts"]
+        assert counts.sum() == 1000
+        assert counts[1] > 250 and counts[2] > 250
+        assert abs(int(counts[1]) - int(counts[2])) < 100
+
+    def test_rate_checks_lengths(self):
+        with pytest.raises(RuntimeError):
+            epiworld.UpdateFun.rate(["a", "b"], [1])
+        with pytest.raises(RuntimeError):
+            epiworld.UpdateFun.rate([], [])
+
+
 class TestModelQueries:
     @pytest.fixture
     def ran(self):
