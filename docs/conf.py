@@ -42,6 +42,12 @@ extensions = [
 
 toc_deph = 5
 autosummary_generate = True
+
+# Anchors for Markdown headings, so links like [Examples](#examples) work.
+myst_heading_anchors = 3
+
+# Section labels are only unique within a page.
+autosectionlabel_prefix_document = True
 autoclass_content = "both"
 
 # Add any paths that contain templates here, relative to this directory.
@@ -121,14 +127,17 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'sphinx_book_theme'
+html_title = "epiworldpy"
 html_theme_options = {
-    "repository_url": "https://github.com/CDCgov/PyRenew",
+    "repository_url": "https://github.com/UofUEpiBio/epiworldpy",
     "use_edit_page_button": True,
     "use_issues_button": True,
     "use_repository_button": True,
     "repository_branch": "main",
-    "path_to_docs": "docs/source",
+    "path_to_docs": "docs",
     "use_download_button": True,
+    # Show the API sections (Models, Building blocks, ...) expanded.
+    "show_navbar_depth": 1,
 }
 
 html_sidebars = {
@@ -139,7 +148,6 @@ html_sidebars = {
     ]
 }
 
-master_doc = "ctoc"
 autodoc_typehints = "description"
 autodoc_type_aliases = {
     "Any": ":obj:`Any <typing.Any>`",
@@ -172,7 +180,7 @@ autodoc_type_aliases = {
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+#html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
