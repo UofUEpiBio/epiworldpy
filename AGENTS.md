@@ -52,6 +52,18 @@ Notes:
   existing sources, so `make format` also reflows untouched code (issue #4).
   Commit only the formatting of code you changed.
 
+## Docstrings
+
+Every public class, method, and function needs a NumPy-style docstring
+(summary, plus `Parameters` and `Returns` sections when it takes arguments or
+returns something); `tests/test_docstrings.py` enforces this.
+
+- The docstrings of the bindings live in `epiworldpy/docstrings/`, one header
+  per class, as raw strings (`R"doc(...)doc"`) that the `.cpp` files pass to
+  `.def(...)`. Give every argument a `py::arg` name.
+- Take the wording from epiworldR's documentation where it covers the same
+  thing, and check the behavior against the vendored C++ headers.
+
 ## Updating epiworld
 
 1. Copy the headers from the target epiworld release or commit into

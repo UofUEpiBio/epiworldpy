@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "docstrings/database.hpp"
 #include "common.hpp"
 #include "config.hpp"
 
@@ -10,6 +11,7 @@ using namespace epiworld;
 using namespace epiworldpy;
 using namespace pybind11::literals;
 namespace py = pybind11;
+namespace doc = epiworldpy::docstrings::database;
 
 static auto get_hist_total(DataBase<int> &self) -> py::dict {
 	auto states = std::vector<std::string>();
@@ -193,18 +195,19 @@ void epiworldpy::export_database(
 	c.def("add_user_data",
 		  pybind11::detail::overload_cast_impl<std::vector<epiworld_double>>()(
 			  &DataBase<int>::add_user_data),
-		  "Add a list of user data.")
+		  doc::add_user_data_row, py::arg("x"))
 		.def("add_user_data",
 			 pybind11::detail::overload_cast_impl<epiworld_fast_uint,
 												  epiworld_double>()(
 				 &DataBase<int>::add_user_data),
-			 "Add a list of user data.")
+			 doc::add_user_data_value, py::arg("j"), py::arg("x"))
 		.def("get_n_tools", &DataBase<int>::get_n_tools,
-			 "Get the number of tools.")
+			 doc::get_n_tools)
 		.def("get_n_viruses", &DataBase<int>::get_n_viruses,
-			 "Get the number of viruses.")
+			 doc::get_n_viruses)
 		.def("record_transmission", &DataBase<int>::record_transmission,
-			 "Record a transmission event.")
+			 doc::record_transmission, py::arg("i"), py::arg("j"),
+			 py::arg("virus"), py::arg("i_expo_date"))
 		.def(
 			"write_data",
 			[](const DataBase<int> &db, std::string fn_virus_info,
@@ -220,7 +223,7 @@ void epiworldpy::export_database(
 							  fn_generation_time, fn_active_cases,
 							  fn_outbreak_size, fn_hospitalizations);
 			},
-			"Write data to files.", py::arg("fn_virus_info"),
+			doc::write_data, py::arg("fn_virus_info"),
 			py::arg("fn_virus_hist"), py::arg("fn_tool_info"),
 			py::arg("fn_tool_hist"), py::arg("fn_total_hist"),
 			py::arg("fn_transmission"), py::arg("fn_transition"),
@@ -228,39 +231,38 @@ void epiworldpy::export_database(
 			py::arg("fn_active_cases") = std::string(""),
 			py::arg("fn_outbreak_size") = std::string(""),
 			py::arg("fn_hospitalizations") = std::string(""))
-		.def("get_hist_virus", &get_hist_virus, "Get historical virus data.")
-		.def("get_hist_tool", &get_hist_tool, "Get historical tool data.")
+		.def("get_hist_virus", &get_hist_virus, doc::get_hist_virus)
+		.def("get_hist_tool", &get_hist_tool, doc::get_hist_tool)
 		.def("get_today_transition_matrix", &get_today_transition_matrix,
-			 "Get today's transition matrix.")
-		.def("get_today_virus", &get_today_virus, "Get today's virus data.")
-		.def("get_today_total", &get_today_total, "Get today's total data.")
-		.def("size", &DataBase<int>::size, "Get the size (number of entries).")
-		.def("record", &DataBase<int>::record, "Register a new variant.")
-		.def("reset", &DataBase<int>::reset, "Reset the database.")
+			 doc::get_today_transition_matrix)
+		.def("get_today_virus", &get_today_virus, doc::get_today_virus)
+		.def("get_today_total", &get_today_total, doc::get_today_total)
+		.def("size", &DataBase<int>::size, doc::size)
+		.def("record", &DataBase<int>::record, doc::record)
+		.def("reset", &DataBase<int>::reset, doc::reset)
 		.def("record_tool", &DataBase<int>::record_tool,
-			 "Add a new tool to the database.")
+			 doc::record_tool, py::arg("t"))
 		.def("record_virus", &DataBase<int>::record_virus,
-			 "Add a new virus to the database.")
+			 doc::record_virus, py::arg("v"))
 		.def("get_hist_total", &get_hist_total,
-			 "Get historical totals for this model run.")
+			 doc::get_hist_total)
 		.def("get_reproductive_number", &get_reproductive_number,
-			 "Get reproductive numbers over time for every virus in the model.")
+			 doc::get_reproductive_number)
 		.def("get_transmissions", &get_transmissions,
-			 "Get transmission data over time for every virus in the model.")
+			 doc::get_transmissions)
 		.def("get_generation_time", &get_generation_time,
-			 "Get generation times over time for every virus in the model.")
+			 doc::get_generation_time)
 		.def("get_hist_transition_matrix", &get_hist_transition_matrix,
-			 "Get historical transitions in a tabular format.",
+			 doc::get_hist_transition_matrix,
 			 py::arg("skip_zeros") = false)
 		.def("get_active_cases", &get_active_cases,
-			 "Get active (currently infected) cases over time per virus.")
+			 doc::get_active_cases)
 		.def("get_outbreak_size", &get_outbreak_size,
-			 "Get the total outbreak size per virus over time.")
+			 doc::get_outbreak_size)
 		.def("get_hospitalizations", &get_hospitalizations,
-			 "Get hospitalization data over time (requires a model that tracks "
-			 "hospitalizations, e.g. SEIRNetworkQuarantine).")
+			 doc::get_hospitalizations)
 		.def("get_transition_probability",
 			 &DataBase<int>::get_transition_probability,
-			 "Get the transition probability matrix as a flat vector.",
+			 doc::get_transition_probability,
 			 py::arg("print") = false, py::arg("normalize") = true);
 }

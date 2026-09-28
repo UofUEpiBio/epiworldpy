@@ -44,6 +44,17 @@ DatabaseResults = dict[str, Any]
 def write_db_results_multiple_csv(
     results: DatabaseResults, base: str = "results", directory: Path | str = Path(".")
 ) -> None:
+    """Write each result to its own CSV file.
+
+    Parameters
+    ----------
+    results : dict
+        Results from :func:`extract_database_results`.
+    base : str, default "results"
+        Prefix of the file names; each file is named ``{base}-{key}.csv``.
+    directory : str or pathlib.Path, default "."
+        Directory for the files, created if needed.
+    """
     if isinstance(directory, str):
         directory = Path(directory)
 
@@ -62,6 +73,12 @@ def write_db_results_multiple_csv(
 
 
 class NumpyJSONEncoder(json.JSONEncoder):
+    """JSON encoder that stores NumPy scalars and arrays with their types.
+
+    Use it with :func:`json.dump` (``cls=NumpyJSONEncoder``), and
+    :func:`numpy_json_decoder` to read the values back.
+    """
+
     def default(self, o):
         if isinstance(o, np.integer):
             return {"__numpy__": True, "dtype": str(o.dtype), "value": int(o)}
@@ -79,6 +96,20 @@ class NumpyJSONEncoder(json.JSONEncoder):
 
 
 def numpy_json_decoder(dct):
+    """Restore the NumPy values written by :class:`NumpyJSONEncoder`.
+
+    Use it as the ``object_hook`` of :func:`json.load`.
+
+    Parameters
+    ----------
+    dct : dict
+        A decoded JSON object.
+
+    Returns
+    -------
+    object
+        The NumPy scalar or array ``dct`` encodes, or ``dct`` unchanged.
+    """
     if "__numpy__" in dct:
         dtype = np.dtype(dct["dtype"])
         if "shape" in dct:
@@ -91,7 +122,16 @@ def numpy_json_decoder(dct):
 
 def write_db_results_json(
     results: DatabaseResults, filename: Path = Path("results.json")
-):
+) -> None:
+    """Write all the results to one JSON file.
+
+    Parameters
+    ----------
+    results : dict
+        Results from :func:`extract_database_results`.
+    filename : str or pathlib.Path, default "results.json"
+        Path of the file.
+    """
     if isinstance(filename, str):
         filename = Path(filename)
 
@@ -104,6 +144,17 @@ def write_db_results_multiple_json(
     base: str = "results",
     directory: Path = Path("."),
 ) -> None:
+    """Write each result to its own JSON file.
+
+    Parameters
+    ----------
+    results : dict
+        Results from :func:`extract_database_results`.
+    base : str, default "results"
+        Prefix of the file names; each file is named ``{base}-{key}.json``.
+    directory : str or pathlib.Path, default "."
+        Directory for the files, created if needed.
+    """
     if isinstance(directory, str):
         directory = Path(directory)
 
@@ -120,7 +171,21 @@ try:
 
     def write_db_results_hdf5(  # type: ignore
         results: DatabaseResults, filename: Path = Path("results.h5"), **hdf5_kwargs
-    ):
+    ) -> None:
+        """Write the results to an HDF5 file, one group per result.
+
+        Requires the ``h5py`` package.
+
+        Parameters
+        ----------
+        results : dict
+            Results from :func:`extract_database_results`.
+        filename : str or pathlib.Path, default "results.h5"
+            Path of the file.
+        **hdf5_kwargs
+            Unused; kept for compatibility.
+        """
+
         def write_group(grp: h5py.Group, value):
             if (
                 isinstance(value, dict)
@@ -159,6 +224,20 @@ try:
 except ImportError:
 
     def write_db_results_hdf5(results, filename=None):
+        """Write the results to an HDF5 file (requires ``h5py``, not installed).
+
+        Parameters
+        ----------
+        results : dict
+            Results from :func:`extract_database_results`.
+        filename : str or pathlib.Path, optional
+            Path of the file.
+
+        Raises
+        ------
+        ImportError
+            Always, because ``h5py`` is not installed.
+        """
         raise ImportError(
             "The `h5py' package is not installed, cannot write HDF5 files."
         )
@@ -169,7 +248,19 @@ try:
 
     def write_db_results_zarr(  # type: ignore
         results: DatabaseResults, filename: Path = Path("results.zarr")
-    ):
+    ) -> None:
+        """Write the results to a Zarr store, one group per result.
+
+        Requires the ``zarr`` package.
+
+        Parameters
+        ----------
+        results : dict
+            Results from :func:`extract_database_results`.
+        filename : str or pathlib.Path, default "results.zarr"
+            Path of the store.
+        """
+
         def write_group(grp: zarr.Group, value):
             if (
                 isinstance(value, dict)
@@ -208,12 +299,49 @@ try:
 except ImportError:
 
     def write_db_results_zarr(results, filename=None):
+        """Write the results to a Zarr store (requires ``zarr``, not installed).
+
+        Parameters
+        ----------
+        results : dict
+            Results from :func:`extract_database_results`.
+        filename : str or pathlib.Path, optional
+            Path of the store.
+
+        Raises
+        ------
+        ImportError
+            Always, because ``zarr`` is not installed.
+        """
         raise ImportError(
             "The `zarr' package is not installed, cannot write Zarr files."
         )
 
 
 def extract_database_results(db, *whats) -> DatabaseResults:
+    """Collect several results from a database into one dictionary.
+
+    Parameters
+    ----------
+    db : DataBase
+        The database, from :meth:`Model.get_db`.
+    *whats : str
+        The results to collect: ``"total_hist"``, ``"virus_hist"``,
+        ``"tool_hist"``, ``"transition"``, ``"transmission"``,
+        ``"reproductive"``, or ``"generation"`` (see the corresponding
+        :class:`DataBase` methods).
+
+    Returns
+    -------
+    dict
+        The results, keyed by the names in ``whats``, ready for the
+        ``write_db_results_*`` functions.
+
+    Raises
+    ------
+    ValueError
+        If a name in ``whats`` is not supported.
+    """
     VALID_WHATS = {
         "total_hist",
         "virus_hist",

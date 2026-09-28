@@ -1,4 +1,5 @@
 #include "virus.hpp"
+#include "docstrings/virus.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/numpy.h>
@@ -12,6 +13,7 @@ using namespace epiworld;
 using namespace epiworldpy;
 using namespace pybind11::literals;
 namespace py = pybind11;
+namespace doc = epiworldpy::docstrings::virus;
 
 static auto new_virus(std::string name, double prevalence, bool as_proportion,
 					  double prob_infecting, double prob_recovery,
@@ -60,96 +62,96 @@ static auto get_state(Virus<int> &virus) -> py::dict {
 }
 
 void epiworldpy::export_virus(py::class_<Virus<int>> &c) {
-	c.def(py::init(&new_virus), "Create a new virus.", py::arg("name"),
+	c.def(py::init(&new_virus), doc::init, py::arg("name"),
 		  py::arg("prevalence"), py::arg("as_proportion"),
 		  py::arg("prob_infecting"), py::arg("prob_recovery"),
 		  py::arg("prob_death"), py::arg("post_immunity") = 0.0,
 		  py::arg("incubation") = py::none())
-		.def("get_id", &Virus<int>::get_id, "Get the ID of this virus.")
-		.def("get_name", &Virus<int>::get_name, "Get the virus name.")
-		.def("set_name", &Virus<int>::set_name, "Set the virus name.",
+		.def("get_id", &Virus<int>::get_id, doc::get_id)
+		.def("get_name", &Virus<int>::get_name, doc::get_name)
+		.def("set_name", &Virus<int>::set_name, doc::set_name,
 			 py::arg("name"))
-		.def("get_date", &Virus<int>::get_date, "Get the date introduced.")
-		.def("set_date", &Virus<int>::set_date, "Set the date introduced.",
+		.def("get_date", &Virus<int>::get_date, doc::get_date)
+		.def("set_date", &Virus<int>::set_date, doc::set_date,
 			 py::arg("date"))
 		.def(
 			"set_prob_infecting",
 			py::overload_cast<epiworld_double>(&Virus<int>::set_prob_infecting),
-			"Set the probability of infection (constant).",
+			doc::set_prob_infecting,
 			py::arg("prob_infecting"))
 		.def("set_prob_recovery",
 			 py::overload_cast<epiworld_double>(&Virus<int>::set_prob_recovery),
-			 "Set the probability of recovery (constant).",
+			 doc::set_prob_recovery,
 			 py::arg("prob_recovery"))
 		.def("set_prob_death",
 			 py::overload_cast<epiworld_double>(&Virus<int>::set_prob_death),
-			 "Set the probability of death (constant).", py::arg("prob_death"))
+			 doc::set_prob_death, py::arg("prob_death"))
 		.def("set_incubation",
 			 py::overload_cast<epiworld_double>(&Virus<int>::set_incubation),
-			 "Set the incubation period (constant).", py::arg("incubation"))
+			 doc::set_incubation, py::arg("incubation"))
 		.def("set_prob_infecting",
 			 py::overload_cast<std::string>(&Virus<int>::set_prob_infecting),
-			 "Bind probability of infection to a model parameter.",
+			 doc::set_prob_infecting_param,
 			 py::arg("param"))
 		.def("set_prob_recovery",
 			 py::overload_cast<std::string>(&Virus<int>::set_prob_recovery),
-			 "Bind probability of recovery to a model parameter.",
+			 doc::set_prob_recovery_param,
 			 py::arg("param"))
 		.def("set_prob_death",
 			 py::overload_cast<std::string>(&Virus<int>::set_prob_death),
-			 "Bind probability of death to a model parameter.",
+			 doc::set_prob_death_param,
 			 py::arg("param"))
 		.def("set_incubation",
 			 py::overload_cast<std::string>(&Virus<int>::set_incubation),
-			 "Bind incubation period to a model parameter.", py::arg("param"))
+			 doc::set_incubation_param, py::arg("param"))
 		.def("get_prob_infecting", &Virus<int>::get_prob_infecting,
-			 "Get the probability of infection.", py::arg("model"))
+			 doc::get_prob_infecting, py::arg("model"))
 		.def("get_prob_recovery", &Virus<int>::get_prob_recovery,
-			 "Get the probability of recovery.", py::arg("model"))
+			 doc::get_prob_recovery, py::arg("model"))
 		.def("get_prob_death", &Virus<int>::get_prob_death,
-			 "Get the probability of death.", py::arg("model"))
+			 doc::get_prob_death, py::arg("model"))
 		.def("get_incubation", &Virus<int>::get_incubation,
-			 "Get the incubation period.", py::arg("model"))
+			 doc::get_incubation, py::arg("model"))
 		.def("set_prob_infecting_fun", &Virus<int>::set_prob_infecting_fun,
-			 "Set the probability-of-infection callback.", py::arg("fun"))
+			 doc::set_prob_infecting_fun, py::arg("fun"))
 		.def("set_prob_recovery_fun", &Virus<int>::set_prob_recovery_fun,
-			 "Set the probability-of-recovery callback.", py::arg("fun"))
+			 doc::set_prob_recovery_fun, py::arg("fun"))
 		.def("set_prob_death_fun", &Virus<int>::set_prob_death_fun,
-			 "Set the probability-of-death callback.", py::arg("fun"))
+			 doc::set_prob_death_fun, py::arg("fun"))
 		.def("set_incubation_fun", &Virus<int>::set_incubation_fun,
-			 "Set the incubation callback.", py::arg("fun"))
+			 doc::set_incubation_fun, py::arg("fun"))
 		.def("set_mutation", &Virus<int>::set_mutation,
-			 "Set the mutation callback.", py::arg("fun"))
+			 doc::set_mutation, py::arg("fun"))
 		.def("set_post_recovery", &Virus<int>::set_post_recovery,
-			 "Set the post-recovery callback.", py::arg("fun"))
+			 doc::set_post_recovery, py::arg("fun"))
 		.def("set_post_immunity",
 			 py::overload_cast<epiworld_double>(&Virus<int>::set_post_immunity),
-			 "Set post-recovery immunity (constant).", py::arg("prob"))
+			 doc::set_post_immunity, py::arg("prob"))
 		.def("set_post_immunity",
 			 py::overload_cast<std::string>(&Virus<int>::set_post_immunity),
-			 "Bind post-recovery immunity to a model parameter.",
+			 doc::set_post_immunity_param,
 			 py::arg("param"))
 		.def("post_recovery", &Virus<int>::post_recovery,
-			 "Execute the post-recovery callback.", py::arg("model"))
+			 doc::post_recovery, py::arg("model"))
 		.def("set_state", &Virus<int>::set_state,
-			 "Set the state transitions for this virus.", py::arg("init"),
+			 doc::set_state, py::arg("init"),
 			 py::arg("end"), py::arg("removed"))
 		.def("set_queue", &Virus<int>::set_queue,
-			 "Set the queue transitions for this virus.", py::arg("init"),
+			 doc::set_queue, py::arg("init"),
 			 py::arg("end"), py::arg("removed"))
-		.def("get_state", &get_state, "Get the state transitions.")
-		.def("get_queue", &get_queue, "Get the queue transitions.")
+		.def("get_state", &get_state, doc::get_state)
+		.def("get_queue", &get_queue, doc::get_queue)
 		.def("set_distribution", &Virus<int>::set_distribution,
-			 "Set the initial distribution function.", py::arg("fun"))
+			 doc::set_distribution, py::arg("fun"))
 		.def("distribute", &Virus<int>::distribute,
-			 "Distribute the virus according to its distribution function.",
+			 doc::distribute,
 			 py::arg("model"))
 		.def("set_sequence", &Virus<int>::set_sequence,
-			 "Set the genetic sequence.", py::arg("sequence"))
-		.def("mutate", &Virus<int>::mutate, "Trigger a mutation event.",
+			 doc::set_sequence, py::arg("sequence"))
+		.def("mutate", &Virus<int>::mutate, doc::mutate,
 			 py::arg("model"))
 		.def("print", &Virus<int>::print,
-			 "Print information about this virus.");
+			 doc::print);
 }
 
 static auto

@@ -1,3 +1,10 @@
+"""Ready-to-use epidemiological models.
+
+Each class sets up its states, parameters, and virus, so it only needs a
+population (for network models) and a call to :meth:`~epiworldpy.Model.run`.
+All of them are :class:`~epiworldpy.Model` subclasses.
+"""
+
 from .. import _core
 
 ModelDiffNet = _core.epimodels.ModelDiffNet
