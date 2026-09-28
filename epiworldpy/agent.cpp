@@ -1,4 +1,5 @@
 #include "agent.hpp"
+#include "docstrings/agent.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/pybind11.h>
@@ -7,6 +8,7 @@
 using namespace epiworld;
 using namespace epiworldpy;
 namespace py = pybind11;
+namespace doc = epiworldpy::docstrings::agent;
 
 static auto agent_get_virus(Agent<int> &self) -> py::object {
 	auto &v = self.get_virus();
@@ -23,69 +25,69 @@ static auto agent_get_tools(Agent<int> &self) -> std::vector<Tool<int> *> {
 }
 
 void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
-	c.def("get_id", &Agent<int>::get_id, "Get the agent's ID.")
+	c.def("get_id", &Agent<int>::get_id, doc::get_id)
 		.def("get_state", &Agent<int>::get_state,
-			 "Get the current state index.")
+			 doc::get_state)
 		.def("get_state_prev", &Agent<int>::get_state_prev,
-			 "Get the previous state index.")
+			 doc::get_state_prev)
 		.def("get_state_last_changed", &Agent<int>::get_state_last_changed,
-			 "Get the day the state last changed.")
+			 doc::get_state_last_changed)
 		.def("get_virus", &agent_get_virus,
-			 "Get the agent's active virus (or None).")
+			 doc::get_virus)
 		.def("get_tools", &agent_get_tools,
 			 py::return_value_policy::reference_internal,
-			 "Get the list of tools this agent carries.")
+			 doc::get_tools)
 		.def("get_n_tools", &Agent<int>::get_n_tools,
-			 "Get the number of tools this agent carries.")
+			 doc::get_n_tools)
 		.def("get_n_neighbors", &Agent<int>::get_n_neighbors,
-			 "Get the number of neighbors.")
+			 doc::get_n_neighbors)
 		.def("get_n_entities", &Agent<int>::get_n_entities,
-			 "Get the number of entities this agent belongs to.")
+			 doc::get_n_entities)
 		.def("has_tool",
 			 py::overload_cast<epiworld_fast_uint>(&Agent<int>::has_tool,
 												   py::const_),
-			 "Check if the agent has a tool by index.", py::arg("t"))
+			 doc::has_tool_id, py::arg("t"))
 		.def("has_tool",
 			 py::overload_cast<std::string_view>(&Agent<int>::has_tool,
 												 py::const_),
-			 "Check if the agent has a tool by name.", py::arg("name"))
+			 doc::has_tool_name, py::arg("name"))
 		.def("has_virus",
 			 py::overload_cast<epiworld_fast_uint>(&Agent<int>::has_virus,
 												   py::const_),
-			 "Check if the agent has a virus by index.", py::arg("t"))
+			 doc::has_virus_id, py::arg("t"))
 		.def("has_virus",
 			 py::overload_cast<std::string_view>(&Agent<int>::has_virus,
 												 py::const_),
-			 "Check if the agent has a virus by name.", py::arg("name"))
+			 doc::has_virus_name, py::arg("name"))
 		.def("has_entity",
 			 py::overload_cast<epiworld_fast_uint>(&Agent<int>::has_entity,
 												   py::const_),
-			 "Check if the agent belongs to an entity by index.", py::arg("t"))
+			 doc::has_entity, py::arg("t"))
 		.def(
 			"change_state",
 			[](Agent<int> &self, Model<int> &model,
 			   epiworld_fast_uint new_state, epiworld_fast_int queue) {
 				self.change_state(model, new_state, queue);
 			},
-			"Change the agent's state.", py::arg("model"), py::arg("new_state"),
+			doc::change_state, py::arg("model"), py::arg("new_state"),
 			py::arg("queue") = 0)
 		.def(
 			"rm_virus",
 			[](Agent<int> &self, Model<int> &model) { self.rm_virus(model); },
-			"Remove the agent's active virus.", py::arg("model"))
+			doc::rm_virus, py::arg("model"))
 		.def(
 			"set_virus",
 			[](Agent<int> &self, Model<int> &model, const Virus<int> &virus) {
 				self.set_virus(model, virus);
 			},
-			"Set/infect the agent with a virus.", py::arg("model"),
+			doc::set_virus, py::arg("model"),
 			py::arg("virus"))
 		.def(
 			"add_tool",
 			[](Agent<int> &self, Model<int> &model, const Tool<int> &tool) {
 				self.add_tool(model, tool);
 			},
-			"Give the agent a tool.", py::arg("model"), py::arg("tool"))
+			doc::add_tool, py::arg("model"), py::arg("tool"))
 		// Agent::mutate_virus() calls Virus::mutate() without the model it
 		// needs and does not compile, so we mutate the virus directly.
 		.def(
@@ -97,32 +99,32 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 										   " has no virus to mutate.");
 				self.get_virus()->mutate(&model);
 			},
-			"Trigger a mutation of the agent's virus.", py::arg("model"))
+			doc::mutate_virus, py::arg("model"))
 		.def("has_neighbor", &Agent<int>::has_neighbor,
-			 "Check if an agent (by ID) is one of this agent's neighbors.",
+			 doc::has_neighbor,
 			 py::arg("neighbor_id"))
 		.def("get_neighbors", &Agent<int>::get_neighbors,
 			 py::return_value_policy::reference_internal,
-			 "Get the list of this agent's neighbors.", py::arg("model"))
+			 doc::get_neighbors, py::arg("model"))
 		.def(
 			"rm_tool",
 			[](Agent<int> &self, Model<int> &model,
 			   epiworld_fast_uint tool_idx) { self.rm_tool(model, tool_idx); },
-			"Remove a tool from the agent by its position in get_tools().",
+			doc::rm_tool,
 			py::arg("model"), py::arg("tool_idx"))
 		.def(
 			"add_entity",
 			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
 				self.add_entity(model, entity);
 			},
-			"Add the agent to an entity.", py::arg("model"), py::arg("entity"))
+			doc::add_entity, py::arg("model"), py::arg("entity"))
 		.def(
 			"rm_entity",
 			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
 				self.rm_entity(model, entity);
 			},
-			"Remove the agent from an entity.", py::arg("model"),
+			doc::rm_entity, py::arg("model"),
 			py::arg("entity"))
 		.def("get_entities", &Agent<int>::get_entities,
-			 "Get the IDs of the entities this agent belongs to.");
+			 doc::get_entities);
 }
