@@ -27,13 +27,13 @@ static auto get_reproductive_number(DataBase<int> &self)
 	-> py::array_t<long long> {
 	auto raw_rt = self.get_reproductive_number();
 
-	auto nrows = static_cast<ssize_t>(raw_rt.size());
-	ssize_t ncols = 4;
+	auto nrows = static_cast<py::ssize_t>(raw_rt.size());
+	py::ssize_t ncols = 4;
 
 	py::array_t<long long> arr({nrows, ncols});
 	auto buf = arr.mutable_unchecked<2>();
 
-	ssize_t i = 0;
+	py::ssize_t i = 0;
 	for (const auto &kv : raw_rt) {
 		const auto &key = kv.first;
 		buf(i, 0) = static_cast<long long>(key[0]);

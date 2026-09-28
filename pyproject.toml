@@ -72,6 +72,8 @@ filterwarnings = [
 [tool.cibuildwheel]
 test-command = "pytest {project}/tests"
 build = "cp310-* cp311-* cp312-* cp313-* cp314-*"
+# numpy ships no 32-bit wheels, so the tests cannot run there.
+skip = "*-win32 *_i686"
 test-requires = ["pytest>=8.4"]
 test-skip = ["*universal2:arm64"]
 build-verbosity = 1
