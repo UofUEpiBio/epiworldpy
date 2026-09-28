@@ -3,32 +3,62 @@ name: "Publish to PyPI"
 on:
   release:
     types: [published]
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/publish.yaml"
+      - "pyproject.toml"
+      - "CMakeLists.txt"
 
 jobs:
-  publish:
-    name: Publish to PyPI
+  build_sdist:
+    name: Build sdist
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build sdist
+        run: pipx run build --sdist
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dist-sdist
+          path: dist/*.tar.gz
+
+  build_wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15-intel, macos-latest, windows-latest]
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: pypa/cibuildwheel@v4.2.1
+
+      - uses: actions/upload-artifact@v7
         with:
-          python-version: "3.11"
+          name: dist-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
 
-      - name: Install build tools
-        run: |
-          python -m pip install --upgrade pip
-          pip install build twine
+  publish:
+    name: Publish to PyPI
+    needs: [build_sdist, build_wheels]
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release'
+    environment:
+      name: pypi
+      url: https://pypi.org/p/epiworldpy
+    permissions:
+      id-token: write
 
-      - name: Build package
-        run: pip install .
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: dist-*
+          path: dist
+          merge-multiple: true
 
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: "__token__"
-          TWINE_PASSWORD: "${{ secrets.PYPI_API_KEY }}"
-        run: |
-          twine upload dist/*
+      - uses: pypa/gh-action-pypi-publish@release/v1
