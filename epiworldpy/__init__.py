@@ -5,9 +5,11 @@
 from ._core import (  # type: ignore[import]
     Agent,
     DataBase,
+    DiagramType,
     Entity,
     Model,
     ModelDiagram,
+    NativeUpdateFun,
     Tool,
     UpdateFun,
     Virus,
@@ -18,9 +20,11 @@ from . import epimodels
 __all__ = [
     "Agent",
     "DataBase",
+    "DiagramType",
     "Entity",
     "Model",
     "ModelDiagram",
+    "NativeUpdateFun",
     "Tool",
     "UpdateFun",
     "Virus",

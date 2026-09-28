@@ -24,3 +24,6 @@ compile_commands.json
 *.log
 *.zarr/
 !.devcontainer/devcontainer.json
+
+# Sphinx autosummary pages, generated at build time
+docs/api/generated/

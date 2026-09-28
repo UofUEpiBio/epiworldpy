@@ -1,4 +1,4 @@
-# Introduction
+# Getting started
 
 
 - [Examples](#examples)
@@ -336,7 +336,7 @@ plt.show()
 <!-- I couldn't figure out a way to get Quarto to do animations correctly so we're
   hardcoding a GIF. -->
 
-![](docs/intro_files/figure-commonmark/contact-visualization-output-1.gif)
+![](intro_files/figure-commonmark/contact-visualization-output-1.gif)
 
 ## Multiple Simulations
 
