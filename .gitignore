@@ -27,3 +27,6 @@ compile_commands.json
 
 # Sphinx autosummary pages, generated at build time
 docs/api/generated/
+
+# Shallow epiworld clone used by "make update"
+tmp_epiworld/
