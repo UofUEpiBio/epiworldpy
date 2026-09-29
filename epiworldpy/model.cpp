@@ -200,6 +200,9 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 		.def(
 			"print", [](const Model<int> &m, bool lite) { m.print(lite); },
 			doc::print, py::arg("lite") = false)
+		.def("initial_states", &Model<int>::initial_states,
+			 doc::initial_states, py::arg("proportions"),
+			 py::arg("queue") = std::vector<int>{})
 		.def("run", &Model<int>::run,
 			 doc::run,
 			 py::arg("ndays"), py::arg("seed") = -1)

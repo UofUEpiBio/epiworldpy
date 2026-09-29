@@ -329,6 +329,30 @@ lite : bool, default False
     If ``True``, print a shorter summary.
 )doc";
 
+inline constexpr const char *initial_states =
+	R"doc(Set the initial distribution of agents across states.
+
+The meaning of ``proportions`` is model specific. For the SEIR family, for
+example, ``proportions[0]`` is the share of the initially infected agents
+placed in ``Infected`` rather than ``Exposed``, and ``proportions[1]`` is the
+share of the remaining agents placed in ``Recovered``. The distribution is
+applied when the model is reset, which happens at the start of every run.
+Models without a state-based initializer ignore the call.
+
+Parameters
+----------
+proportions : list of float
+    Proportions used by the model's initializer.
+queue : list of int, default []
+    Queuing flags used by the model's initializer. Leave empty for the
+    default.
+
+Returns
+-------
+Model
+    The model itself.
+)doc";
+
 inline constexpr const char *run = R"doc(Run the model.
 
 Parameters

@@ -202,3 +202,61 @@ class TestRunMultiple:
         assert len(results) == 5
         for r in results:
             assert r > 0
+
+
+class TestInitialStates:
+    @staticmethod
+    def _day0(model):
+        hist = model.get_db().get_hist_total()
+        names = hist["states"]["values"]
+        return {
+            str(names[state]): int(count)
+            for date, state, count in zip(
+                hist["dates"], hist["states"]["indexes"], hist["counts"]
+            )
+            if date == 0
+        }
+
+    def test_seirconn_initial_states(self):
+        """initial_states should place agents in Exposed, Infected, and Recovered."""
+        # Target counts: S=7112, E=11, I=1116, R=1761. The half-unit offsets
+        # keep epiworld's truncation on the intended integers.
+        n = 10000
+        m = epimodels.ModelSEIRCONN(
+            name="covid-19",
+            n=n,
+            prevalence=(1127 + 0.5) / n,
+            contact_rate=2.0,
+            transmission_rate=0.1,
+            incubation_days=7.0,
+            recovery_rate=0.14,
+        )
+        assert m.initial_states([(1116 + 0.5) / 1127, (1761 + 0.5) / 8873]) is m
+        m.verbose_off()
+        m.run(0, SEED)
+        assert self._day0(m) == {
+            "Susceptible": 7112,
+            "Exposed": 11,
+            "Infected": 1116,
+            "Recovered": 1761,
+        }
+
+    def test_initial_states_survives_rerun(self):
+        """The distribution is reapplied on every run, not only the first."""
+        m = epimodels.ModelSEIRCONN(
+            name="covid-19",
+            n=1000,
+            prevalence=0.1,
+            contact_rate=2.0,
+            transmission_rate=0.1,
+            incubation_days=7.0,
+            recovery_rate=0.14,
+        )
+        m.initial_states([1.0, 0.5])
+        m.verbose_off()
+        m.run(0, SEED)
+        first = self._day0(m)
+        m.run(0, SEED + 1)
+        assert self._day0(m) == first
+        assert first["Exposed"] == 0
+        assert first["Recovered"] == 450
