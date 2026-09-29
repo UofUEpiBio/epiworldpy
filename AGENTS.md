@@ -37,7 +37,8 @@ repository from inside the container.
 | Rebuild and install after changing C++ or Python sources | `uv pip install .` |
 | Run the tests | `pytest` |
 | Format the binding sources | `make format` |
-| Update the vendored epiworld headers | `make update` (expects an epiworld checkout at `../epiworld`) |
+| Update the vendored epiworld headers from GitHub | `make update` (override the branch or tag with `EPIWORLD_BRANCH=…`) |
+| Update the vendored epiworld headers from a local checkout | `make local-update` (expects an epiworld checkout at `../epiworld`) |
 
 Notes:
 
@@ -67,7 +68,9 @@ returns something); `tests/test_docstrings.py` enforces this.
 ## Updating epiworld
 
 1. Copy the headers from the target epiworld release or commit into
-   `epiworldpy/include/epiworld/`, using `make update` or `rsync --delete`.
+   `epiworldpy/include/epiworld/`, using `make update` (clones the
+   requested `EPIWORLD_BRANCH`, `master` by default), `make local-update`
+   (from `../epiworld`), or `rsync --delete`.
    Keep them identical to upstream: fix upstream bugs upstream (and work
    around them in the bindings) instead of patching the vendored headers.
 2. Bump `version` in `pyproject.toml` and `CITATION.cff` to match the epiworld
