@@ -1,0 +1,18 @@
+version: 1
+groups:
+  epiworldpy:
+    paths:
+      - epiworldpy/
+      - CMakeLists.txt
+      - pyproject.toml
+      - CITATION.cff
+    # epiworldpy follows epiworld's `X.Y.Z-N` versioning (as epiworldR does),
+    # which is R's version scheme; PEP 440 has no hyphenated form, so the
+    # `python-pyproject` preset would reject these versions.
+    scheme: r
+    files:
+      - pyproject.toml
+      - CITATION.cff
+    regex:
+      - '^version[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*$'
+      - '^version:[[:space:]]*"([^"]+)"[[:space:]]*$'
