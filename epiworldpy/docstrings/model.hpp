@@ -824,12 +824,15 @@ speed and in the random numbers drawn. Directed networks always pull.
 Parameters
 ----------
 mode : {"auto", "push", "pull"}
-    ``"auto"`` (the default) pushes when the infected agents have at most
-    ``kappa`` times as many ties as the susceptible ones and pulls
-    otherwise. ``"pull"`` reproduces the random streams of
+    ``"auto"`` (the default) chooses each day from the cost of each step:
+    it pushes when ``D_c + 4 N_c <= kappa (D_s + 4 N_s)``, where ``D`` is
+    the sum of degrees and ``N`` the number of agents, over the infected
+    agents that can transmit (``c``) and the susceptible ones (``s``), and
+    pulls otherwise. ``"pull"`` reproduces the random streams of
     epiworld 0.15 and earlier.
-kappa : float, default 0.25
-    Threshold used by ``"auto"``; a finite, non-negative number.
+kappa : float, default 0.5
+    Threshold used by ``"auto"``; a finite, non-negative number. Smaller
+    values pull more often.
 
 Returns
 -------
