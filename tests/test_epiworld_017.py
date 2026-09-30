@@ -62,10 +62,10 @@ class TestTransmissionMode:
     def test_default_and_setters(self):
         m = make_sir()
         assert m.get_transmission_mode() == "auto"
-        assert m.get_transmission_kappa() == pytest.approx(0.25)
-        m.set_transmission_mode("pull", kappa=0.5)
-        assert m.get_transmission_mode() == "pull"
         assert m.get_transmission_kappa() == pytest.approx(0.5)
+        m.set_transmission_mode("pull", kappa=0.25)
+        assert m.get_transmission_mode() == "pull"
+        assert m.get_transmission_kappa() == pytest.approx(0.25)
         with pytest.raises(ValueError):
             m.set_transmission_mode("bogus")
 
