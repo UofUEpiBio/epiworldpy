@@ -8,6 +8,7 @@
 :caption: User guide
 
 intro
+performance
 ```
 
 ```{toctree}
