@@ -16,6 +16,9 @@ models. Some of the main features include:
 - Transmission can be a function of agents’ features.
 - Out-of-the-box parallelization for multiple simulations.
 
+See the [performance benchmark](performance.md) for a comparison of
+the currently covered workloads and its limitations.
+
 This is a short introduction to epiworldpy; for complete documentation,
 see the API documentation page [on the
 website](https://uofuepibio.github.io/epiworldpy).
