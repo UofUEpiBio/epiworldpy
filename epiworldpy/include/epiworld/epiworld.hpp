@@ -1,3 +1,7 @@
+// Every standard header the library uses must be included here: the other
+// headers are included inside `namespace epiworld`, so a standard header first
+// included there would be declared in `epiworld::std`.
+#include <array>
 #include <vector>
 #include <functional>
 #include <memory>
@@ -13,6 +17,9 @@
 #include <chrono>
 #include <climits>
 #include <cstdint>
+#include <cstddef>
+#include <limits>
+#include <numeric>
 #include <algorithm>
 #include <regex>
 #include <sstream>
@@ -21,14 +28,15 @@
 #include <type_traits>
 #include <cassert>
 #include <atomic>
+#include <variant>
 
 #ifndef EPIWORLD_HPP
 #define EPIWORLD_HPP
 
 /* Versioning */
 #define EPIWORLD_VERSION_MAJOR 0
-#define EPIWORLD_VERSION_MINOR 17
-#define EPIWORLD_VERSION_PATCH 1
+#define EPIWORLD_VERSION_MINOR 18
+#define EPIWORLD_VERSION_PATCH 0
 
 #define EPIWORLD_VERSION_PRERELEASE ""
 
@@ -78,6 +86,7 @@ namespace epiworld {
     #include "hospitalizationstracker-bones.hpp"
     #include "hospitalizationstracker-meat.hpp"
 
+    #include "run-outputs.hpp"
     #include "database-bones.hpp"
     #include "database-meat.hpp"
     #include "adjlist-bones.hpp"
@@ -99,6 +108,7 @@ namespace epiworld {
     #include "model-bones.hpp"
     #include "model-rand-meat.hpp"
     #include "model-meat.hpp"
+    #include "postsampling-meat.hpp"
 
     #include "viruses-bones.hpp"
 
@@ -121,6 +131,7 @@ namespace epiworld {
     #include "agent-bones.hpp"
     #include "agent-meat.hpp"
     #include "model-meat-transmission.hpp"
+    #include "sampler-mixing.hpp"
 
     #include "agentssample-bones.hpp"
 

@@ -88,18 +88,8 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 				self.add_tool(model, tool);
 			},
 			doc::add_tool, py::arg("model"), py::arg("tool"))
-		// Agent::mutate_virus() calls Virus::mutate() without the model it
-		// needs and does not compile, so we mutate the virus directly.
-		.def(
-			"mutate_virus",
-			[](Agent<int> &self, Model<int> &model) {
-				if (self.get_virus() == nullptr)
-					throw std::logic_error("Agent " +
-										   std::to_string(self.get_id()) +
-										   " has no virus to mutate.");
-				self.get_virus()->mutate(&model);
-			},
-			doc::mutate_virus, py::arg("model"))
+		.def("mutate_virus", &Agent<int>::mutate_virus, doc::mutate_virus,
+			 py::arg("model"))
 		.def("has_neighbor", &Agent<int>::has_neighbor,
 			 doc::has_neighbor,
 			 py::arg("neighbor_id"))
