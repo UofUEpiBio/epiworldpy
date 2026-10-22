@@ -9,7 +9,7 @@ format:
 	find epiworldpy -path epiworldpy/include -prune -o \( -iname '*.hpp' -o -iname '*.cpp' \) -print | xargs clang-format -i
 
 # Branch (or tag) of epiworld to pull the headers from
-EPIWORLD_BRANCH ?= master
+EPIWORLD_BRANCH ?= v1-layers
 EPIWORLD_REPO ?= https://github.com/UofUEpiBio/epiworld
 
 # Update the vendored C++ headers from a local epiworld checkout
@@ -22,6 +22,7 @@ local-update:
 update: clean-update
 	git clone --depth=1 -b $(EPIWORLD_BRANCH) $(EPIWORLD_REPO) tmp_epiworld && \
 		rsync -avz --delete tmp_epiworld/include/epiworld/ epiworldpy/include/epiworld/ && \
+		echo "epiworld $(EPIWORLD_REPO) $$(git -C tmp_epiworld rev-parse HEAD)" > epiworldpy/include/VERSIONS && \
 		rm -rf tmp_epiworld
 
 .PHONY: clean-update

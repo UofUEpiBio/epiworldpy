@@ -27,6 +27,7 @@ public:
    * @brief Constructor for the SEIRD model.
    * 
    * @param vname Name of the model.
+ * @param n Number of agents.
    * @param prevalence Initial prevalence of the disease.
    * @param transmission_rate Transmission rate of the disease.
    * @param avg_incubation_days Average incubation period of the disease.
@@ -35,6 +36,7 @@ public:
    */
   ModelSEIRD(
     const std::string & vname,
+    epiworld_fast_uint n,
     epiworld_double prevalence,
     epiworld_double transmission_rate,
     epiworld_double avg_incubation_days,
@@ -129,6 +131,7 @@ public:
 template<typename TSeq>
 inline ModelSEIRD<TSeq>::ModelSEIRD(
     const std::string & vname,
+    epiworld_fast_uint n,
     epiworld_double prevalence,
     epiworld_double transmission_rate,
     epiworld_double avg_incubation_days,
@@ -136,9 +139,15 @@ inline ModelSEIRD<TSeq>::ModelSEIRD(
     epiworld_double death_rate
 )
 {
+
+    this->set_population_size(n);
   
   // Adding statuses
-  this->add_state("Susceptible", default_update_susceptible<TSeq>);
+  // Exposed agents carry the virus but are not infectious yet
+  this->add_state(
+      "Susceptible",
+      sampler::make_update_susceptible<TSeq>({ModelSEIRD<TSeq>::EXPOSED})
+  );
   this->add_state("Exposed",  this->update_exposed_seir);
   this->add_state("Infected", this->update_infected);
   this->add_state("Removed");
