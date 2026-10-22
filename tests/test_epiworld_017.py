@@ -5,6 +5,7 @@ import pytest
 
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
+from epiworldpy import graph, layer
 
 DAYS = 30
 SEED = 1
@@ -12,9 +13,10 @@ SEED = 1
 
 def make_sir(n=2000):
     m = epimodels.ModelSIR(
-        name="flu", prevalence=0.01, transmission_rate=0.3, recovery_rate=0.1
+        name="flu", n=n, prevalence=0.01, transmission_rate=0.3,
+        recovery_rate=0.1
     )
-    m.agents_smallworld(n=n, k=5, d=False, p=0.01)
+    m.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
     m.verbose_off()
     return m
 
@@ -22,40 +24,44 @@ def make_sir(n=2000):
 class TestEdges:
     @pytest.fixture
     def model(self):
-        m = epiworld.Model()
-        m.agents_empty_graph(5)
+        m = epiworld.Model(5)
+        m.add_layer(layer.network("ties", graph.edgelist([], [], 5)))
         return m
 
     def test_add_has_rm(self, model):
-        assert not model.is_directed()
-        assert model.add_edge(0, 1)
-        assert not model.add_edge(0, 1)  # already tied
-        assert model.has_edge(0, 1) and model.has_edge(1, 0)
-        assert model.get_agent(0).has_neighbor(1)
-        assert [a.get_id() for a in model.get_agent(0).get_neighbors(model)] == [1]
+        net = model.get_layer("ties")
+        assert not net.is_directed()
+        assert net.add_edge(0, 1)
+        assert not net.add_edge(0, 1)  # already tied
+        assert net.has_edge(0, 1) and net.has_edge(1, 0)
+        assert net.get_degree(0) == 1
+        assert list(net.get_edgelist()["to"]) == [1]
 
-        assert model.rm_edge(1, 0)
-        assert not model.rm_edge(1, 0)
-        assert not model.has_edge(0, 1)
-        assert model.get_agent(0).get_n_neighbors() == 0
+        assert net.rm_edge(1, 0)
+        assert not net.rm_edge(1, 0)
+        assert not net.has_edge(0, 1)
+        assert net.get_degree(0) == 0
 
     def test_out_of_range(self, model):
         with pytest.raises(ValueError):
-            model.add_edge(0, 99)
+            model.get_layer("ties").add_edge(0, 99)
 
     def test_rewire_during_run(self):
-        # add_edge/rm_edge keep the queue in step, so they are safe mid-run.
+        # Edits during a run keep the queue in step, and last for that run.
         m = make_sir(500)
+        net = m.get_layer("contacts")
 
         def cut_ties(model):
             if model.today() == 5:
-                agent = model.get_agent(0)
-                for nb in agent.get_neighbors(model):
-                    model.rm_edge(0, nb.get_id())
+                el = net.get_edgelist()
+                for i, j in zip(el["from"], el["to"]):
+                    if 0 in (i, j):
+                        net.rm_edge(int(i), int(j))
+                assert net.get_degree(0) == 0
 
         m.add_globalevent(cut_ties, "cut")
         m.run(DAYS, SEED)
-        assert m.get_agent(0).get_n_neighbors() == 0
+        assert net.get_degree(0) == 0
 
 
 class TestTransmissionMode:
@@ -79,14 +85,14 @@ class TestTransmissionMode:
     def test_custom_model_can_push(self):
         # UpdateFun.default_update_susceptible() must be epiworld's own
         # function; the model only pushes for that exact function.
-        m = epiworld.Model()
+        m = epiworld.Model(2000)
         m.add_state("S", epiworld.UpdateFun.default_update_susceptible())
         infected = m.add_state("I", epiworld.UpdateFun.default_update_exposed())
         recovered = m.add_state("R")
         virus = epiworld.Virus("v", 0.05, True, 0.5, 0.2, 0.0)
         virus.set_state(infected, recovered, recovered)
         m.add_virus(virus)
-        m.agents_smallworld(n=2000, k=10, d=False, p=0.01)
+        m.add_layer(layer.network("contacts", graph.smallworld(k=10, p=0.01)))
         m.verbose_off()
         m.set_transmission_mode("push")
         m.run(5, SEED)
@@ -98,7 +104,7 @@ class TestNativeUpdateFun:
     def make_seir(n=2000):
         # SEIR from epiworld's own update functions: exposed agents do not
         # transmit, and every transition runs in C++.
-        m = epiworld.Model()
+        m = epiworld.Model(n)
         m.add_param(0.25, "Incubation rate")
         m.add_param(0.2, "Recovery rate")
         m.add_state("S", epiworld.UpdateFun.susceptible(exclude=[1]))
@@ -108,7 +114,7 @@ class TestNativeUpdateFun:
         virus = epiworld.Virus("v", 0.05, True, 0.5, 0.0, 0.0)
         virus.set_state(1, 3, 3)
         m.add_virus(virus)
-        m.agents_smallworld(n=n, k=10, d=False, p=0.01)
+        m.add_layer(layer.network("contacts", graph.smallworld(k=10, p=0.01)))
         m.verbose_off()
         return m
 
@@ -145,13 +151,12 @@ class TestNativeUpdateFun:
         assert m.get_last_transmission_mode() == "push"
 
     def test_rate_competing_transitions(self):
-        m = epiworld.Model()
+        m = epiworld.Model(1000)
         m.add_param(0.5, "to A")
         m.add_param(0.5, "to B")
         m.add_state("X", epiworld.UpdateFun.rate(["to A", "to B"], [1, 2]))
         m.add_state("A")
         m.add_state("B")
-        m.agents_empty_graph(1000)
         m.verbose_off()
         # Without a virus the queue would skip every agent.
         m.queuing_off()
@@ -236,7 +241,7 @@ class TestFixes:
 
     def test_default_update_exposed_kills(self):
         # Deaths used to be recorded as recoveries.
-        m = epiworld.Model()
+        m = epiworld.Model(200)
         m.add_state("S", epiworld.UpdateFun.default_update_susceptible())
         infected = m.add_state("I", epiworld.UpdateFun.default_update_exposed())
         recovered = m.add_state("R")
@@ -244,7 +249,6 @@ class TestFixes:
         virus = epiworld.Virus("v", 0.5, True, 0.0, 0.0, 1.0)
         virus.set_state(infected, recovered, dead)
         m.add_virus(virus)
-        m.agents_empty_graph(200)
         m.verbose_off()
         m.run(10, SEED)
         counts = np.bincount(m.get_agents_states(), minlength=4)

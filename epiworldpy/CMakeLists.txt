@@ -6,6 +6,7 @@ python_add_library(_core MODULE
     database.cpp
     diagram.cpp
     entity.cpp
+    layer.cpp
     main.cpp
     model.cpp
     tool.cpp

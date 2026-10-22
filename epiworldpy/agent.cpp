@@ -39,8 +39,6 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			 doc::get_tools)
 		.def("get_n_tools", &Agent<int>::get_n_tools,
 			 doc::get_n_tools)
-		.def("get_n_neighbors", &Agent<int>::get_n_neighbors,
-			 doc::get_n_neighbors)
 		.def("get_n_entities", &Agent<int>::get_n_entities,
 			 doc::get_n_entities)
 		.def("has_tool",
@@ -90,12 +88,6 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			doc::add_tool, py::arg("model"), py::arg("tool"))
 		.def("mutate_virus", &Agent<int>::mutate_virus, doc::mutate_virus,
 			 py::arg("model"))
-		.def("has_neighbor", &Agent<int>::has_neighbor,
-			 doc::has_neighbor,
-			 py::arg("neighbor_id"))
-		.def("get_neighbors", &Agent<int>::get_neighbors,
-			 py::return_value_policy::reference_internal,
-			 doc::get_neighbors, py::arg("model"))
 		.def(
 			"rm_tool",
 			[](Agent<int> &self, Model<int> &model,

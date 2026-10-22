@@ -69,6 +69,8 @@ void epiworldpy::export_virus(py::class_<Virus<int>> &c) {
 		  py::arg("incubation") = py::none())
 		.def("get_id", &Virus<int>::get_id, doc::get_id)
 		.def("get_name", &Virus<int>::get_name, doc::get_name)
+		.def("get_lineage_id", &Virus<int>::get_lineage_id,
+			 doc::get_lineage_id)
 		.def("set_name", &Virus<int>::set_name, doc::set_name,
 			 py::arg("name"))
 		.def("get_date", &Virus<int>::get_date, doc::get_date)

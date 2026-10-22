@@ -122,7 +122,27 @@ void epiworldpy::export_update_fun(
 }
 
 void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
-	c.def(py::init<>(), doc::init)
+	c.def(py::init<size_t>(), doc::init, py::arg("n"))
+		.def(
+			"add_layer",
+			[](Model<int> &self, std::shared_ptr<ContactLayer<int>> layer) {
+				self.add_layer(std::move(layer));
+			},
+			doc::add_layer, py::arg("layer"))
+		.def(
+			"get_layer",
+			[](Model<int> &self, std::string_view name) -> ContactLayer<int> & {
+				return self.get_layer(name);
+			},
+			py::return_value_policy::reference_internal, doc::get_layer,
+			py::arg("name"))
+		.def(
+			"get_layer",
+			[](Model<int> &self, size_t id) -> ContactLayer<int> & {
+				return self.get_layer(id);
+			},
+			py::return_value_policy::reference_internal, doc::get_layer_id,
+			py::arg("id"))
 		.def(
 			"add_state",
 			[](Model<int> &self, std::string lab, const NativeUpdateFun &fun) {
@@ -156,30 +176,6 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 		.def("get_sim_id", &Model<int>::get_sim_id,
 			 doc::get_sim_id)
 		.def("today", &Model<int>::today, doc::today)
-		.def("agents_from_edgelist", &Model<int>::agents_from_edgelist,
-			 doc::agents_from_edgelist,
-			 py::arg("source"), py::arg("target"), py::arg("size"),
-			 py::arg("directed"))
-		.def("agents_smallworld", &Model<int>::agents_smallworld,
-			 doc::agents_smallworld,
-			 py::arg("n"), py::arg("k"), py::arg("d"), py::arg("p"))
-		.def(
-			"agents_sbm",
-			[](Model<int> &self, const std::vector<size_t> &block_sizes,
-			   const std::vector<double> &mixing_matrix,
-			   bool row_major) -> Model<int> & {
-				return self.agents_sbm(block_sizes, mixing_matrix, row_major);
-			},
-			py::return_value_policy::reference_internal,
-			doc::agents_sbm,
-			py::arg("block_sizes"), py::arg("mixing_matrix"),
-			py::arg("row_major") = true)
-		.def("agents_bernoulli", &Model<int>::agents_bernoulli,
-			 doc::agents_bernoulli, py::arg("n"),
-			 py::arg("p"), py::arg("d") = false)
-		.def("agents_empty_graph", &Model<int>::agents_empty_graph,
-			 doc::agents_empty_graph,
-			 py::arg("n") = 1000)
 		.def("add_virus", &Model<int>::add_virus, doc::add_virus,
 			 py::arg("virus"))
 		.def("add_tool", &Model<int>::add_tool,
@@ -254,11 +250,6 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			},
 			py::return_value_policy::reference_internal,
 			doc::get_agents)
-		.def("set_rewire_prop", &Model<int>::set_rewire_prop,
-			 doc::set_rewire_prop, py::arg("prop"))
-		.def("get_rewire_prop", &Model<int>::get_rewire_prop,
-			 doc::get_rewire_prop)
-		.def("rewire", &Model<int>::rewire, doc::rewire)
 		.def(
 			"add_globalevent",
 			[](Model<int> &self, std::function<void(Model<int> *)> fun,
@@ -271,12 +262,6 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			 doc::rm_globalevent, py::arg("name"))
 		.def("run_globalevents", &Model<int>::run_globalevents,
 			 doc::run_globalevents)
-		.def(
-			"write_edgelist",
-			[](const Model<int> &self, std::string fn) {
-				self.write_edgelist(fn);
-			},
-			doc::write_edgelist, py::arg("fn"))
 		.def(
 			"set_state_function",
 			[](Model<int> &self, epiworld_fast_uint state,
@@ -322,17 +307,6 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 		.def("get_agents_in_state", &get_agents_in_state,
 			 doc::get_agents_in_state,
 			 py::arg("state"))
-		.def("is_directed", &Model<int>::is_directed,
-			 doc::is_directed)
-		.def("add_edge", &Model<int>::add_edge,
-			 doc::add_edge,
-			 py::arg("i"), py::arg("j"))
-		.def("rm_edge", &Model<int>::rm_edge,
-			 doc::rm_edge,
-			 py::arg("i"), py::arg("j"))
-		.def("has_edge", &Model<int>::has_edge,
-			 doc::has_edge,
-			 py::arg("i"), py::arg("j"))
 		.def(
 			"set_transmission_mode",
 			[](Model<int> &self, std::string_view mode,
@@ -456,14 +430,14 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 	auto surv = model_of<epimodels::ModelSURV<int>>(m, "SURV", mdoc::surv);
 
 	export_model_<epimodels::ModelDiffNet<int>>(
-		diffnet, mdoc::diffnet_init, make_arg<std::string>("name"),
+		diffnet, mdoc::diffnet_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("prob_adopt"),
 		make_arg<bool>("normalize_exposure"), make_arg<double *>("data"),
 		make_arg<int>("data_ncols"), make_arg<std::vector<size_t>>("data_cols"),
 		make_arg<std::vector<double>>("params"));
 
 	export_model_<epimodels::ModelSEIR<int>>(
-		seir, mdoc::seir_init, make_arg<std::string>("name"),
+		seir, mdoc::seir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
 
@@ -474,7 +448,7 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSEIRD<int>>(
-		seird, mdoc::seird_init, make_arg<std::string>("name"),
+		seird, mdoc::seird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"),
 		make_arg<double>("death_rate"));
@@ -509,10 +483,10 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		py::arg("contact_tracing_days_prior") = 4u);
 
 	seirnetworkquarantine.def(
-		py::init<const std::string &, double, double, double, double, double,
-				 double, double, int, double, double, int, double,
-				 unsigned int>(),
-		mdoc::seirnetworkquarantine_init, py::arg("vname"),
+		py::init<const std::string &, epiworld_fast_uint, double, double,
+				 double, double, double, double, double, int, double, double,
+				 int, double, unsigned int>(),
+		mdoc::seirnetworkquarantine_init, py::arg("vname"), py::arg("n"),
 		py::arg("prevalence"), py::arg("transmission_rate"),
 		py::arg("avg_incubation_days"), py::arg("recovery_rate"),
 		py::arg("hospitalization_rate"), py::arg("hospitalization_period"),
@@ -523,7 +497,7 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		py::arg("contact_tracing_days_prior") = 4u);
 
 	export_model_<epimodels::ModelSIR<int>>(
-		sir, mdoc::sir_init, make_arg<std::string>("name"),
+		sir, mdoc::sir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("recovery_rate"));
 
@@ -534,7 +508,7 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSIRD<int>>(
-		sird, mdoc::sird_init, make_arg<std::string>("name"),
+		sird, mdoc::sird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
@@ -552,19 +526,19 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		make_arg<std::vector<double>>("contact_matrix"));
 
 	export_model_<epimodels::ModelSIS<int>>(
-		sis, mdoc::sis_init, make_arg<std::string>("name"),
+		sis, mdoc::sis_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSISD<int>>(
-		sisd, mdoc::sisd_init, make_arg<std::string>("name"),
+		sisd, mdoc::sisd_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
 		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
 	// The argument names follow ModelSURV's constructor, and `prevalence` is a
 	// number of agents there, not a proportion.
 	export_model_<epimodels::ModelSURV<int>>(
-		surv, mdoc::surv_init, make_arg<std::string>("name"),
+		surv, mdoc::surv_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
 		make_arg<epiworld_fast_uint>("prevalence"),
 		make_arg<double>("efficacy_vax"), make_arg<double>("latent_period"),
 		make_arg<double>("infect_period"), make_arg<double>("prob_symptoms"),

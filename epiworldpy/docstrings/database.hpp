@@ -75,6 +75,8 @@ virus : int
     ID of the virus.
 i_expo_date : int
     Day the transmitting agent was infected.
+layer : int, default -1
+    Id of the contact layer the infection came through (``-1``: none).
 )doc";
 
 inline constexpr const char *write_data = R"doc(Write the results to files.
@@ -193,6 +195,8 @@ Parameters
 ----------
 v : Virus
     The virus.
+founder : bool, default False
+    Whether the virus starts its own lineage (as when the model adds it).
 )doc";
 
 inline constexpr const char *get_hist_total =
@@ -224,8 +228,10 @@ Returns
 dict
     ``"dates"``, ``"sources"`` (IDs of the infecting agents, ``-1`` for the
     initial cases), ``"targets"`` (IDs of the infected agents),
-    ``"viruses"`` (virus IDs), and ``"source_exposure_dates"`` (days the
-    infecting agents were infected), one entry per event.
+    ``"viruses"`` (virus IDs), ``"source_exposure_dates"`` (days the
+    infecting agents were infected), and ``"layers"`` (ids of the contact
+    layers the infections came through, ``-1`` for the initial cases; see
+    :meth:`Model.get_layer`), one entry per event.
 )doc";
 
 inline constexpr const char *get_generation_time =

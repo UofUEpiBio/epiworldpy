@@ -483,7 +483,7 @@ plt.show()
 #| echo: true
 #| output-location: slide
 
-model = epiworld.Model()
+model = epiworld.Model(100000)
 model.add_state("Susceptible", epiworld.UpdateFun.default_update_susceptible());
 model.add_state("Infected", epiworld.UpdateFun.default_update_exposed());
 model.add_state("Recovered", epiworld.UpdateFun.default());
@@ -519,8 +519,8 @@ covid19.set_state(1, 2, 3);
 model.add_virus(flu)
 model.add_virus(covid19)
 
-# We need agents to infect.
-model.agents_smallworld(100000, 4, False, 0.01);
+# Agents need contacts to infect each other.
+model.add_layer(epiworld.layer.network("contacts", epiworld.graph.smallworld(k = 4, p = 0.01)));
 
 # Run things.
 model.run(100, 223)

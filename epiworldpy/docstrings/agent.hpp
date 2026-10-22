@@ -9,9 +9,10 @@ namespace epiworldpy::docstrings::agent {
 inline constexpr const char *cls =
 	R"doc(An individual in the simulated population.
 
-Agents are created by the model (for example, with
-:meth:`Model.agents_smallworld`) and accessed with :meth:`Model.get_agent` or
-:meth:`Model.get_agents`; they cannot be created directly. Each agent has a
+Agents are created by the model (``n`` of them, given to its constructor) and
+accessed with :meth:`Model.get_agent` or :meth:`Model.get_agents`; they cannot
+be created directly. Their contacts come from the model's layers (see
+:mod:`epiworldpy.layer`). Each agent has a
 state (an index into :meth:`Model.get_states`), at most one active virus, any
 number of tools, and may belong to entities.
 
@@ -78,15 +79,6 @@ Returns
 -------
 int
     Number of tools.
-)doc";
-
-inline constexpr const char *get_n_neighbors =
-	R"doc(Get the number of neighbors in the contact network.
-
-Returns
--------
-int
-    Number of neighbors.
 )doc";
 
 inline constexpr const char *get_n_entities =
@@ -235,34 +227,6 @@ Raises
 ------
 RuntimeError
     If the agent has no active virus.
-)doc";
-
-inline constexpr const char *has_neighbor =
-	R"doc(Check whether another agent is a neighbor.
-
-Parameters
-----------
-neighbor_id : int
-    ID of the other agent.
-
-Returns
--------
-bool
-    ``True`` if the other agent is one of this agent's neighbors.
-)doc";
-
-inline constexpr const char *get_neighbors =
-	R"doc(Get the agent's neighbors in the contact network.
-
-Parameters
-----------
-model : Model
-    The model the agent belongs to.
-
-Returns
--------
-list of Agent
-    The neighboring agents.
 )doc";
 
 inline constexpr const char *rm_tool = R"doc(Remove one of the agent's tools.

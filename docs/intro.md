@@ -37,17 +37,19 @@ at a 0.3 rate:
 # Loading the module
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
+from epiworldpy import graph, layer
 
 # Create a SIR model (susceptible, infectious, recovered).
 virus = epimodels.ModelSIR(
   name              = 'hypothetical',
+  n                 = 100000,
   prevalence        = 0.01,
   transmission_rate = 0.7,
   recovery_rate     = 0.3
 )
 
-# Adding a Small world population.
-virus.agents_smallworld(n = 100000, k = 10, d = False, p = .01)
+# Contacts: a small-world network layer.
+virus.add_layer(layer.network("contacts", graph.smallworld(k = 10, p = .01)))
 
 # Run for 50 days with a seed of 1912.
 virus.run(50, 1912)
@@ -275,12 +277,13 @@ from matplotlib.animation import FuncAnimation
 
 model = epimodels.ModelSIR(
   name           = "hypothetical",
+  n              = 500,
   prevalence     = .01,
   transmission_rate = 0.5,
   recovery_rate  = 0.5
 )
 
-model.agents_smallworld(n = 500, k = 10, d = False, p = 0.01)
+model.add_layer(layer.network("contacts", graph.smallworld(k = 10, p = 0.01)))
 model.run(50, 1912)
 
 transmissions = model.get_db().get_transmissions()

@@ -5,6 +5,16 @@ epiworldpy is a pybind11 wrapper around the header-only C++ library
 `epiworldpy/*.cpp`, and a copy of epiworld's headers is vendored in
 `epiworldpy/include/epiworld/`.
 
+## The `v1-layers` branch (epiworldpy 1.0.0)
+
+`v1-layers` follows epiworld's `v1-layers` (contact layers, epiworld 1.0.0)
+one merged phase at a time. There, epiworld's
+[`contact-layers.md`](https://github.com/UofUEpiBio/epiworld/blob/v1-layers/contact-layers.md)
+is the source of truth: its Section 11 (Runbook) says how to find where
+things stand and what to do next. Bindings mirror the C++ API (and what
+epiworldR settled for the same phase), and removed methods become stubs in
+`epiworldpy/_defunct.py` that raise and name the replacement.
+
 ## Always work inside the devcontainer
 
 Run **every** build, test, formatting, and docs command inside the

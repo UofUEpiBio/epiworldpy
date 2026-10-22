@@ -12,22 +12,69 @@ inline constexpr const char *cls =
 
 ``Model`` is the base class of every model in :mod:`epiworldpy.epimodels`.
 Those come with their states, parameters, and virus already set up, so a
-typical workflow only needs a population and a call to :meth:`run`::
+typical workflow only needs contacts (a layer) and a call to :meth:`run`::
 
-    from epiworldpy import epimodels
+    from epiworldpy import epimodels, graph, layer
 
-    covid = epimodels.ModelSIR("COVID-19", prevalence=0.01,
+    covid = epimodels.ModelSIR("COVID-19", n=1000, prevalence=0.01,
                                transmission_rate=0.9, recovery_rate=0.1)
-    covid.agents_smallworld(n=1000, k=5, d=False, p=0.01)
+    covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
     covid.run(ndays=100, seed=1912)
     covid.get_db().get_hist_total()
 
-An empty ``Model()`` can be used to build a custom model with
-:meth:`add_state`, :meth:`add_virus`, and :meth:`add_tool`.
+An empty ``Model(n)`` can be used to build a custom model with
+:meth:`add_state`, :meth:`add_virus`, :meth:`add_tool`, and
+:meth:`add_layer`.
 )doc";
 
 inline constexpr const char *init =
-	R"doc(Create an empty model with no states, agents, viruses, or tools.
+	R"doc(Create an empty model of ``n`` agents, with no states, viruses, tools, or contacts.
+
+Parameters
+----------
+n : int
+    Number of agents.
+)doc";
+
+inline constexpr const char *add_layer = R"doc(Add a contact layer.
+
+Agents are exposed to the infectious agents of every layer of the model, in
+one draw. The layer object stays the model's layer: editing it edits the
+model.
+
+Parameters
+----------
+layer : epiworldpy.layer.ContactLayer
+    The layer, for example from :func:`epiworldpy.layer.network`. Its name
+    must be unique within the model.
+)doc";
+
+inline constexpr const char *get_layer = R"doc(Get a contact layer by name.
+
+Parameters
+----------
+name : str
+    Name of the layer (the mixing models name theirs ``"mixing"``).
+
+Returns
+-------
+epiworldpy.layer.ContactLayer
+    The model's layer, as a :class:`~epiworldpy.layer.Network` or
+    :class:`~epiworldpy.layer.Mixing`.
+)doc";
+
+inline constexpr const char *get_layer_id = R"doc(Get a contact layer by id.
+
+Parameters
+----------
+id : int
+    Id of the layer: layers are numbered from 0 in the order they were added,
+    as in the ``layers`` column of :meth:`DataBase.get_transmissions`.
+
+Returns
+-------
+epiworldpy.layer.ContactLayer
+    The model's layer.
 )doc";
 
 inline constexpr const char *add_state_native =
@@ -165,98 +212,6 @@ Returns
 -------
 int
     Current day (step), starting at 0.
-)doc";
-
-inline constexpr const char *agents_from_edgelist =
-	R"doc(Create the population from an edge list.
-
-Parameters
-----------
-source : list of int
-    Source agent of each tie.
-target : list of int
-    Target agent of each tie, of the same length as ``source``.
-size : int
-    Number of agents. Agent IDs must be in ``[0, size)``.
-directed : bool
-    Whether ties are directed. A directed tie ``source -> target`` makes
-    ``target`` a neighbor of ``source`` only, so ``target`` can infect
-    ``source`` but not the other way around.
-)doc";
-
-inline constexpr const char *agents_smallworld =
-	R"doc(Create the population as a Watts-Strogatz small-world network.
-
-Agents are first placed on a ring and tied to their ``k`` nearest neighbors;
-then a proportion ``p`` of the ties are rewired at random.
-
-Parameters
-----------
-n : int
-    Number of agents.
-k : int
-    Number of neighbors of each agent in the ring (half on each side if the
-    network is undirected).
-d : bool
-    Whether the network is directed.
-p : float
-    Proportion of ties to rewire, between 0 and 1.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *agents_sbm =
-	R"doc(Create the population from a stochastic block model (SBM).
-
-Parameters
-----------
-block_sizes : list of int
-    Number of agents in each of the ``K`` blocks (groups).
-mixing_matrix : list of float
-    Flattened ``K x K`` matrix; entry ``(g, h)`` is the expected number of
-    ties an agent in block ``g`` has with agents in block ``h``, so the row
-    sums are the expected degrees.
-row_major : bool, default True
-    Whether ``mixing_matrix`` is flattened by rows (NumPy's default
-    ``order="C"``) or by columns (``order="F"``).
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *agents_bernoulli =
-	R"doc(Create the population as a Bernoulli (Erdos-Renyi) random graph.
-
-Parameters
-----------
-n : int
-    Number of agents.
-p : float
-    Probability that any two agents are tied.
-d : bool, default False
-    Whether the network is directed.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *agents_empty_graph =
-	R"doc(Create a population with no ties.
-
-Useful for models that do not use a network, such as the ``*CONN`` and
-``*Mixing`` models.
-
-Parameters
-----------
-n : int, default 1000
-    Number of agents.
 )doc";
 
 inline constexpr const char *add_virus = R"doc(Add a virus to the model.
@@ -555,35 +510,12 @@ list of Agent
     Every agent in the model, in ID order.
 )doc";
 
-inline constexpr const char *set_rewire_prop =
-	R"doc(Set the proportion of ties rewired at each step.
-
-Only used if the model has a rewiring function.
-
-Parameters
-----------
-prop : float
-    Proportion between 0 and 1.
-)doc";
-
-inline constexpr const char *get_rewire_prop =
-	R"doc(Get the proportion of ties rewired at each step.
-
-Returns
--------
-float
-    Proportion between 0 and 1.
-)doc";
-
-inline constexpr const char *rewire =
-	R"doc(Rewire the network with the model's rewiring function, if it has one.
-)doc";
-
 inline constexpr const char *add_globalevent =
 	R"doc(Add a global event: a function called at the end of a simulation day.
 
 Global events can, for example, implement interventions that change the
-network (see :meth:`add_edge`) or model parameters.
+network (see :meth:`epiworldpy.layer.Network.add_edge`) or model
+parameters.
 
 Parameters
 ----------
@@ -605,15 +537,6 @@ name : str
 
 inline constexpr const char *run_globalevents =
 	R"doc(Run the global events scheduled for today.
-)doc";
-
-inline constexpr const char *write_edgelist =
-	R"doc(Write the network to a file as an edge list.
-
-Parameters
-----------
-fn : str
-    Path of the output file.
 )doc";
 
 inline constexpr const char *set_state_function_native_id =
@@ -750,67 +673,6 @@ Returns
 -------
 numpy.ndarray
     IDs of the agents in that state.
-)doc";
-
-inline constexpr const char *is_directed =
-	R"doc(Check whether the network is directed.
-
-Returns
--------
-bool
-    ``True`` if the network is directed.
-)doc";
-
-inline constexpr const char *add_edge = R"doc(Tie two agents.
-
-Safe to call during a run, for example from a global event. Only works on
-undirected networks.
-
-Parameters
-----------
-i : int
-    ID of the first agent.
-j : int
-    ID of the second agent.
-
-Returns
--------
-bool
-    ``True`` if the tie was created, ``False`` if the agents were already
-    tied.
-)doc";
-
-inline constexpr const char *rm_edge = R"doc(Remove the tie between two agents.
-
-Safe to call during a run, for example from a global event. Only works on
-undirected networks.
-
-Parameters
-----------
-i : int
-    ID of the first agent.
-j : int
-    ID of the second agent.
-
-Returns
--------
-bool
-    ``True`` if a tie was removed, ``False`` if there was none.
-)doc";
-
-inline constexpr const char *has_edge = R"doc(Check whether two agents are tied.
-
-Parameters
-----------
-i : int
-    ID of the first agent.
-j : int
-    ID of the second agent.
-
-Returns
--------
-bool
-    ``True`` if the agents are tied (``i -> j`` in a directed network).
 )doc";
 
 inline constexpr const char *set_transmission_mode =

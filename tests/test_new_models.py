@@ -3,6 +3,7 @@
 import pytest
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
+from epiworldpy import graph, layer
 
 DAYS = 50
 SEED = 42
@@ -175,6 +176,7 @@ class TestSEIRNetworkQuarantine:
     def make_model(self):
         m = epimodels.ModelSEIRNetworkQuarantine(
             vname="pathogen",
+            n=2000,
             prevalence=0.02,
             transmission_rate=0.1,
             avg_incubation_days=5.0,
@@ -187,7 +189,7 @@ class TestSEIRNetworkQuarantine:
             isolation_willingness=0.9,
             isolation_period=10,
         )
-        m.agents_smallworld(2000, 5, False, 0.01)
+        m.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
         return m
 
     def test_runs(self):
