@@ -15,7 +15,10 @@ from ._core import (  # type: ignore[import]
     Virus,
     __epiworld_version__,
 )
-from . import epimodels
+from . import epimodels, graph, layer
+from ._defunct import install as _install_defunct
+
+_install_defunct({"Model": Model, "Agent": Agent})
 
 __all__ = [
     "Agent",
@@ -29,6 +32,8 @@ __all__ = [
     "UpdateFun",
     "Virus",
     "epimodels",
+    "graph",
+    "layer",
 ]
 
 # |##########################################|

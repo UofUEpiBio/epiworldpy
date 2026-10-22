@@ -1,5 +1,6 @@
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
+from epiworldpy import graph, layer
 
 
 def test_seirconn_simple():
@@ -31,9 +32,15 @@ def test_sirconn_simple():
 
 def test_smallworld():
     hypothetical = epimodels.ModelSIR(
-        name="hypothetical", prevalence=0.01, transmission_rate=0.1, recovery_rate=0.14
+        name="hypothetical",
+        n=100000,
+        prevalence=0.01,
+        transmission_rate=0.1,
+        recovery_rate=0.14,
     )
 
-    hypothetical.agents_smallworld(100000, 10, False, 0.01)
+    hypothetical.add_layer(
+        layer.network("contacts", graph.smallworld(k=10, p=0.01))
+    )
 
     hypothetical.run(100, 223)

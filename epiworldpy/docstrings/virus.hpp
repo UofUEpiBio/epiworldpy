@@ -65,6 +65,18 @@ int
     ID of the virus.
 )doc";
 
+inline constexpr const char *get_lineage_id =
+	R"doc(Get the virus's lineage id.
+
+A lineage is a virus added to a model together with all of its variants;
+contact layers and tools target viruses by lineage.
+
+Returns
+-------
+int
+    Lineage id, or -99 if the virus has not been added to a model.
+)doc";
+
 inline constexpr const char *get_name = R"doc(Get the name of the virus.
 
 Returns

@@ -54,15 +54,17 @@ static auto get_transmissions(DataBase<int> &self) -> py::dict {
 	auto targets = new std::vector<int>();
 	auto viruses = new std::vector<int>();
 	auto source_exposure_dates = new std::vector<int>();
+	auto layers = new std::vector<int>();
 
 	self.get_transmissions(*dates, *sources, *targets, *viruses,
-						   *source_exposure_dates);
+						   *source_exposure_dates, *layers);
 
 	return make_dict(
 		make_dict_entry("dates", *dates), make_dict_entry("sources", *sources),
 		make_dict_entry("targets", *targets),
 		make_dict_entry("viruses", *viruses),
-		make_dict_entry("source_exposure_dates", *source_exposure_dates));
+		make_dict_entry("source_exposure_dates", *source_exposure_dates),
+		make_dict_entry("layers", *layers));
 }
 
 static auto get_generation_time(DataBase<int> &self) -> py::dict {
@@ -207,7 +209,7 @@ void epiworldpy::export_database(
 			 doc::get_n_viruses)
 		.def("record_transmission", &DataBase<int>::record_transmission,
 			 doc::record_transmission, py::arg("i"), py::arg("j"),
-			 py::arg("virus"), py::arg("i_expo_date"))
+			 py::arg("virus"), py::arg("i_expo_date"), py::arg("layer") = -1)
 		.def(
 			"write_data",
 			[](const DataBase<int> &db, std::string fn_virus_info,
@@ -243,7 +245,7 @@ void epiworldpy::export_database(
 		.def("record_tool", &DataBase<int>::record_tool,
 			 doc::record_tool, py::arg("t"))
 		.def("record_virus", &DataBase<int>::record_virus,
-			 doc::record_virus, py::arg("v"))
+			 doc::record_virus, py::arg("v"), py::arg("founder") = false)
 		.def("get_hist_total", &get_hist_total,
 			 doc::get_hist_total)
 		.def("get_reproductive_number", &get_reproductive_number,

@@ -2,6 +2,7 @@
 
 import pytest
 import epiworldpy.epimodels as epimodels
+from epiworldpy import graph, layer
 
 DAYS = 50
 SEED = 42
@@ -25,9 +26,10 @@ def seirconn():
 @pytest.fixture
 def sir_smallworld():
     m = epimodels.ModelSIR(
-        name="flu", prevalence=0.01, transmission_rate=0.1, recovery_rate=0.14
+        name="flu", n=5000, prevalence=0.01, transmission_rate=0.1,
+        recovery_rate=0.14
     )
-    m.agents_smallworld(5000, 5, False, 0.01)
+    m.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
     m.run(DAYS, SEED)
     return m
 
@@ -78,38 +80,41 @@ class TestModelAPI:
         seirconn.reset()
         assert seirconn.today() == 0
 
-    def test_agents_sbm(self):
-        """agents_sbm should populate model using Stochastic Block Model."""
+    def test_sbm(self):
+        """A network layer drawn from a stochastic block model."""
         m = epimodels.ModelSIR(
-            name="flu", prevalence=0.01, transmission_rate=0.1, recovery_rate=0.14
+            name="flu", n=1000, prevalence=0.01, transmission_rate=0.1,
+            recovery_rate=0.14
         )
         # Two blocks of 500 agents each; 2x2 mixing matrix (row-major)
-        m.agents_sbm(
-            block_sizes=[500, 500],
-            mixing_matrix=[4.0, 0.5, 0.5, 4.0],
-            row_major=True,
-        )
+        m.add_layer(layer.network(
+            "blocks", graph.sbm(block_sizes=[500, 500],
+                                mixing_matrix=[0.01, 0.001, 0.001, 0.01])
+        ))
         m.run(DAYS, SEED)
         hist = m.get_db().get_hist_total()
         assert len(hist["dates"]) > 0
 
-    def test_agents_bernoulli(self):
-        """agents_bernoulli should populate model using a Bernoulli random graph."""
+    def test_bernoulli(self):
+        """A network layer drawn from a Bernoulli random graph."""
         m = epimodels.ModelSIR(
-            name="flu", prevalence=0.01, transmission_rate=0.1, recovery_rate=0.14
+            name="flu", n=1000, prevalence=0.01, transmission_rate=0.1,
+            recovery_rate=0.14
         )
-        m.agents_bernoulli(n=1000, p=0.01)
+        m.add_layer(layer.network("random", graph.bernoulli(p=0.01)))
         m.run(DAYS, SEED)
         hist = m.get_db().get_hist_total()
         assert len(hist["dates"]) > 0
 
-    def test_agents_empty_graph(self):
-        """agents_empty_graph should create isolated agents."""
+    def test_no_layers(self):
+        """A network model without layers has no contacts."""
         m = epimodels.ModelSIS(
-            name="sis", prevalence=0.01, transmission_rate=0.1, recovery_rate=0.14
+            name="sis", n=500, prevalence=0.01, transmission_rate=0.1,
+            recovery_rate=0.14
         )
-        m.agents_empty_graph(n=500)
         m.run(10, SEED)
+        tr = m.get_db().get_transmissions()
+        assert (tr["sources"] >= 0).sum() == 0
 
 
 

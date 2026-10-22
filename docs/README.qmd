@@ -59,6 +59,26 @@ pip install .
 
 For a quickstart, please see the [intro](docs/intro.md).
 
+## Migrating to 1.0.0 (development)
+
+epiworldpy 1.0.0 follows epiworld 1.0.0, where contacts come from contact
+layers. Code written for 0.x needs these changes; removed methods raise an
+error that names their replacement.
+
+- The population size goes to the model constructor, and only there:
+  `epimodels.ModelSIR(name, n, ...)`, `Model(n)`.
+- Networks are layers: `model.add_layer(layer.network("contacts",
+  graph.smallworld(k=5, p=0.01)))`, with `graph.bernoulli()`, `graph.sbm()` or
+  a fixed `graph.edgelist()`. `agents_smallworld()` and the other `agents_*()`
+  methods are gone.
+- Network edits and queries are on the layer (`model.get_layer(name)`):
+  `add_edge()`, `rm_edge()`, `has_edge()`, `get_degree()`, `get_edgelist()`,
+  `set_rewiring(graph.rewire_degseq(param))`. The contact matrix of a mixing
+  model is on `model.get_layer("mixing")`.
+- `get_transmissions()` gains `layers`: the layer each infection came
+  through. Layers have a weight (`set_weight(param)`) and virus targets
+  (`add_virus_target(virus)`).
+
 ## Documentation
 
 This is a short introduction to epiworldPy; for complete documentation,

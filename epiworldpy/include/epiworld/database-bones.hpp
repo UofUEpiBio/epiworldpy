@@ -81,6 +81,7 @@ private:
     std::vector< int > transmission_target;               ///< Id of the target
     std::vector< int > transmission_virus;              ///< Id of the variant
     std::vector< int > transmission_source_exposure_date; ///< Date when the source acquired the variant
+    std::vector< int > transmission_layer;                ///< Id of the layer of the contact (-1: none, e.g., seeded)
 
     std::vector< int > transition_matrix;
 
@@ -128,8 +129,10 @@ public:
      * Since viruses are originated in the agent, the numbers simply move around.
      * From the parent virus to the new virus. And the total number of infected
      * does not change.
+     * @param founder `true` when `Model::add_virus()` registers the virus,
+     * which then starts its own lineage (unless its sequence is on record).
      */
-    void record_virus(Virus<TSeq> & v);
+    void record_virus(Virus<TSeq> & v, bool founder = false);
     void record_tool(Tool<TSeq> & t);
     void set_seq_hasher(std::function<std::vector<int>(TSeq)> fun);
     void reset();
@@ -221,6 +224,8 @@ public:
      * @param target
      * @param virus
      * @param source_exposure_date
+     * @param layer Id of the layer of the contact that transmitted the virus
+     * (-1 for infections that did not come from a contact, e.g., seeds)
      */
     ///@{
     void get_transmissions(
@@ -228,7 +233,8 @@ public:
         std::vector<int> & source,
         std::vector<int> & target,
         std::vector<int> & virus,
-        std::vector<int> & source_exposure_date
+        std::vector<int> & source_exposure_date,
+        std::vector<int> & layer
     ) const;
 
     void get_transmissions(
@@ -236,7 +242,8 @@ public:
         int * source,
         int * target,
         int * virus,
-        int * source_exposure_date
+        int * source_exposure_date,
+        int * layer
     ) const;
     ///@}
 
@@ -273,7 +280,7 @@ public:
      * If i is -1, then it means that the agent was assigned a virus at the
      * beginning of the simulation.
      */
-    void record_transmission(int i, int j, int virus, int i_expo_date);
+    void record_transmission(int i, int j, int virus, int i_expo_date, int layer = -1);
 
     size_t get_n_viruses() const; ///< Get the number of viruses
     size_t get_n_tools() const; ///< Get the number of tools

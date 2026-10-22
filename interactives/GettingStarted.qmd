@@ -51,8 +51,8 @@ After running the `epiworld` model, below is a list of all the functions that ca
 
 | Not Implemented               | Implemented                  | Implemented in Another Branch       |
 | ----------------------------- | ---------------------------- | ----------------------------------- |
-|                               | `agents_from_edgelist`       |                                     |
-|                               | `agents_smallworld`          |                                     |
+|                               | `add_layer`                  |                                     |
+|                               | `get_layer`                  |                                     |
 |                               | `add_virus`                  |                                     |
 |                               | `add_tool`                   |                                     |
 |                               | `get_hist_tool`              |                                     |
@@ -325,7 +325,7 @@ plt.show()
 `epiworld` supports multi-virus models. The below code gives instructions on how to implement this. Using the virus function, give a name to the new virus/virus with its corresponding probability of infecting any given agent. In this example, `prob_infecting` is set to 1.0, making it highly contagious. To officially add this new virus to the model, use the `add_virus` function by calling the original `epiworld` model object, the new virus, and the new virus's prevalence (which is set to 0.01 in this example).
 
 ```{python}
-model = epiworld.Model()
+model = epiworld.Model(100000)
 model.add_state("Susceptible", epiworld.UpdateFun.default_update_susceptible());
 model.add_state("Infected", epiworld.UpdateFun.default_update_exposed());
 model.add_state("Recovered", epiworld.UpdateFun.default());
@@ -361,8 +361,8 @@ covid19.set_state(1, 2, 3);
 model.add_virus(flu)
 model.add_virus(covid19)
 
-# We need agents to infect.
-model.agents_smallworld(100000, 4, False, 0.01);
+# Agents need contacts to infect each other.
+model.add_layer(epiworld.layer.network("contacts", epiworld.graph.smallworld(k = 4, p = 0.01)));
 ```
 
 After running the updated model with the new virus included for 50 days, the output below describes the simulation. To confirm that the flu is included, notice the presence of “Flu” in the virus(es) section of the output. All other output is interpretable as specified in previous sections.

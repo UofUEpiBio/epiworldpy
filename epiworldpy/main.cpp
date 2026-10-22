@@ -12,11 +12,13 @@
 #include "docstrings/database.hpp"
 #include "docstrings/diagram.hpp"
 #include "docstrings/entity.hpp"
+#include "docstrings/layer.hpp"
 #include "docstrings/epimodels.hpp"
 #include "docstrings/model.hpp"
 #include "docstrings/tool.hpp"
 #include "docstrings/virus.hpp"
 #include "entity.hpp"
+#include "layer.hpp"
 #include "misc.hpp"
 #include "model.hpp"
 #include "tool.hpp"
@@ -57,6 +59,12 @@ PYBIND11_MODULE(_core, m) {
 	epiworldpy::export_entity(entity);
 	epiworldpy::export_tool(tool);
 	epiworldpy::export_virus(virus);
+
+	auto m_graph = m.def_submodule("graph", docs::layer::graph_module);
+	epiworldpy::export_graph(m_graph);
+
+	auto m_layer = m.def_submodule("layer", docs::layer::layer_module);
+	epiworldpy::export_layer(m_layer);
 
 	auto m_epimodels = m.def_submodule("epimodels", docs::epimodels::module);
 	epiworldpy::export_all_models(m_epimodels);

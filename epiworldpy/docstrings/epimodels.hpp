@@ -9,8 +9,9 @@ namespace epiworldpy::docstrings::epimodels {
 
 // Shared pieces, spliced in with string literal concatenation.
 #define EPIWORLDPY_DOC_NETWORK                                                 \
-    "The model has no agents until a population is added, for example with\n"  \
-    ":meth:`~epiworldpy.Model.agents_smallworld`.\n"
+    "The model has ``n`` agents and no contacts until a network layer is\n"   \
+    "added with :meth:`~epiworldpy.Model.add_layer` (see\n"                  \
+    ":mod:`epiworldpy.layer`).\n"
 
 #define EPIWORLDPY_DOC_CONNECTED                                                 \
     "Every agent can contact every other agent (a well-mixed population), so\n"  \
@@ -49,9 +50,10 @@ States: ``Susceptible``, ``Infected``, ``Recovered``.
 Examples
 --------
 >>> from epiworldpy import epimodels
->>> covid = epimodels.ModelSIR("COVID-19", prevalence=0.01,
+>>> from epiworldpy import graph, layer
+>>> covid = epimodels.ModelSIR("COVID-19", n=1000, prevalence=0.01,
 ...                            transmission_rate=0.9, recovery_rate=0.1)
->>> covid.agents_smallworld(n=1000, k=5, d=False, p=0.01)
+>>> covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
 >>> covid.run(ndays=100, seed=1912)
 )doc";
 
@@ -61,6 +63,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -115,6 +119,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -189,10 +195,11 @@ agents carry the virus but cannot transmit it yet.
 Examples
 --------
 >>> from epiworldpy import epimodels
->>> covid = epimodels.ModelSEIR("COVID-19", prevalence=0.01,
+>>> from epiworldpy import graph, layer
+>>> covid = epimodels.ModelSEIR("COVID-19", n=1000, prevalence=0.01,
 ...                             transmission_rate=0.9, incubation_days=4,
 ...                             recovery_rate=0.1)
->>> covid.agents_smallworld(n=1000, k=5, d=False, p=0.01)
+>>> covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
 >>> covid.run(ndays=100, seed=1912)
 )doc";
 
@@ -202,6 +209,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -262,6 +271,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -386,8 +397,8 @@ inline constexpr const char *seirnetworkquarantine =
 	R"doc(SEIR model on a network, with quarantine, isolation, hospitalization, and contact tracing.
 
 Like :class:`ModelSEIRMixingQuarantine`, but contacts are the agents'
-neighbors in the network (for example, one built with
-:meth:`~epiworldpy.Model.agents_sbm`) instead of a contact matrix.
+neighbors in its network layers (for example, one drawn with
+:func:`epiworldpy.graph.sbm`) instead of a contact matrix.
 
 States: ``Susceptible``, ``Exposed``, ``Infected``, ``Isolated``,
 ``Detected Hospitalized``, ``Quarantined Susceptible``,
@@ -403,6 +414,8 @@ Parameters
 ----------
 vname : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -429,6 +442,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -451,6 +466,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
 transmission_rate : float
@@ -481,6 +498,8 @@ Parameters
 ----------
 name : str
     Name of the virus.
+n : int
+    Number of agents.
 prevalence : int
     Initial number of agents with the virus.
 efficacy_vax : float
@@ -530,6 +549,8 @@ Parameters
 ----------
 name : str
     Name of the behavior (innovation).
+n : int
+    Number of agents.
 prevalence : float
     Initial proportion of adopters.
 prob_adopt : float

@@ -16,7 +16,7 @@ import re
 import pytest
 
 import epiworldpy
-from epiworldpy import epimodels
+from epiworldpy import epimodels, graph, layer
 
 
 def _split_top_level(s: str) -> list[str]:
@@ -103,7 +103,7 @@ def _is_pybind(obj) -> bool:
 
 
 def _public_classes():
-    for mod in (epiworldpy, epimodels):
+    for mod in (epiworldpy, epimodels, graph, layer):
         for name in sorted(dir(mod)):
             obj = getattr(mod, name)
             if (not name.startswith("_") and inspect.isclass(obj)
@@ -122,6 +122,14 @@ def _public_members(cls):
 
 
 CLASSES = list(_public_classes())
+
+# The functions of the compiled submodules (graph.smallworld(), ...)
+BUILTINS = [
+    (f"{mod.__name__}.{name}", getattr(mod, name))
+    for mod in (graph, layer)
+    for name in mod.__all__
+    if _is_pybind(getattr(mod, name)) and not inspect.isclass(getattr(mod, name))
+]
 FUNCTIONS = [
     (f"epiworldpy.{name}", getattr(epiworldpy, name))
     for name in epiworldpy.__all__
@@ -156,6 +164,15 @@ def test_function_docstrings(qualname, func):
     ret = "None" if sig.return_annotation in empty else "value"
     body = inspect.getdoc(func) or ""
     problems = _check(qualname, args, ret, body)
+    assert not problems, "\n".join(problems)
+
+
+@pytest.mark.parametrize("qualname,func", BUILTINS,
+                         ids=[q for q, _ in BUILTINS])
+def test_builtin_docstrings(qualname, func):
+    problems = []
+    for args, ret, body in _pybind_overloads(func):
+        problems += _check(qualname, args, ret, body)
     assert not problems, "\n".join(problems)
 
 

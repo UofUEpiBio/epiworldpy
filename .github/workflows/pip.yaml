@@ -6,6 +6,7 @@ on:
   push:
     branches:
       - main
+      - v1-layers
 
 jobs:
   build:
