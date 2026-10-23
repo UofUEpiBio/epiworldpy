@@ -193,6 +193,9 @@ Parameters
 ----------
 v : Virus
     The virus.
+founder : bool, default=False
+    Whether this virus was registered directly with the model as a founding
+    variant.
 )doc";
 
 inline constexpr const char *get_hist_total =

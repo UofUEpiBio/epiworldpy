@@ -243,7 +243,7 @@ void epiworldpy::export_database(
 		.def("record_tool", &DataBase<int>::record_tool,
 			 doc::record_tool, py::arg("t"))
 		.def("record_virus", &DataBase<int>::record_virus,
-			 doc::record_virus, py::arg("v"))
+			 doc::record_virus, py::arg("v"), py::arg("founder") = false)
 		.def("get_hist_total", &get_hist_total,
 			 doc::get_hist_total)
 		.def("get_reproductive_number", &get_reproductive_number,
