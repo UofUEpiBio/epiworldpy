@@ -65,6 +65,20 @@ int
     ID of the virus.
 )doc";
 
+inline constexpr const char *get_lineage_id =
+	R"doc(Get the ID of the virus's lineage.
+
+The lineage ID is the ID that :meth:`Model.add_virus` assigns to the founding
+virus. Mutations change the virus ID but keep the lineage ID, so all variants
+of a virus share it. Tools target viruses by lineage (see
+:meth:`Tool.add_target`).
+
+Returns
+-------
+int
+    The lineage ID, or -99 if the virus has not been added to a model.
+)doc";
+
 inline constexpr const char *get_name = R"doc(Get the name of the virus.
 
 Returns

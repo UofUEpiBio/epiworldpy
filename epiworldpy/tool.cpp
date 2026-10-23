@@ -111,5 +111,15 @@ void epiworldpy::export_tool(pybind11::class_<epiworld::Tool<int>> &c) {
 			 doc::set_distribution, py::arg("fun"))
 		.def("distribute", &Tool<int>::distribute,
 			 doc::distribute, py::arg("model"))
+		.def("add_target", py::overload_cast<int>(&Tool<int>::add_target),
+			 doc::add_target, py::arg("target"))
+		.def("add_target",
+			 py::overload_cast<const Virus<int> &>(&Tool<int>::add_target),
+			 doc::add_target, py::arg("target"))
+		.def("set_targets", &Tool<int>::set_targets, doc::set_targets,
+			 py::arg("lineage_ids"))
+		.def("get_targets", &Tool<int>::get_targets, doc::get_targets)
+		.def("clear_targets", &Tool<int>::clear_targets, doc::clear_targets)
+		.def("targets", &Tool<int>::targets, doc::targets, py::arg("v"))
 		.def("print", &Tool<int>::print, doc::print);
 }
