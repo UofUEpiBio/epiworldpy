@@ -1,6 +1,6 @@
 """Contact layers: network layers from generators and edge lists, the layer
-objects shared with the model, mixing layers, several layers in one draw, and
-the defunct functions."""
+objects shared with the model, mixing layers (across and within groups),
+several layers in one draw, and the defunct functions."""
 
 import numpy as np
 import pytest
@@ -86,6 +86,88 @@ def test_mixing_layer():
 
     mixing.set_contact_matrix([1.0, 9.0, 9.0, 1.0])
     assert m.get_layer("mixing").get_contact_matrix() == [1.0, 9.0, 9.0, 1.0]
+
+
+def test_mixing_within_groups():
+    # 100 households of 10. With probability 1 the households are cliques:
+    # carriers, transmitting for sure, infect their housemates in a day, and
+    # nobody else.
+    m = epimodels.ModelSIR(
+        "flu", n=1000, prevalence=0.01, transmission_rate=1, recovery_rate=0
+    )
+    m.verbose_off()
+    hh = layer.mixing(
+        "households", [i // 10 for i in range(1000)], infectious_states=[1],
+        available_states=[0, 1, 2], contact_prob=1,
+    )
+    assert isinstance(hh, layer.Mixing)
+    m.add_layer(hh)
+
+    def infected_vs_expected():
+        m.run(1, 1)
+        tr = m.get_db().get_transmissions()
+        seeds = {t for s, t in zip(tr["sources"], tr["targets"]) if s < 0}
+        reached = {hh.get_group(i) for i in seeds} - {None}
+        expected = seeds | {i for i in range(1000) if hh.get_group(i) in reached}
+        states = m.get_agents_states()
+        return {i for i in range(1000) if states[i] == 1}, expected
+
+    infected, expected = infected_vs_expected()
+    assert infected == expected
+    assert len(infected) > 10 * 5
+    assert sorted(hh.members_of(1)) == list(range(10, 20))
+    assert hh.get_contact_prob() == [1.0] * 100
+
+    # Moves between runs are kept: everyone leaves the first 50 households
+    for i in range(500):
+        hh.set_group(i, None)
+    assert hh.get_group(0) is None
+    infected, expected = infected_vs_expected()
+    assert infected == expected
+    assert hh.members_of(0) == []
+
+    # A probability set from a global event (at the end of each day) lasts for
+    # that run only
+    m.add_globalevent(
+        lambda model: model.get_layer("households").set_contact_prob(0.0),
+        "lockdown",
+    )
+    m.run(1, 1)
+    assert hh.get_contact_prob() == [0.0] * 100
+    m.rm_globalevent("lockdown")
+    m.run(1, 1)
+    assert hh.get_contact_prob() == [1.0] * 100
+
+    # Probability .5 per housemate is the same run as 4.5 contacts a day with
+    # the 9 housemates, from a diagonal contact matrix
+    def same_run(**contacts):
+        s = epimodels.ModelSIR(
+            "flu", n=1000, prevalence=0.02, transmission_rate=0.3,
+            recovery_rate=0.1
+        )
+        s.verbose_off()
+        s.add_layer(layer.mixing(
+            "households", [i // 10 for i in range(1000)], [1], [0, 1, 2],
+            **contacts
+        ))
+        s.run(30, 2026)
+        return list(s.get_agents_states())
+
+    diag = [4.5 if i % 101 == 0 else 0.0 for i in range(100 * 100)]
+    assert same_run(contact_prob=0.5) == same_run(contact_matrix=diag)
+
+    with pytest.raises(ValueError, match="exactly one"):
+        layer.mixing("x", [0, 1], [1], [0, 1, 2])
+    with pytest.raises(TypeError):
+        layer.mixing("x", [0, -1], [1], [0, 1, 2], contact_prob=1)
+    with pytest.raises(TypeError):
+        layer.mixing("x", [0, 0.5], [1], [0, 1, 2], contact_prob=1)
+    with pytest.raises(ValueError):
+        hh.get_group(1000)
+    with pytest.raises(ValueError):
+        hh.members_of(100)
+    with pytest.raises(ValueError):
+        hh.set_contact_prob(1.5)
 
 
 def test_several_layers_weights_and_targets():

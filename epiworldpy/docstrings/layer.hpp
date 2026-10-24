@@ -320,11 +320,90 @@ rewiring : Rewiring
 )doc";
 
 inline constexpr const char *mixing_cls =
-	R"doc(A mixing layer: contacts between groups, from a contact matrix.
+	R"doc(A mixing layer: contacts drawn afresh every day, by group.
 
-The mixing models (for example,
-:class:`~epiworldpy.epimodels.ModelSIRMixing`) create one named ``"mixing"``;
-retrieve it with ``model.get_layer("mixing")``.
+The contacts come from a contact matrix (contacts per day across groups) or
+from contact probabilities (within groups only: the probability that two
+members of a group meet on a given day). Create one with :func:`mixing`; the
+mixing models (for example, :class:`~epiworldpy.epimodels.ModelSIRMixing`)
+create one named ``"mixing"``, which ``model.get_layer("mixing")`` retrieves.
+)doc";
+
+inline constexpr const char *set_contact_prob =
+	R"doc(Set one contact probability for every group.
+
+Parameters
+----------
+contact_prob : float
+    Probability, in [0, 1], that two members of a group meet on a given day;
+    1 makes every group a clique.
+)doc";
+
+inline constexpr const char *set_contact_prob_list =
+	R"doc(Set the contact probability of each group.
+
+Parameters
+----------
+contact_prob : list of float
+    Probability, in [0, 1], that two members of each group meet on a given
+    day (one per group).
+)doc";
+
+inline constexpr const char *get_contact_prob =
+	R"doc(Get the contact probabilities.
+
+Returns
+-------
+list of float
+    One per group once the model has run; empty with a contact matrix.
+)doc";
+
+inline constexpr const char *get_n_groups = R"doc(Get the number of groups.
+
+Returns
+-------
+int
+    The number of groups of the layer.
+)doc";
+
+inline constexpr const char *get_group = R"doc(Get the group of an agent.
+
+Parameters
+----------
+agent : int
+    Id of the agent (starting at 0).
+
+Returns
+-------
+int or None
+    The group of the agent, or None if it is not in the layer.
+)doc";
+
+inline constexpr const char *set_group =
+	R"doc(Move an agent to another group.
+
+Set during a run, the move takes effect at the end of the day and lasts for
+that run; set between runs, it is kept.
+
+Parameters
+----------
+agent : int
+    Id of the agent (starting at 0).
+group : int or None
+    The new group, or None to take the agent out of the layer.
+)doc";
+
+inline constexpr const char *members_of = R"doc(Get the members of a group.
+
+Parameters
+----------
+group : int
+    Id of the group (starting at 0).
+
+Returns
+-------
+list of int
+    The ids of the agents in the group, in no particular order.
 )doc";
 
 inline constexpr const char *set_contact_matrix =
@@ -343,6 +422,38 @@ Returns
 -------
 list of float
     The contact matrix, flattened by columns.
+)doc";
+
+inline constexpr const char *mixing =
+	R"doc(Create a mixing layer.
+
+Give exactly one of ``contact_matrix`` and ``contact_prob``. The number of
+groups is the size of the contact matrix, or the number of contact
+probabilities; with a single probability, it is the largest group plus one.
+
+Parameters
+----------
+name : str
+    Name of the layer (unique within a model).
+groups : list of int or None
+    The group of each agent (starting at 0), or None to leave the agent out of
+    the layer; one per agent of the model.
+infectious_states : list of int
+    States whose agents can be met and transmit.
+available_states : list of int
+    States whose agents take part in the mixing (e.g., not hospitalized).
+contact_matrix : list of float, optional
+    Expected number of contacts per day between groups, a square matrix
+    flattened by columns.
+contact_prob : float or list of float, optional
+    Probability, in [0, 1], that two members of a group meet on a given day:
+    one for every group or one per group. 1 makes every group a clique
+    (everyone meets everyone, every day), with no ties stored.
+
+Returns
+-------
+Mixing
+    The layer, to add with :meth:`epiworldpy.Model.add_layer`.
 )doc";
 
 inline constexpr const char *network =
