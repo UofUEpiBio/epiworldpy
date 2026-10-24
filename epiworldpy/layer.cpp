@@ -4,6 +4,10 @@
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
 
+#include <cmath>
+#include <optional>
+#include <variant>
+
 using namespace epiworldpy;
 using namespace epiworld;
 namespace py = pybind11;
@@ -12,6 +16,7 @@ namespace doc = epiworldpy::docstrings::layer;
 using Network = layer::Network<int>;
 using Mixing = layer::Mixing<int>;
 using Generator = Network::Generator;
+using ContactProb = std::variant<double, std::vector<double>>;
 using Rewiring = Network::Rewiring;
 
 /* Python objects that only carry a generator or a rewiring function from the
@@ -123,7 +128,33 @@ void epiworldpy::export_layer(py::module &m) {
 		.def("set_contact_matrix", &Mixing::set_contact_matrix,
 			 doc::set_contact_matrix, py::arg("contact_matrix"))
 		.def("get_contact_matrix", &Mixing::get_contact_matrix,
-			 doc::get_contact_matrix);
+			 doc::get_contact_matrix)
+		.def("set_contact_prob",
+			 py::overload_cast<double>(&Mixing::set_contact_prob),
+			 doc::set_contact_prob, py::arg("contact_prob"))
+		.def("set_contact_prob",
+			 py::overload_cast<std::vector<double>>(&Mixing::set_contact_prob),
+			 doc::set_contact_prob_list, py::arg("contact_prob"))
+		.def("get_contact_prob", &Mixing::get_contact_prob,
+			 doc::get_contact_prob)
+		.def("get_n_groups", &Mixing::get_n_groups, doc::get_n_groups)
+		.def(
+			"get_group",
+			[](const Mixing &self, size_t agent) -> std::optional<size_t> {
+				size_t g = self.get_group(agent);
+				if (g == Mixing::NO_GROUP)
+					return std::nullopt;
+				return g;
+			},
+			doc::get_group, py::arg("agent"))
+		.def(
+			"set_group",
+			[](Mixing &self, size_t agent, std::optional<size_t> group) {
+				self.set_group(agent, group.value_or(Mixing::NO_GROUP));
+			},
+			doc::set_group, py::arg("agent"), py::arg("group"))
+		.def("members_of", &Mixing::members_of, doc::members_of,
+			 py::arg("group"));
 
 	m.def(
 		 "network",
@@ -136,5 +167,55 @@ void epiworldpy::export_layer(py::module &m) {
 			[](std::string name, const AdjList &graph) {
 				return layer::network<int>(std::move(name), graph);
 			},
-			doc::network_graph, py::arg("name"), py::arg("graph"));
+			doc::network_graph, py::arg("name"), py::arg("graph"))
+		.def(
+			"mixing",
+			[](std::string name, const std::vector<std::optional<size_t>> &groups,
+			   std::vector<int> infectious_states,
+			   std::vector<int> available_states,
+			   std::optional<std::vector<double>> contact_matrix,
+			   std::optional<ContactProb> contact_prob) {
+				if (contact_matrix.has_value() == contact_prob.has_value())
+					throw std::invalid_argument(
+						"Give exactly one of contact_matrix and contact_prob.");
+
+				// Groups: None leaves the agent out of the layer
+				std::vector<size_t> g(groups.size());
+				size_t n_groups = 0;
+				for (size_t i = 0; i < groups.size(); ++i) {
+					g[i] = groups[i].value_or(Mixing::NO_GROUP);
+					if (groups[i])
+						n_groups = std::max(n_groups, *groups[i] + 1);
+				}
+
+				// The number of groups: the matrix's rows, or one probability
+				// per group (a single one is for every group)
+				const auto *q = contact_prob ?
+					std::get_if<std::vector<double>>(&*contact_prob) : nullptr;
+				if (contact_matrix) {
+					n_groups = static_cast<size_t>(
+						std::lround(std::sqrt(double(contact_matrix->size()))));
+					if (n_groups * n_groups != contact_matrix->size())
+						throw std::invalid_argument(
+							"contact_matrix must be a square matrix (flattened).");
+				} else if (q && (q->size() > 1))
+					n_groups = q->size();
+
+				auto mix = layer::mixing<int>(std::move(name),
+											  std::move(infectious_states),
+											  std::move(available_states));
+				mix->set_groups(std::move(g), n_groups);
+
+				if (contact_matrix)
+					mix->set_contact_matrix(std::move(*contact_matrix));
+				else
+					std::visit([&](auto p) { mix->set_contact_prob(p); },
+							   *contact_prob);
+
+				return mix;
+			},
+			doc::mixing, py::arg("name"), py::arg("groups"),
+			py::arg("infectious_states"), py::arg("available_states"),
+			py::arg("contact_matrix") = py::none(),
+			py::arg("contact_prob") = py::none());
 }
