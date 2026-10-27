@@ -138,6 +138,22 @@ def test_mixing_within_groups():
     m.run(1, 1)
     assert hh.get_contact_prob() == [1.0] * 100
 
+    # A traced layer logs its contacts: every transmission is in the log
+    assert not hh.is_tracing()
+    with pytest.raises(RuntimeError, match="not traced"):
+        hh.get_tracing()
+    hh.enable_tracing(20)
+    assert hh.is_tracing()
+    m.run(1, 1)
+    log = hh.get_tracing()
+    assert sorted(log) == ["contact", "day", "source"]
+    logged = set(zip(log["source"].tolist(), log["contact"].tolist()))
+    tr = transmissions(m)
+    assert len(tr["sources"]) > 0
+    assert set(zip(tr["sources"].tolist(), tr["targets"].tolist())) <= logged
+    hh.disable_tracing()
+    assert not hh.is_tracing()
+
     # Probability .5 per housemate is the same run as 4.5 contacts a day with
     # the 9 housemates, from a diagonal contact matrix
     def same_run(**contacts):
