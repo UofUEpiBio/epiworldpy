@@ -93,7 +93,34 @@ void epiworldpy::export_layer(py::module &m) {
 			[](ContactLayer<int> &self, const Virus<int> &virus) {
 				self.add_virus_target(virus);
 			},
-			doc::add_virus_target, py::arg("virus"));
+			doc::add_virus_target, py::arg("virus"))
+		.def("enable_tracing", &ContactLayer<int>::enable_tracing,
+			 doc::enable_tracing, py::arg("max_contacts") = EPI_MAX_TRACKING)
+		.def("disable_tracing", &ContactLayer<int>::disable_tracing,
+			 doc::disable_tracing)
+		.def("is_tracing", &ContactLayer<int>::is_tracing, doc::is_tracing)
+		.def(
+			"get_tracing",
+			[](ContactLayer<int> &self) -> py::dict {
+				ContactTracing &log = self.get_tracing();
+				auto source = new std::vector<int>();
+				auto contact = new std::vector<int>();
+				auto day = new std::vector<int>();
+				for (size_t a = 0u; a < log.get_n_agents(); ++a) {
+					const size_t n = std::min(log.get_n_contacts(a),
+											  log.get_max_contacts());
+					for (size_t k = 0u; k < n; ++k) {
+						auto [c, d] = log.get_contact(a, k);
+						source->push_back(static_cast<int>(a));
+						contact->push_back(static_cast<int>(c));
+						day->push_back(d);
+					}
+				}
+				return make_dict(make_dict_entry("source", *source),
+								 make_dict_entry("contact", *contact),
+								 make_dict_entry("day", *day));
+			},
+			doc::get_tracing);
 
 	py::class_<Network, ContactLayer<int>, std::shared_ptr<Network>>(
 		m, "Network", doc::network_cls)

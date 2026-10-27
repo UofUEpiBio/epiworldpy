@@ -221,6 +221,44 @@ virus : Virus
     A virus already added to the model.
 )doc";
 
+inline constexpr const char *enable_tracing =
+	R"doc(Log the contacts the layer samples.
+
+Each contact of an infectious agent (the source) with another agent is logged
+with the day. The log starts empty at every run and keeps the last
+``max_contacts`` contacts of each source. Tracing is off by default; once
+turned on (or off) it lasts across runs.
+
+Parameters
+----------
+max_contacts : int
+    Number of contacts the log keeps per agent (at least 1).
+)doc";
+
+inline constexpr const char *disable_tracing =
+	R"doc(Stop logging contacts and drop the log.
+)doc";
+
+inline constexpr const char *is_tracing =
+	R"doc(Whether the layer logs its contacts.
+
+Returns
+-------
+bool
+)doc";
+
+inline constexpr const char *get_tracing =
+	R"doc(Get the contact log of the last run.
+
+Raises an error if the layer is not traced (see :meth:`enable_tracing`).
+
+Returns
+-------
+dict
+    ``source``, ``contact`` and ``day``: arrays with one entry per logged
+    contact.
+)doc";
+
 inline constexpr const char *network_cls = R"doc(A network layer: ties between agents.
 
 Created with :func:`network`.
