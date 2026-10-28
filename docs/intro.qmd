@@ -48,7 +48,7 @@ virus = epimodels.ModelSIR(
   name              = 'hypothetical',
   n                 = 100000,
   prevalence        = 0.01,
-  transmission_rate = 0.7,
+  transmission_prob = 0.7,
   recovery_rate     = 0.3
 )
 
@@ -150,26 +150,32 @@ plt.grid(True)
 plt.show()
 ```
 
-## SEIR model with a fully connected graph
+## SEIR model with random mixing
 
-The SEIRCONN model is similar to the SIR model but includes an exposed state.
+The SEIR model is similar to the SIR model but includes an exposed state.
 Here, we simulate a population of 10,000 agents with a 0.01 prevalence, a 0.1
-transmission rate, a 0.5 recovery rate, and 7 day-incubation period. The
-population is fully connected, meaning agents can transmit the disease to
-any other agent:
+transmission probability per contact, a 1/7 recovery rate, and a 7-day latent
+period. The population mixes at random: a mixing layer puts everyone in one
+group, and each agent meets "Contact rate" (10) others a day, any of whom can
+transmit the disease:
 
 ```{python}
 #| label: fully-connected-graph
 #| fig-cap: ""
-model = epimodels.ModelSEIRCONN(
+model = epimodels.ModelSEIR(
   name              = 'hypothetical',
   prevalence        = 0.01,
   n                 = 10000,
-  contact_rate      = 10,
-  incubation_days   = 7,
-  transmission_rate = 0.1,
+  latent_period     = 7,
+  transmission_prob = 0.1,
   recovery_rate     = 1 / 7
 )
+
+# Everyone meets "Contact rate" others a day, at random
+model.add_param(10, "Contact rate")
+everyone = layer.mixing("everyone", [0] * 10000, contact_matrix=[1.0])
+everyone.set_contact_rate("Contact rate")
+model.add_layer(everyone)
 
 # Run for 100 days with a seed of 132.
 model.run(100, 132)
@@ -208,7 +214,7 @@ for pack in packs:
 
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
-plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
+plt.title("Hypothetical SEIR Model Effective Reproductive Rate")
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -275,7 +281,7 @@ model = epimodels.ModelSIR(
   name           = "hypothetical",
   n              = 500,
   prevalence     = .01,
-  transmission_rate = 0.5,
+  transmission_prob = 0.5,
   recovery_rate  = 0.5
 )
 
@@ -342,8 +348,8 @@ plt.show()
 ## Multiple Simulations
 
 epiworldpy supports running multiple simulations using the `run_multiple` function.
-The following code simulates 50 SIR models with 1000 agents each. Each agent is
-connected to ten other agents. One percent of the population has the virus, with
+The following code simulates 50 SIR models with 1000 agents each. Each agent
+meets two others a day, at random. One percent of the population has the virus, with
 a 90% chance of transmission. Infected individuals recover at a 0.1 rate. The
 results are saved in a dataframe:
 
@@ -351,14 +357,17 @@ results are saved in a dataframe:
 #| label: run-multiple
 #| fig-cap: ""
 
-model = epimodels.ModelSIRCONN(
+model = epimodels.ModelSIR(
   name = "hypothetical",
   prevalence = 0.01,
   n = 1000,
-  contact_rate = 2,
-  transmission_rate = 0.9,
+  transmission_prob = 0.9,
   recovery_rate = 0.1
 )
+model.add_param(2, "Contact rate")
+everyone = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
+everyone.set_contact_rate("Contact rate")
+model.add_layer(everyone)
 
 model.run_multiple(100, 50, nthreads=2)
 ```

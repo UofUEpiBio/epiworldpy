@@ -22,11 +22,12 @@ probabilities (see :class:`Tool`).
 Examples
 --------
 >>> from epiworldpy import Virus, epimodels
->>> model = epimodels.ModelSEIRCONN("COVID-19", n=10000, prevalence=0.01,
-...                                 contact_rate=2, transmission_rate=0.5,
-...                                 incubation_days=7, recovery_rate=0.3)
+>>> model = epimodels.ModelSEIR("COVID-19", n=10000, prevalence=0.01,
+...                             transmission_prob=0.5, latent_period=7,
+...                             recovery_rate=0.3)
 >>> flu = Virus("Flu", prevalence=0.001, as_proportion=True,
 ...             prob_infecting=0.9, prob_recovery=1 / 7, prob_death=0.0)
+>>> flu.set_state(init=1, end=3, removed=3)  # Exposed, then Recovered
 >>> model.add_virus(flu)
 )doc";
 

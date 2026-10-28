@@ -1,43 +1,34 @@
 """Ready-to-use epidemiological models.
 
-Each class sets up its states, parameters, and virus, so it only needs a
-population (for network models) and a call to :meth:`~epiworldpy.Model.run`.
-All of them are :class:`~epiworldpy.Model` subclasses.
+Each class sets up its states, parameters, and virus, so it only needs its
+contacts (a layer, see :mod:`epiworldpy.layer`) and a call to
+:meth:`~epiworldpy.Model.run`. All of them are :class:`~epiworldpy.Model`
+subclasses.
 """
 
 from .. import _core
+from .._defunct import DEFUNCT_MODELS, model_stub
 
 ModelDiffNet = _core.epimodels.ModelDiffNet
 ModelSEIR = _core.epimodels.ModelSEIR
-ModelSEIRCONN = _core.epimodels.ModelSEIRCONN
 ModelSEIRD = _core.epimodels.ModelSEIRD
-ModelSEIRDCONN = _core.epimodels.ModelSEIRDCONN
-ModelSEIRMixing = _core.epimodels.ModelSEIRMixing
-ModelSEIRMixingQuarantine = _core.epimodels.ModelSEIRMixingQuarantine
-ModelSEIRNetworkQuarantine = _core.epimodels.ModelSEIRNetworkQuarantine
+ModelSEIRQuarantine = _core.epimodels.ModelSEIRQuarantine
 ModelSIR = _core.epimodels.ModelSIR
-ModelSIRCONN = _core.epimodels.ModelSIRCONN
 ModelSIRD = _core.epimodels.ModelSIRD
-ModelSIRDCONN = _core.epimodels.ModelSIRDCONN
-ModelSIRMixing = _core.epimodels.ModelSIRMixing
 ModelSIS = _core.epimodels.ModelSIS
 ModelSISD = _core.epimodels.ModelSISD
 ModelSURV = _core.epimodels.ModelSURV
 
+# Removed in 1.0.0: calling them raises with what replaces them
+globals().update({name: model_stub(name) for name in DEFUNCT_MODELS})
+
 __all__ = [
     "ModelDiffNet",
     "ModelSEIR",
-    "ModelSEIRCONN",
     "ModelSEIRD",
-    "ModelSEIRDCONN",
-    "ModelSEIRMixing",
-    "ModelSEIRMixingQuarantine",
-    "ModelSEIRNetworkQuarantine",
+    "ModelSEIRQuarantine",
     "ModelSIR",
-    "ModelSIRCONN",
     "ModelSIRD",
-    "ModelSIRDCONN",
-    "ModelSIRMixing",
     "ModelSIS",
     "ModelSISD",
     "ModelSURV",

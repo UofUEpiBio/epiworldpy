@@ -16,10 +16,10 @@ inline constexpr const char *cls =
 
 Examples
 --------
->>> from epiworldpy import DiagramType, ModelDiagram, epimodels
->>> model = epimodels.ModelSIRCONN("COVID-19", n=10000, prevalence=0.01,
-...                                contact_rate=5, transmission_rate=0.4,
-...                                recovery_rate=0.95)
+>>> from epiworldpy import DiagramType, ModelDiagram, epimodels, graph, layer
+>>> model = epimodels.ModelSIR("COVID-19", n=10000, prevalence=0.01,
+...                            transmission_prob=0.4, recovery_rate=0.95)
+>>> model.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
 >>> model.run(ndays=100, seed=1912)
 >>> ModelDiagram().draw_from_data(
 ...     DiagramType.Mermaid, model.get_states(),

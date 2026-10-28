@@ -154,6 +154,8 @@ void epiworldpy::export_layer(py::module &m) {
 		m, "Mixing", doc::mixing_cls)
 		.def("set_contact_matrix", &Mixing::set_contact_matrix,
 			 doc::set_contact_matrix, py::arg("contact_matrix"))
+		.def("set_contact_rate", &Mixing::set_contact_rate,
+			 doc::set_contact_rate, py::arg("param"))
 		.def("get_contact_matrix", &Mixing::get_contact_matrix,
 			 doc::get_contact_matrix)
 		.def("set_contact_prob",
@@ -198,8 +200,6 @@ void epiworldpy::export_layer(py::module &m) {
 		.def(
 			"mixing",
 			[](std::string name, const std::vector<std::optional<size_t>> &groups,
-			   std::vector<int> infectious_states,
-			   std::vector<int> available_states,
 			   std::optional<std::vector<double>> contact_matrix,
 			   std::optional<ContactProb> contact_prob) {
 				if (contact_matrix.has_value() == contact_prob.has_value())
@@ -228,9 +228,7 @@ void epiworldpy::export_layer(py::module &m) {
 				} else if (q && (q->size() > 1))
 					n_groups = q->size();
 
-				auto mix = layer::mixing<int>(std::move(name),
-											  std::move(infectious_states),
-											  std::move(available_states));
+				auto mix = layer::mixing<int>(std::move(name));
 				mix->set_groups(std::move(g), n_groups);
 
 				if (contact_matrix)
@@ -242,7 +240,6 @@ void epiworldpy::export_layer(py::module &m) {
 				return mix;
 			},
 			doc::mixing, py::arg("name"), py::arg("groups"),
-			py::arg("infectious_states"), py::arg("available_states"),
 			py::arg("contact_matrix") = py::none(),
 			py::arg("contact_prob") = py::none());
 }

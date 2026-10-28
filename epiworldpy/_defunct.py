@@ -60,6 +60,50 @@ DEFUNCT = {
 }
 
 
+_RANDOM_MIXING = (
+    "with a random-mixing layer: everyone in one group, a contact matrix of 1, "
+    "and set_contact_rate(\"Contact rate\") (model.add_param(rate, "
+    "\"Contact rate\"); see help(epiworldpy.layer.Mixing))."
+)
+_MATRIX = (
+    "and model.add_layer(layer.mixing(name, groups, "
+    "contact_matrix=contact_matrix))."
+)
+
+# The models removed in 1.0.0: a model's states describe the course of
+# infection, and its layers describe who meets whom.
+DEFUNCT_MODELS = {
+    "ModelSIRCONN": "Use ModelSIR() " + _RANDOM_MIXING,
+    "ModelSEIRCONN": "Use ModelSEIR() " + _RANDOM_MIXING,
+    "ModelSIRDCONN": "Use ModelSIRD() " + _RANDOM_MIXING,
+    "ModelSEIRDCONN": "Use ModelSEIRD() " + _RANDOM_MIXING,
+    "ModelSIRMixing": "Use ModelSIR() " + _MATRIX,
+    "ModelSEIRMixing": "Use ModelSEIR() " + _MATRIX,
+    "ModelSEIRMixingQuarantine": (
+        "Use ModelSEIRQuarantine() " + _MATRIX + " It traces every layer."
+    ),
+    "ModelSEIRNetworkQuarantine": (
+        "Use ModelSEIRQuarantine() and add the network layer; it traces every "
+        "layer."
+    ),
+}
+
+
+def model_stub(name: str):
+    """A stand-in for a removed model that raises with its replacement."""
+    msg = DEFUNCT_MODELS[name]
+
+    def defunct(*args, **kwargs):
+        raise RuntimeError(
+            f"epimodels.{name}() is defunct as of epiworldpy 1.0.0. {msg}"
+        )
+
+    defunct.__name__ = name
+    defunct.__qualname__ = name
+    defunct.__doc__ = f"Defunct as of epiworldpy 1.0.0. {msg}"
+    return defunct
+
+
 def _stub(cls_name: str, name: str, msg: str):
     def defunct(self, *args, **kwargs):
         raise RuntimeError(

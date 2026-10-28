@@ -1,5 +1,6 @@
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
+from epiworldpy import layer
 import pytest
 import numpy as np
 
@@ -8,15 +9,19 @@ DAYS = 100
 
 @pytest.fixture
 def covid19():
-    covid19 = epimodels.ModelSEIRCONN(
+    covid19 = epimodels.ModelSEIR(
         name="covid-19",
         n=10000,
         prevalence=0.01,
-        contact_rate=2.0,
-        transmission_rate=0.1,
-        incubation_days=7.0,
+        transmission_prob=0.1,
+        latent_period=7.0,
         recovery_rate=0.14,
     )
+    # Everyone meets "Contact rate" others a day, at random
+    covid19.add_param(2.0, "Contact rate")
+    everyone = layer.mixing("everyone", [0] * 10000, contact_matrix=[1.0])
+    everyone.set_contact_rate("Contact rate")
+    covid19.add_layer(everyone)
 
     covid19.run(DAYS, 223)
 

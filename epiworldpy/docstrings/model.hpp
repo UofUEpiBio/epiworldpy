@@ -675,6 +675,35 @@ numpy.ndarray
     IDs of the agents in that state.
 )doc";
 
+inline constexpr const char *set_infectious_states =
+	R"doc(Set the states whose agents transmit.
+
+By default every state transmits (any agent carrying a virus). Agents in the
+other states may carry a virus (e.g., Exposed in an SEIR model) but infect
+nobody, in any layer; they can still be met (in a mixing layer, they take
+their share of each agent's contacts). Called during a run (e.g., from a
+global event), it applies from the next step.
+
+Parameters
+----------
+states : list of int
+    State ids (starting at 0); an empty list makes every state infectious.
+
+Returns
+-------
+Model
+    The model.
+)doc";
+
+inline constexpr const char *get_infectious_states =
+	R"doc(Get the states set with :meth:`set_infectious_states`.
+
+Returns
+-------
+list of int
+    The states (empty: every state transmits).
+)doc";
+
 inline constexpr const char *set_transmission_mode =
 	R"doc(Set how network transmission is computed.
 
@@ -896,17 +925,16 @@ callable
 inline constexpr const char *update_fun_susceptible =
 	R"doc(Get a native update function for susceptible agents.
 
-Each susceptible agent can be infected by the viruses of its neighbors, except
-neighbors in the states listed in ``exclude``. Like
-:meth:`default_update_susceptible`, the model may push infections from the
-infected agents instead when that is cheaper (see
-:meth:`Model.set_transmission_mode`).
+Each susceptible agent can be infected by its contacts in every layer of the
+model that are in one of the model's infectious states (see
+:meth:`Model.set_infectious_states`). It is :meth:`default_update_susceptible`:
+the model may push infections from the infected agents instead when that is
+cheaper (see :meth:`Model.set_transmission_mode`).
 
 Parameters
 ----------
-exclude : list of int, default []
-    States whose agents cannot infect others (for example, latent or
-    hospitalized).
+exclude : None
+    Defunct; passing it raises. Use :meth:`Model.set_infectious_states`.
 
 Returns
 -------

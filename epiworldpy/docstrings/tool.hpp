@@ -21,9 +21,8 @@ a Python function.
 Examples
 --------
 >>> from epiworldpy import Tool, epimodels
->>> model = epimodels.ModelSIRCONN("COVID-19", n=10000, prevalence=0.01,
-...                                contact_rate=5, transmission_rate=0.4,
-...                                recovery_rate=0.95)
+>>> model = epimodels.ModelSIR("COVID-19", n=10000, prevalence=0.01,
+...                            transmission_prob=0.4, recovery_rate=0.95)
 >>> vaccine = Tool("Vaccine", prevalence=0.5, as_proportion=True,
 ...                susceptibility_reduction=0.9, transmission_reduction=0.5)
 >>> model.add_tool(vaccine)

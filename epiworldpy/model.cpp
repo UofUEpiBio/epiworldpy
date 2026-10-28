@@ -104,12 +104,15 @@ void epiworldpy::export_update_fun(
 					doc::default_update_exposed)
 		.def_static(
 			"susceptible",
-			[](std::vector<epiworld_fast_uint> exclude) {
-				return NativeUpdateFun{
-					sampler::make_update_susceptible<int>(std::move(exclude))};
+			[](py::object exclude) {
+				if (!exclude.is_none())
+					throw std::invalid_argument(
+						"`exclude` is defunct as of epiworldpy 1.0.0: the model "
+						"says which states transmit, for every layer, with "
+						"Model.set_infectious_states(states).");
+				return NativeUpdateFun{default_update_susceptible<int>};
 			},
-			py::arg("exclude") = std::vector<epiworld_fast_uint>{},
-			doc::update_fun_susceptible)
+			py::arg("exclude") = py::none(), doc::update_fun_susceptible)
 		.def_static(
 			"rate",
 			[](std::vector<std::string> param_names,
@@ -307,6 +310,10 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 		.def("get_agents_in_state", &get_agents_in_state,
 			 doc::get_agents_in_state,
 			 py::arg("state"))
+		.def("set_infectious_states", &Model<int>::set_infectious_states,
+			 doc::set_infectious_states, py::arg("states"))
+		.def("get_infectious_states", &Model<int>::get_infectious_states,
+			 doc::get_infectious_states)
 		.def(
 			"set_transmission_mode",
 			[](Model<int> &self, std::string_view mode,
@@ -404,27 +411,11 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 	auto diffnet = model_of<epimodels::ModelDiffNet<int>>(m, "DiffNet",
 														   mdoc::diffnet);
 	auto seir = model_of<epimodels::ModelSEIR<int>>(m, "SEIR", mdoc::seir);
-	auto seirconn =
-		model_of<epimodels::ModelSEIRCONN<int>>(m, "SEIRCONN", mdoc::seirconn);
 	auto seird = model_of<epimodels::ModelSEIRD<int>>(m, "SEIRD", mdoc::seird);
-	auto seirdconn = model_of<epimodels::ModelSEIRDCONN<int>>(
-		m, "SEIRDCONN", mdoc::seirdconn);
-	auto seirmixing = model_of<epimodels::ModelSEIRMixing<int>>(
-		m, "SEIRMixing", mdoc::seirmixing);
-	auto seirmixingquarantine =
-		model_of<epimodels::ModelSEIRMixingQuarantine<int>>(
-			m, "SEIRMixingQuarantine", mdoc::seirmixingquarantine);
-	auto seirnetworkquarantine =
-		model_of<epimodels::ModelSEIRNetworkQuarantine<int>>(
-			m, "SEIRNetworkQuarantine", mdoc::seirnetworkquarantine);
+	auto seirquarantine = model_of<epimodels::ModelSEIRQuarantine<int>>(
+		m, "SEIRQuarantine", mdoc::seirquarantine);
 	auto sir = model_of<epimodels::ModelSIR<int>>(m, "SIR", mdoc::sir);
-	auto sirconn =
-		model_of<epimodels::ModelSIRCONN<int>>(m, "SIRCONN", mdoc::sirconn);
 	auto sird = model_of<epimodels::ModelSIRD<int>>(m, "SIRD", mdoc::sird);
-	auto sirdconn =
-		model_of<epimodels::ModelSIRDCONN<int>>(m, "SIRDCONN", mdoc::sirdconn);
-	auto sirmixing = model_of<epimodels::ModelSIRMixing<int>>(
-		m, "SIRMixing", mdoc::sirmixing);
 	auto sis = model_of<epimodels::ModelSIS<int>>(m, "SIS", mdoc::sis);
 	auto sisd = model_of<epimodels::ModelSISD<int>>(m, "SISD", mdoc::sisd);
 	auto surv = model_of<epimodels::ModelSURV<int>>(m, "SURV", mdoc::surv);
@@ -438,101 +429,46 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 
 	export_model_<epimodels::ModelSEIR<int>>(
 		seir, mdoc::seir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
-		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
-
-	export_model_<epimodels::ModelSEIRCONN<int>>(
-		seirconn, mdoc::seirconn_init, make_arg<std::string>("name"),
-		make_arg<int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("contact_rate"), make_arg<double>("transmission_rate"),
-		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"));
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
+		make_arg<double>("latent_period"), make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSEIRD<int>>(
 		seird, mdoc::seird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
-		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
+		make_arg<double>("latent_period"), make_arg<double>("recovery_rate"),
 		make_arg<double>("death_rate"));
 
-	export_model_<epimodels::ModelSEIRDCONN<int>>(
-		seirdconn, mdoc::seirdconn_init, make_arg<std::string>("name"),
-		make_arg<int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("contact_rate"), make_arg<double>("transmission_rate"),
-		make_arg<double>("incubation_days"), make_arg<double>("recovery_rate"),
-		make_arg<double>("death_rate"));
-
-	export_model_<epimodels::ModelSEIRMixing<int>>(
-		seirmixing, mdoc::seirmixing_init, make_arg<std::string>("vname"),
-		make_arg<unsigned int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("transmission_rate"),
-		make_arg<double>("avg_incubation_days"),
-		make_arg<double>("recovery_rate"),
-		make_arg<std::vector<double>>("contact_matrix"));
-
-	seirmixingquarantine.def(
-		py::init<const std::string &, unsigned int, double, double, double,
-				 double, std::vector<double>, double, double, double, int,
-				 double, double, int, double, unsigned int>(),
-		mdoc::seirmixingquarantine_init, py::arg("vname"), py::arg("n"),
-		py::arg("prevalence"), py::arg("transmission_rate"),
-		py::arg("avg_incubation_days"), py::arg("recovery_rate"),
-		py::arg("contact_matrix"), py::arg("hospitalization_rate"),
-		py::arg("hospitalization_period"), py::arg("days_undetected"),
-		py::arg("quarantine_period"), py::arg("quarantine_willingness"),
-		py::arg("isolation_willingness"), py::arg("isolation_period"),
-		py::arg("contact_tracing_success_rate") = 1.0,
-		py::arg("contact_tracing_days_prior") = 4u);
-
-	seirnetworkquarantine.def(
+	seirquarantine.def(
 		py::init<const std::string &, epiworld_fast_uint, double, double,
 				 double, double, double, double, double, int, double, double,
 				 int, double, unsigned int>(),
-		mdoc::seirnetworkquarantine_init, py::arg("vname"), py::arg("n"),
-		py::arg("prevalence"), py::arg("transmission_rate"),
-		py::arg("avg_incubation_days"), py::arg("recovery_rate"),
+		mdoc::seirquarantine_init, py::arg("name"), py::arg("n"),
+		py::arg("prevalence"), py::arg("transmission_prob"),
+		py::arg("latent_period"), py::arg("recovery_rate"),
 		py::arg("hospitalization_rate"), py::arg("hospitalization_period"),
-		py::arg("days_undetected"), py::arg("quarantine_period"),
+		py::arg("detection_delay"), py::arg("quarantine_period"),
 		py::arg("quarantine_willingness"), py::arg("isolation_willingness"),
-		py::arg("isolation_period"),
-		py::arg("contact_tracing_success_rate") = 1.0,
-		py::arg("contact_tracing_days_prior") = 4u);
+		py::arg("isolation_period"), py::arg("contact_tracing_prob") = 1.0,
+		py::arg("contact_tracing_window") = 4u);
 
 	export_model_<epimodels::ModelSIR<int>>(
 		sir, mdoc::sir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
-		make_arg<double>("recovery_rate"));
-
-	export_model_<epimodels::ModelSIRCONN<int>>(
-		sirconn, mdoc::sirconn_init, make_arg<std::string>("name"),
-		make_arg<int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("contact_rate"), make_arg<double>("transmission_rate"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
 		make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSIRD<int>>(
 		sird, mdoc::sird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
 		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
-
-	export_model_<epimodels::ModelSIRDCONN<int>>(
-		sirdconn, mdoc::sirdconn_init, make_arg<std::string>("name"),
-		make_arg<int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("contact_rate"), make_arg<double>("transmission_rate"),
-		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
-
-	export_model_<epimodels::ModelSIRMixing<int>>(
-		sirmixing, mdoc::sirmixing_init, make_arg<std::string>("vname"),
-		make_arg<unsigned int>("n"), make_arg<double>("prevalence"),
-		make_arg<double>("transmission_rate"),
-		make_arg<double>("recovery_rate"),
-		make_arg<std::vector<double>>("contact_matrix"));
 
 	export_model_<epimodels::ModelSIS<int>>(
 		sis, mdoc::sis_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
 		make_arg<double>("recovery_rate"));
 
 	export_model_<epimodels::ModelSISD<int>>(
 		sisd, mdoc::sisd_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_rate"),
+		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
 		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
 
 	// The argument names follow ModelSURV's constructor, and `prevalence` is a
@@ -546,6 +482,6 @@ void epiworldpy::export_all_models(pybind11::module &m) {
 		make_arg<double>("prop_vax_redux_transm"),
 		make_arg<double>("prop_vax_redux_infect"),
 		make_arg<double>("surveillance_prob"),
-		make_arg<double>("transmission_rate"), make_arg<double>("prob_death"),
+		make_arg<double>("transmission_prob"), make_arg<double>("prob_death"),
 		make_arg<double>("prob_noreinfect"));
 }

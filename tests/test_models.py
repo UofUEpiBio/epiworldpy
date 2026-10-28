@@ -3,39 +3,12 @@ import epiworldpy.epimodels as epimodels
 from epiworldpy import graph, layer
 
 
-def test_seirconn_simple():
-    hypothetical = epimodels.ModelSEIRCONN(
-        name="hypothetical",
-        n=10000,
-        prevalence=0.01,
-        contact_rate=2.0,
-        transmission_rate=0.1,
-        incubation_days=7.0,
-        recovery_rate=0.14,
-    )
-
-    hypothetical.run(100, 223)
-
-
-def test_sirconn_simple():
-    hypothetical = epimodels.ModelSIRCONN(
-        name="hypothetical",
-        n=10000,
-        prevalence=0.01,
-        contact_rate=2.0,
-        transmission_rate=0.1,
-        recovery_rate=0.14,
-    )
-
-    hypothetical.run(100, 223)
-
-
 def test_smallworld():
     hypothetical = epimodels.ModelSIR(
         name="hypothetical",
         n=100000,
         prevalence=0.01,
-        transmission_rate=0.1,
+        transmission_prob=0.1,
         recovery_rate=0.14,
     )
 
