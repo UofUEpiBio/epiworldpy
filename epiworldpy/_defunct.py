@@ -70,8 +70,8 @@ _MATRIX = (
     "contact_matrix=contact_matrix))."
 )
 
-# The models removed in 1.0.0: a model is a disease, and its layers are where
-# contacts come from.
+# The models removed in 1.0.0: a model's states describe the course of
+# infection, and its layers describe who meets whom.
 DEFUNCT_MODELS = {
     "ModelSIRCONN": "Use ModelSIR() " + _RANDOM_MIXING,
     "ModelSEIRCONN": "Use ModelSEIR() " + _RANDOM_MIXING,
