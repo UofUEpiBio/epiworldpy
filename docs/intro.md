@@ -44,7 +44,7 @@ virus = epimodels.ModelSIR(
   name              = 'hypothetical',
   n                 = 100000,
   prevalence        = 0.01,
-  transmission_rate = 0.7,
+  transmission_prob = 0.7,
   recovery_rate     = 0.3
 )
 
@@ -165,8 +165,8 @@ model = epimodels.ModelSEIRCONN(
   prevalence        = 0.01,
   n                 = 10000,
   contact_rate      = 10,
-  incubation_days   = 7,
-  transmission_rate = 0.1,
+  latent_period   = 7,
+  transmission_prob = 0.1,
   recovery_rate     = 1 / 7
 )
 
@@ -279,7 +279,7 @@ model = epimodels.ModelSIR(
   name           = "hypothetical",
   n              = 500,
   prevalence     = .01,
-  transmission_rate = 0.5,
+  transmission_prob = 0.5,
   recovery_rate  = 0.5
 )
 
@@ -359,7 +359,7 @@ model = epimodels.ModelSIRCONN(
   prevalence = 0.01,
   n = 1000,
   contact_rate = 2,
-  transmission_rate = 0.9,
+  transmission_prob = 0.9,
   recovery_rate = 0.1
 )
 

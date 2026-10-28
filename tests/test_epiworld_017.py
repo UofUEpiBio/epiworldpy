@@ -13,7 +13,7 @@ SEED = 1
 
 def make_sir(n=2000):
     m = epimodels.ModelSIR(
-        name="flu", n=n, prevalence=0.01, transmission_rate=0.3,
+        name="flu", n=n, prevalence=0.01, transmission_prob=0.3,
         recovery_rate=0.1
     )
     m.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
@@ -107,10 +107,11 @@ class TestNativeUpdateFun:
         m = epiworld.Model(n)
         m.add_param(0.25, "Incubation rate")
         m.add_param(0.2, "Recovery rate")
-        m.add_state("S", epiworld.UpdateFun.susceptible(exclude=[1]))
+        m.add_state("S", epiworld.UpdateFun.susceptible())
         m.add_state("E", epiworld.UpdateFun.rate(["Incubation rate"], [2]))
         m.add_state("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
         m.add_state("R")
+        m.set_infectious_states([2])  # Exposed do not transmit
         virus = epiworld.Virus("v", 0.05, True, 0.5, 0.0, 0.0)
         virus.set_state(1, 3, 3)
         m.add_virus(virus)
@@ -145,7 +146,7 @@ class TestNativeUpdateFun:
     def test_set_state_function(self):
         m = self.make_seir()
         m.set_state_function("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
-        m.set_state_function(0, epiworld.UpdateFun.susceptible([1]))
+        m.set_state_function(0, epiworld.UpdateFun.susceptible())
         m.set_transmission_mode("push")
         m.run(5, SEED)
         assert m.get_last_transmission_mode() == "push"

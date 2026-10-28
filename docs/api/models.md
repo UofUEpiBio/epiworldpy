@@ -2,7 +2,10 @@
 
 Ready-to-use epidemiological models from {mod}`epiworldpy.epimodels`. Each one
 is a {class}`~epiworldpy.Model` with its states, parameters, and virus already
-set up.
+set up; its contacts come from its layers (see {mod}`epiworldpy.layer`). The
+models that differed only in their contacts (`ModelSIRCONN`, `ModelSIRMixing`,
+`ModelSEIRMixingQuarantine`, ...) were removed in 1.0.0: calling one raises
+with what replaces it.
 
 ```{eval-rst}
 .. currentmodule:: epiworldpy.epimodels
@@ -17,10 +20,7 @@ set up.
    :nosignatures:
 
    ModelSIR
-   ModelSIRCONN
    ModelSIRD
-   ModelSIRDCONN
-   ModelSIRMixing
 ```
 
 ## SEIR family
@@ -32,12 +32,8 @@ set up.
    :nosignatures:
 
    ModelSEIR
-   ModelSEIRCONN
    ModelSEIRD
-   ModelSEIRDCONN
-   ModelSEIRMixing
-   ModelSEIRMixingQuarantine
-   ModelSEIRNetworkQuarantine
+   ModelSEIRQuarantine
 ```
 
 ## SIS family

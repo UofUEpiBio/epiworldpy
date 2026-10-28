@@ -362,9 +362,27 @@ inline constexpr const char *mixing_cls =
 
 The contacts come from a contact matrix (contacts per day across groups) or
 from contact probabilities (within groups only: the probability that two
-members of a group meet on a given day). Create one with :func:`mixing`; the
-mixing models (for example, :class:`~epiworldpy.epimodels.ModelSIRMixing`)
-create one named ``"mixing"``, which ``model.get_layer("mixing")`` retrieves.
+members of a group meet on a given day). Create one with :func:`mixing` and
+add it to any model with :meth:`~epiworldpy.Model.add_layer`. Every agent of
+a group can be met, and the agents in the model's infectious states transmit
+(see :meth:`~epiworldpy.Model.set_infectious_states`).
+
+With :meth:`set_contact_rate`, everyone in one group and a 1 x 1 contact
+matrix of 1, every agent meets "Contact rate" others a day, at random (what
+the former connected models, e.g. ``ModelSIRCONN``, did).
+)doc";
+
+inline constexpr const char *set_contact_rate =
+	R"doc(Make the contacts a model parameter times the contact matrix.
+
+The parameter is read at the end of every step (after the global events), so
+a change to it applies from the next step. For a layer with a contact matrix
+only; a layer with contact probabilities raises when the model runs.
+
+Parameters
+----------
+param : str
+    Name of the model parameter (add it with :meth:`Model.add_param`).
 )doc";
 
 inline constexpr const char *set_contact_prob =
@@ -476,10 +494,6 @@ name : str
 groups : list of int or None
     The group of each agent (starting at 0), or None to leave the agent out of
     the layer; one per agent of the model.
-infectious_states : list of int
-    States whose agents can be met and transmit.
-available_states : list of int
-    States whose agents take part in the mixing (e.g., not hospitalized).
 contact_matrix : list of float, optional
     Expected number of contacts per day between groups, a square matrix
     flattened by columns.

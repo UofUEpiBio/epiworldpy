@@ -10,15 +10,19 @@ SEED = 42
 
 @pytest.fixture
 def seirconn():
-    m = epimodels.ModelSEIRCONN(
+    m = epimodels.ModelSEIR(
         name="covid-19",
         n=5000,
         prevalence=0.02,
-        contact_rate=2.0,
-        transmission_rate=0.1,
-        incubation_days=7.0,
+        transmission_prob=0.1,
+        latent_period=7.0,
         recovery_rate=0.14,
     )
+    # Everyone meets "Contact rate" others a day, at random
+    m.add_param(2.0, "Contact rate")
+    everyone = layer.mixing("everyone", [0] * 5000, contact_matrix=[1.0])
+    everyone.set_contact_rate("Contact rate")
+    m.add_layer(everyone)
     m.run(DAYS, SEED)
     return m
 
@@ -26,7 +30,7 @@ def seirconn():
 @pytest.fixture
 def sir_smallworld():
     m = epimodels.ModelSIR(
-        name="flu", n=5000, prevalence=0.01, transmission_rate=0.1,
+        name="flu", n=5000, prevalence=0.01, transmission_prob=0.1,
         recovery_rate=0.14
     )
     m.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
@@ -83,7 +87,7 @@ class TestModelAPI:
     def test_sbm(self):
         """A network layer drawn from a stochastic block model."""
         m = epimodels.ModelSIR(
-            name="flu", n=1000, prevalence=0.01, transmission_rate=0.1,
+            name="flu", n=1000, prevalence=0.01, transmission_prob=0.1,
             recovery_rate=0.14
         )
         # Two blocks of 500 agents each; 2x2 mixing matrix (row-major)
@@ -98,7 +102,7 @@ class TestModelAPI:
     def test_bernoulli(self):
         """A network layer drawn from a Bernoulli random graph."""
         m = epimodels.ModelSIR(
-            name="flu", n=1000, prevalence=0.01, transmission_rate=0.1,
+            name="flu", n=1000, prevalence=0.01, transmission_prob=0.1,
             recovery_rate=0.14
         )
         m.add_layer(layer.network("random", graph.bernoulli(p=0.01)))
@@ -109,7 +113,7 @@ class TestModelAPI:
     def test_no_layers(self):
         """A network model without layers has no contacts."""
         m = epimodels.ModelSIS(
-            name="sis", n=500, prevalence=0.01, transmission_rate=0.1,
+            name="sis", n=500, prevalence=0.01, transmission_prob=0.1,
             recovery_rate=0.14
         )
         m.run(10, SEED)
@@ -182,14 +186,18 @@ class TestDatabaseAPI:
 
 class TestRunMultiple:
     def test_run_multiple(self):
-        m = epimodels.ModelSIRCONN(
+        m = epimodels.ModelSIR(
             name="flu",
             n=1000,
             prevalence=0.02,
-            contact_rate=2.0,
-            transmission_rate=0.1,
+            transmission_prob=0.1,
             recovery_rate=0.14,
         )
+        # Everyone meets "Contact rate" others a day, at random
+        m.add_param(2.0, "Contact rate")
+        everyone = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
+        everyone.set_contact_rate("Contact rate")
+        m.add_layer(everyone)
         results = []
 
         def collector(sim_id, model):
@@ -227,15 +235,19 @@ class TestInitialStates:
         # Target counts: S=7112, E=11, I=1116, R=1761. The half-unit offsets
         # keep epiworld's truncation on the intended integers.
         n = 10000
-        m = epimodels.ModelSEIRCONN(
+        m = epimodels.ModelSEIR(
             name="covid-19",
             n=n,
             prevalence=(1127 + 0.5) / n,
-            contact_rate=2.0,
-            transmission_rate=0.1,
-            incubation_days=7.0,
+            transmission_prob=0.1,
+            latent_period=7.0,
             recovery_rate=0.14,
         )
+        # Everyone meets "Contact rate" others a day, at random
+        m.add_param(2.0, "Contact rate")
+        everyone = layer.mixing("everyone", [0] * n, contact_matrix=[1.0])
+        everyone.set_contact_rate("Contact rate")
+        m.add_layer(everyone)
         assert m.initial_states([(1116 + 0.5) / 1127, (1761 + 0.5) / 8873]) is m
         m.verbose_off()
         m.run(0, SEED)
@@ -243,20 +255,24 @@ class TestInitialStates:
             "Susceptible": 7112,
             "Exposed": 11,
             "Infected": 1116,
-            "Recovered": 1761,
+            "Removed": 1761,
         }
 
     def test_initial_states_survives_rerun(self):
         """The distribution is reapplied on every run, not only the first."""
-        m = epimodels.ModelSEIRCONN(
+        m = epimodels.ModelSEIR(
             name="covid-19",
             n=1000,
             prevalence=0.1,
-            contact_rate=2.0,
-            transmission_rate=0.1,
-            incubation_days=7.0,
+            transmission_prob=0.1,
+            latent_period=7.0,
             recovery_rate=0.14,
         )
+        # Everyone meets "Contact rate" others a day, at random
+        m.add_param(2.0, "Contact rate")
+        everyone = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
+        everyone.set_contact_rate("Contact rate")
+        m.add_layer(everyone)
         m.initial_states([1.0, 0.5])
         m.verbose_off()
         m.run(0, SEED)
@@ -264,4 +280,4 @@ class TestInitialStates:
         m.run(0, SEED + 1)
         assert self._day0(m) == first
         assert first["Exposed"] == 0
-        assert first["Recovered"] == 450
+        assert first["Removed"] == 450

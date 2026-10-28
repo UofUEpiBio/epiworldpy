@@ -19,7 +19,7 @@ def transmissions(model):
 
 def sir(n=1000):
     m = epimodels.ModelSIR(
-        "flu", n=n, prevalence=0.05, transmission_rate=1, recovery_rate=0.1
+        "flu", n=n, prevalence=0.05, transmission_prob=1, recovery_rate=0.1
     )
     m.verbose_off()
     return m
@@ -58,7 +58,7 @@ def test_network_layers():
 
 def test_fixed_network_edits_persist():
     m = epimodels.ModelSIS(
-        "cold", n=4, prevalence=0.25, transmission_rate=0.5, recovery_rate=0.5
+        "cold", n=4, prevalence=0.25, transmission_prob=0.5, recovery_rate=0.5
     )
     m.verbose_off()
     ring = layer.network("ring", graph.edgelist([0, 1, 2], [1, 2, 3], 4))
@@ -76,10 +76,12 @@ def test_fixed_network_edits_persist():
 
 def test_mixing_layer():
     cm = [9.0, 1.0, 1.0, 9.0]
-    m = epimodels.ModelSEIRMixing(
-        "flu", n=1000, prevalence=0.01, transmission_rate=0.1,
-        avg_incubation_days=3, recovery_rate=0.2, contact_matrix=cm,
+    m = epimodels.ModelSEIR(
+        "flu", n=1000, prevalence=0.01, transmission_prob=0.1,
+        latent_period=3, recovery_rate=0.2,
     )
+    m.add_layer(layer.mixing("mixing", [i // 500 for i in range(1000)],
+                             contact_matrix=cm))
     mixing = m.get_layer("mixing")
     assert isinstance(mixing, layer.Mixing)
     assert mixing.get_contact_matrix() == cm
@@ -93,12 +95,11 @@ def test_mixing_within_groups():
     # carriers, transmitting for sure, infect their housemates in a day, and
     # nobody else.
     m = epimodels.ModelSIR(
-        "flu", n=1000, prevalence=0.01, transmission_rate=1, recovery_rate=0
+        "flu", n=1000, prevalence=0.01, transmission_prob=1, recovery_rate=0
     )
     m.verbose_off()
     hh = layer.mixing(
-        "households", [i // 10 for i in range(1000)], infectious_states=[1],
-        available_states=[0, 1, 2], contact_prob=1,
+        "households", [i // 10 for i in range(1000)], contact_prob=1,
     )
     assert isinstance(hh, layer.Mixing)
     m.add_layer(hh)
@@ -158,13 +159,12 @@ def test_mixing_within_groups():
     # the 9 housemates, from a diagonal contact matrix
     def same_run(**contacts):
         s = epimodels.ModelSIR(
-            "flu", n=1000, prevalence=0.02, transmission_rate=0.3,
+            "flu", n=1000, prevalence=0.02, transmission_prob=0.3,
             recovery_rate=0.1
         )
         s.verbose_off()
         s.add_layer(layer.mixing(
-            "households", [i // 10 for i in range(1000)], [1], [0, 1, 2],
-            **contacts
+            "households", [i // 10 for i in range(1000)], **contacts
         ))
         s.run(30, 2026)
         return list(s.get_agents_states())
@@ -173,11 +173,11 @@ def test_mixing_within_groups():
     assert same_run(contact_prob=0.5) == same_run(contact_matrix=diag)
 
     with pytest.raises(ValueError, match="exactly one"):
-        layer.mixing("x", [0, 1], [1], [0, 1, 2])
+        layer.mixing("x", [0, 1])
     with pytest.raises(TypeError):
-        layer.mixing("x", [0, -1], [1], [0, 1, 2], contact_prob=1)
+        layer.mixing("x", [0, -1], contact_prob=1)
     with pytest.raises(TypeError):
-        layer.mixing("x", [0, 0.5], [1], [0, 1, 2], contact_prob=1)
+        layer.mixing("x", [0, 0.5], contact_prob=1)
     with pytest.raises(ValueError):
         hh.get_group(1000)
     with pytest.raises(ValueError):
@@ -215,15 +215,101 @@ def test_several_layers_weights_and_targets():
     assert len(transmissions(m)["layers"]) == 0
 
 
-def test_connected_models_ignore_layers():
-    m = epimodels.ModelSIRCONN(
-        "flu", n=1000, prevalence=0.05, contact_rate=0, transmission_rate=1,
-        recovery_rate=0.1,
+def test_contact_rate_and_infectious_states():
+    # Random mixing: "Contact rate" is read every day, so a global event that
+    # sets it to 0 on day 10 stops new infections from day 11 on
+    m = epimodels.ModelSIR(
+        "flu", n=2000, prevalence=0.01, transmission_prob=0.1,
+        recovery_rate=1 / 14,
     )
     m.verbose_off()
-    m.add_layer(layer.network("contacts", graph.smallworld(k=4, p=0.1)))
-    m.run(10, 1)
-    assert len(transmissions(m)["sources"]) == 0
+    m.add_param(5.0, "Contact rate")
+    everyone = layer.mixing("everyone", [0] * 2000, contact_matrix=[1.0])
+    everyone.set_contact_rate("Contact rate")
+    m.add_layer(everyone)
+    m.add_globalevent(
+        lambda model: model.set_param("Contact rate", 0.0)
+        if model.today() == 10 else None,
+        "lockdown",
+    )
+    m.run(30, 2211)
+    assert max(transmissions(m)["dates"]) == 10
+
+    # Exposed agents that never leave Exposed infect nobody, until every state
+    # is made infectious
+    s = epimodels.ModelSEIR(
+        "flu", n=2000, prevalence=0.01, transmission_prob=0.5,
+        latent_period=1e9, recovery_rate=0,
+    )
+    s.verbose_off()
+    assert s.get_infectious_states() == [2]
+    s.add_layer(layer.mixing("everyone", [0] * 2000, contact_matrix=[5.0]))
+    s.run(5, 1)
+    assert len(transmissions(s)["sources"]) == 0
+    s.set_infectious_states([])
+    s.run(5, 1)
+    assert len(transmissions(s)["sources"]) > 0
+
+    # A contact rate needs a contact matrix
+    hh = layer.mixing("hh", [0] * 2000, contact_prob=1)
+    hh.set_contact_rate("Contact rate")
+    m2 = epimodels.ModelSIR("flu", n=2000, prevalence=0.01,
+                            transmission_prob=0.1, recovery_rate=0.1)
+    m2.add_param(1.0, "Contact rate")
+    m2.add_layer(hh)
+    with pytest.raises(RuntimeError, match="contact rate"):
+        m2.run(1, 1)
+
+
+def test_seir_quarantine_traces_every_layer():
+    # One carrier in a ring network and a household of four is detected the
+    # day it becomes infectious; nobody is infected (transmission probability
+    # 0), but its contacts that day are in the logs, so its ring neighbors and
+    # housemates are quarantined, and nobody else.
+    n = 40
+    m = epimodels.ModelSEIRQuarantine(
+        "flu", n=n, prevalence=1 / n, transmission_prob=0.0, latent_period=1.0,
+        recovery_rate=0.0, hospitalization_rate=0.0, hospitalization_period=7,
+        detection_delay=0.0, quarantine_period=14, quarantine_willingness=1.0,
+        isolation_willingness=1.0, isolation_period=14,
+    )
+    m.verbose_off()
+    ring = layer.network(
+        "ring", graph.edgelist(list(range(n)), [(i + 1) % n for i in range(n)],
+                               n, False)
+    )
+    hh = layer.mixing("households", [i // 4 for i in range(n)], contact_prob=1)
+    m.add_layer(ring)
+    m.add_layer(hh)
+    m.run(3, 1)
+
+    assert ring.is_tracing() and hh.is_tracing()
+    carrier = int(m.get_db().get_transmissions()["targets"][0])
+    expected = {(carrier - 1) % n, (carrier + 1) % n}
+    expected |= {i for i in range(n) if i // 4 == carrier // 4} - {carrier}
+
+    states = m.get_agents_states()
+    labels = m.get_states()
+    assert labels[states[carrier]] == "Isolated"
+    quarantined = {i for i in range(n)
+                   if labels[states[i]] == "Quarantined Susceptible"}
+    assert quarantined == expected
+    assert m.get_param("Detection delay") == 0.0
+
+
+@pytest.mark.parametrize(
+    "name,replacement",
+    [
+        ("ModelSIRCONN", "set_contact_rate"),
+        ("ModelSEIRMixing", "layer.mixing"),
+        ("ModelSEIRNetworkQuarantine", "ModelSEIRQuarantine"),
+    ],
+)
+def test_defunct_models(name, replacement):
+    with pytest.raises(RuntimeError, match="defunct.*" + replacement):
+        getattr(epimodels, name)("flu", 1000, 0.01, 2.0, 0.5, 0.1)
+    with pytest.raises(ValueError, match="set_infectious_states"):
+        epiworld.UpdateFun.susceptible(exclude=[1])
 
 
 @pytest.mark.parametrize(

@@ -9,28 +9,9 @@ namespace epiworldpy::docstrings::epimodels {
 
 // Shared pieces, spliced in with string literal concatenation.
 #define EPIWORLDPY_DOC_NETWORK                                                 \
-    "The model has ``n`` agents and no contacts until a network layer is\n"   \
-    "added with :meth:`~epiworldpy.Model.add_layer` (see\n"                  \
-    ":mod:`epiworldpy.layer`).\n"
-
-#define EPIWORLDPY_DOC_CONNECTED                                                 \
-    "Every agent can contact every other agent (a well-mixed population), so\n"  \
-    "no network is needed: the model creates its ``n`` agents itself. This is\n" \
-    "equivalent to a compartmental model.\n"
-
-#define EPIWORLDPY_DOC_MIXING                                                    \
-    "Agents are split into groups with :class:`~epiworldpy.Entity` objects\n"    \
-    "(add them with :meth:`~epiworldpy.Model.add_entity` before running), and\n" \
-    "contacts between groups follow ``contact_matrix``. The model creates its\n" \
-    "``n`` agents itself.\n"
-
-#define EPIWORLDPY_DOC_CONTACT_MATRIX                                             \
-    "contact_matrix : list of float\n"                                            \
-    "    Flattened ``G x G`` matrix, where ``G`` is the number of entities;\n"    \
-    "    entry ``(i, j)`` is the expected number of daily contacts an agent in\n" \
-    "    group ``i`` has with agents in group ``j``, so the row sums are the\n"   \
-    "    expected contacts per day of each group. The matrix is stored by\n"      \
-    "    columns: flatten a NumPy array with ``m.flatten(order=\"F\")``.\n"
+    "The model has ``n`` agents and no contacts until a layer (a network, a\n" \
+    "mixing layer, or several) is added with\n"                              \
+    ":meth:`~epiworldpy.Model.add_layer` (see :mod:`epiworldpy.layer`).\n"
 
 inline constexpr const char *module = R"doc(Ready-to-use epidemiological models.
 
@@ -52,7 +33,7 @@ Examples
 >>> from epiworldpy import epimodels
 >>> from epiworldpy import graph, layer
 >>> covid = epimodels.ModelSIR("COVID-19", n=1000, prevalence=0.01,
-...                            transmission_rate=0.9, recovery_rate=0.1)
+...                            transmission_prob=0.9, recovery_rate=0.1)
 >>> covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
 >>> covid.run(ndays=100, seed=1912)
 )doc";
@@ -67,41 +48,9 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-)doc";
-
-inline constexpr const char *sirconn =
-	R"doc(Susceptible-Infected-Recovered (SIR) model in a connected population.
-
-States: ``Susceptible``, ``Infected``, ``Recovered``.
-
-)doc" EPIWORLDPY_DOC_CONNECTED R"doc(
-Examples
---------
->>> from epiworldpy import epimodels
->>> covid = epimodels.ModelSIRCONN("COVID-19", n=10000, prevalence=0.01,
-...                                contact_rate=5, transmission_rate=0.4,
-...                                recovery_rate=0.95)
->>> covid.run(ndays=100, seed=1912)
-)doc";
-
-inline constexpr const char *sirconn_init = R"doc(Create a connected SIR model.
-
-Parameters
-----------
-name : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-contact_rate : float
-    Average number of contacts per agent per day.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 )doc";
@@ -123,65 +72,14 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 death_rate : float
     Daily probability of death, between 0 and 1.
 )doc";
-
-inline constexpr const char *sirdconn =
-	R"doc(Susceptible-Infected-Recovered-Deceased (SIRD) model in a connected population.
-
-States: ``Susceptible``, ``Infected``, ``Recovered``, ``Deceased``.
-
-)doc" EPIWORLDPY_DOC_CONNECTED;
-
-inline constexpr const char *sirdconn_init =
-	R"doc(Create a connected SIRD model.
-
-Parameters
-----------
-name : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-contact_rate : float
-    Average number of contacts per agent per day.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-death_rate : float
-    Daily probability of death, between 0 and 1.
-)doc";
-
-inline constexpr const char *sirmixing =
-	R"doc(Susceptible-Infected-Recovered (SIR) model with mixing between groups.
-
-States: ``Susceptible``, ``Infected``, ``Recovered``.
-
-)doc" EPIWORLDPY_DOC_MIXING;
-
-inline constexpr const char *sirmixing_init =
-	R"doc(Create a SIR model with mixing.
-
-Parameters
-----------
-vname : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-)doc" EPIWORLDPY_DOC_CONTACT_MATRIX;
 
 // SEIR family --------------------------------------------------------------
 
@@ -197,7 +95,7 @@ Examples
 >>> from epiworldpy import epimodels
 >>> from epiworldpy import graph, layer
 >>> covid = epimodels.ModelSEIR("COVID-19", n=1000, prevalence=0.01,
-...                             transmission_rate=0.9, incubation_days=4,
+...                             transmission_prob=0.9, latent_period=4,
 ...                             recovery_rate=0.1)
 >>> covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
 >>> covid.run(ndays=100, seed=1912)
@@ -213,46 +111,12 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-incubation_days : float
-    Average number of days in the exposed state; greater than 0.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-)doc";
-
-inline constexpr const char *seirconn =
-	R"doc(Susceptible-Exposed-Infected-Recovered (SEIR) model in a connected population.
-
-States: ``Susceptible``, ``Exposed``, ``Infected``, ``Recovered``.
-
-)doc" EPIWORLDPY_DOC_CONNECTED R"doc(
-Examples
---------
->>> from epiworldpy import epimodels
->>> covid = epimodels.ModelSEIRCONN("COVID-19", n=10000, prevalence=0.01,
-...                                 contact_rate=2, transmission_rate=0.5,
-...                                 incubation_days=7, recovery_rate=0.3)
->>> covid.run(ndays=100, seed=1912)
-)doc";
-
-inline constexpr const char *seirconn_init =
-	R"doc(Create a connected SEIR model.
-
-Parameters
-----------
-name : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-contact_rate : float
-    Average number of contacts per agent per day.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-incubation_days : float
-    Average number of days in the exposed state; greater than 0.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
+latent_period : float
+    Mean days in the exposed state (infected, not yet infectious); greater
+    than 0 ("Latent period").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 )doc";
@@ -275,26 +139,59 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-incubation_days : float
-    Average number of days in the exposed state; greater than 0.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
+latent_period : float
+    Mean days in the exposed state (infected, not yet infectious); greater
+    than 0 ("Latent period").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 death_rate : float
     Daily probability of death, between 0 and 1.
 )doc";
 
-inline constexpr const char *seirdconn =
-	R"doc(Susceptible-Exposed-Infected-Recovered-Deceased (SEIRD) model in a connected population.
+#define EPIWORLDPY_DOC_QUARANTINE_PARAMS                                         \
+    "hospitalization_rate : float\n"                                             \
+    "    Daily probability that an infected agent is hospitalized.\n"            \
+    "hospitalization_period : float\n"                                           \
+    "    Average number of days in the hospital.\n"                              \
+    "detection_delay : float\n"                                                  \
+    "    Mean days infected before detection; 0 detects at once, and a\n"        \
+    "    negative value never (\"Detection delay\").\n"                          \
+    "quarantine_period : int\n"                                                  \
+    "    Number of days in quarantine. A negative value turns quarantine off.\n" \
+    "quarantine_willingness : float\n"                                           \
+    "    Proportion of agents willing to quarantine.\n"                          \
+    "isolation_willingness : float\n"                                            \
+    "    Proportion of agents willing to isolate.\n"                             \
+    "isolation_period : int\n"                                                   \
+    "    Number of days in isolation. A negative value turns isolation off.\n"   \
+    "contact_tracing_prob : float, default 1.0\n"                                \
+    "    Probability that a contact is traced (\"Contact tracing probability\").\n" \
+    "contact_tracing_window : int, default 4\n"                                  \
+    "    Days before detection whose contacts are traced (\"Contact tracing\n"     \
+    "    window\").\n"
 
-States: ``Susceptible``, ``Exposed``, ``Infected``, ``Removed``,
-``Deceased``.
+inline constexpr const char *seirquarantine =
+	R"doc(SEIR model with quarantine, isolation, hospitalization, and contact tracing.
 
-)doc" EPIWORLDPY_DOC_CONNECTED;
+Its contacts come from its layers, of any kind (networks, mixing by group, or
+both). Infected agents are isolated once detected (if willing), and their
+contacts in every layer are traced and quarantined (if willing): at the start
+of every run the model turns contact tracing on for each layer that does not
+have it. Only Infected agents transmit; isolated, quarantined, and
+hospitalized agents are out of the mixing layers altogether.
 
-inline constexpr const char *seirdconn_init =
-	R"doc(Create a connected SEIRD model.
+States: ``Susceptible``, ``Exposed``, ``Infected``, ``Isolated``,
+``Detected Hospitalized``, ``Quarantined Susceptible``,
+``Quarantined Exposed``, ``Isolated Recovered``, ``Hospitalized``,
+``Recovered``.
+
+)doc" EPIWORLDPY_DOC_NETWORK;
+
+inline constexpr const char *seirquarantine_init =
+	R"doc(Create a SEIR model with quarantine.
 
 Parameters
 ----------
@@ -304,124 +201,12 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-contact_rate : float
-    Average number of contacts per agent per day.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-incubation_days : float
-    Average number of days in the exposed state; greater than 0.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-death_rate : float
-    Daily probability of death, between 0 and 1.
-)doc";
-
-inline constexpr const char *seirmixing =
-	R"doc(Susceptible-Exposed-Infected-Recovered (SEIR) model with mixing between groups.
-
-States: ``Susceptible``, ``Exposed``, ``Infected``, ``Recovered``.
-
-)doc" EPIWORLDPY_DOC_MIXING;
-
-inline constexpr const char *seirmixing_init =
-	R"doc(Create a SEIR model with mixing.
-
-Parameters
-----------
-vname : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-avg_incubation_days : float
-    Average number of days in the exposed state; greater than 0.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-)doc" EPIWORLDPY_DOC_CONTACT_MATRIX;
-
-#define EPIWORLDPY_DOC_QUARANTINE_PARAMS                                         \
-    "hospitalization_rate : float\n"                                             \
-    "    Daily probability that an infected agent is hospitalized.\n"            \
-    "hospitalization_period : float\n"                                           \
-    "    Average number of days in the hospital.\n"                              \
-    "days_undetected : float\n"                                                  \
-    "    Average number of days an infection goes undetected.\n"                 \
-    "quarantine_period : int\n"                                                  \
-    "    Number of days in quarantine. A negative value turns quarantine off.\n" \
-    "quarantine_willingness : float\n"                                           \
-    "    Proportion of agents willing to quarantine.\n"                          \
-    "isolation_willingness : float\n"                                            \
-    "    Proportion of agents willing to isolate.\n"                             \
-    "isolation_period : int\n"                                                   \
-    "    Number of days in isolation. A negative value turns isolation off.\n"   \
-    "contact_tracing_success_rate : float, default 1.0\n"                        \
-    "    Probability that a contact is traced.\n"                                \
-    "contact_tracing_days_prior : int, default 4\n"                              \
-    "    Number of days before detection during which contacts are traced.\n"
-
-inline constexpr const char *seirmixingquarantine =
-	R"doc(SEIR model with mixing, quarantine, isolation, hospitalization, and contact tracing.
-
-Infected agents are isolated once detected, and the agents they were in
-contact with are traced and quarantined.
-
-States: ``Susceptible``, ``Exposed``, ``Infected``, ``Isolated``,
-``Quarantined Susceptible``, ``Quarantined Exposed``, ``Isolated Recovered``,
-``Hospitalized``, ``Recovered``.
-
-)doc" EPIWORLDPY_DOC_MIXING;
-
-inline constexpr const char *seirmixingquarantine_init =
-	R"doc(Create a SEIR model with mixing and quarantine.
-
-Parameters
-----------
-vname : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-avg_incubation_days : float
-    Average number of days in the exposed state; greater than 0.
-recovery_rate : float
-    Daily probability of recovery, between 0 and 1.
-)doc" EPIWORLDPY_DOC_CONTACT_MATRIX EPIWORLDPY_DOC_QUARANTINE_PARAMS;
-
-inline constexpr const char *seirnetworkquarantine =
-	R"doc(SEIR model on a network, with quarantine, isolation, hospitalization, and contact tracing.
-
-Like :class:`ModelSEIRMixingQuarantine`, but contacts are the agents'
-neighbors in its network layers (for example, one drawn with
-:func:`epiworldpy.graph.sbm`) instead of a contact matrix.
-
-States: ``Susceptible``, ``Exposed``, ``Infected``, ``Isolated``,
-``Detected Hospitalized``, ``Quarantined Susceptible``,
-``Quarantined Exposed``, ``Isolated Recovered``, ``Hospitalized``,
-``Recovered``.
-
-)doc" EPIWORLDPY_DOC_NETWORK;
-
-inline constexpr const char *seirnetworkquarantine_init =
-	R"doc(Create a SEIR network model with quarantine.
-
-Parameters
-----------
-vname : str
-    Name of the virus.
-n : int
-    Number of agents.
-prevalence : float
-    Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
-avg_incubation_days : float
-    Average number of days in the exposed state; greater than 0.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
+latent_period : float
+    Mean days in the exposed state (infected, not yet infectious); greater
+    than 0 ("Latent period").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 )doc" EPIWORLDPY_DOC_QUARANTINE_PARAMS;
@@ -446,8 +231,9 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 )doc";
@@ -470,8 +256,9 @@ n : int
     Number of agents.
 prevalence : float
     Initial proportion of agents with the virus.
-transmission_rate : float
-    Probability of transmission per contact, between 0 and 1.
+transmission_prob : float
+    Probability that a contact with an infected agent infects, between 0 and
+    1 ("Transmission probability").
 recovery_rate : float
     Daily probability of recovery, between 0 and 1.
 death_rate : float
@@ -521,7 +308,7 @@ prop_vax_redux_infect : float
     Factor by which the vaccine reduces the chance of becoming infected.
 surveillance_prob : float
     Daily probability of testing an agent.
-transmission_rate : float
+transmission_prob : float
     Probability of transmission per contact.
 prob_death : float
     Daily probability of death for symptomatic agents.
@@ -570,9 +357,6 @@ params : list of float
 )doc";
 
 #undef EPIWORLDPY_DOC_NETWORK
-#undef EPIWORLDPY_DOC_CONNECTED
-#undef EPIWORLDPY_DOC_MIXING
-#undef EPIWORLDPY_DOC_CONTACT_MATRIX
 #undef EPIWORLDPY_DOC_QUARANTINE_PARAMS
 
 } // namespace epiworldpy::docstrings::epimodels

@@ -8,7 +8,7 @@ def test_distribution():
         name="hypothetical",
         n=100000,
         prevalence=0.01,
-        transmission_rate=0.1,
+        transmission_prob=0.1,
         recovery_rate=0.14,
     )
 
