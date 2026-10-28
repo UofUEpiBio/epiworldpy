@@ -183,7 +183,26 @@ void epiworldpy::export_layer(py::module &m) {
 			},
 			doc::set_group, py::arg("agent"), py::arg("group"))
 		.def("members_of", &Mixing::members_of, doc::members_of,
-			 py::arg("group"));
+			 py::arg("group"))
+		.def(
+			"groupmates_of",
+			[](const Mixing &self, size_t agent, int start, int end) -> py::dict {
+				std::vector<Mixing::Groupmate> mates;
+				self.groupmates_of(agent, start, end, mates);
+				auto id = new std::vector<int>();
+				auto last_day = new std::vector<int>();
+				auto n_days = new std::vector<int>();
+				for (const auto &g : mates) {
+					id->push_back(static_cast<int>(g.agent));
+					last_day->push_back(g.last_day);
+					n_days->push_back(g.n_days);
+				}
+				return make_dict(make_dict_entry("agent", *id),
+								 make_dict_entry("last_day", *last_day),
+								 make_dict_entry("n_days", *n_days));
+			},
+			doc::groupmates_of, py::arg("agent"), py::arg("start") = 1,
+			py::arg("end") = std::numeric_limits<int>::max());
 
 	m.def(
 		 "network",

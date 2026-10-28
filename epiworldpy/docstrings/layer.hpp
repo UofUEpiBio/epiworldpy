@@ -458,6 +458,37 @@ list of int
     The ids of the agents in the group, in no particular order.
 )doc";
 
+inline constexpr const char *groupmates_of =
+	R"doc(Get who shared a group with an agent, both present, over a window of days.
+
+A traced layer with contact probabilities (:meth:`enable_tracing`, before the
+run) keeps the run's history of who was in which group and who was absent (in
+a state the model takes out of the layers, e.g., isolated in
+:class:`~epiworldpy.epimodels.ModelSEIRQuarantine`). With a contact
+probability of 1 that is exactly who the agent met; below 1, who it could have
+met ("notify the household").
+
+The history covers whole runs: on an untraced layer, with tracing turned on
+during a run, or after the grouping is edited between runs, this raises an
+error until the next run.
+
+Parameters
+----------
+agent : int
+    Id of the agent (starting at 0).
+start : int, default 1
+    First day of the window.
+end : int, default the last day
+    Last day of the window. Days after the last one simulated are left out.
+
+Returns
+-------
+dict
+    ``agent``, ``last_day`` (the last day they shared a group, both present)
+    and ``n_days`` (how many days they did): arrays with one entry per
+    groupmate, in ascending id order.
+)doc";
+
 inline constexpr const char *set_contact_matrix =
 	R"doc(Set the contact matrix.
 
