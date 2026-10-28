@@ -7,7 +7,7 @@ import pytest
 
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
-from epiworldpy import graph, layer
+from epiworldpy import graph, grouping, layer
 
 
 def transmissions(model):
@@ -197,6 +197,42 @@ def test_mixing_within_groups():
         hh.members_of(100)
     with pytest.raises(ValueError):
         hh.set_contact_prob(1.5)
+
+
+def test_grouping_random():
+    # Groups drawn at random at every run: the sizes hold (agents left over
+    # are in no group), the same seed draws the same groups and another seed
+    # others, and a move between runs is an error
+    m = epimodels.ModelSIR(
+        "flu", n=1000, prevalence=0.01, transmission_prob=0.2,
+        recovery_rate=0.1
+    )
+    m.verbose_off()
+    schools = layer.mixing(
+        "schools", grouping.random([300, 200]), contact_prob=0.05
+    )
+    halves = layer.mixing(
+        "halves", grouping.random([0.5, 0.5], as_proportion=True),
+        contact_prob=0.05
+    )
+    m.add_layer(schools)
+    m.add_layer(halves)
+
+    def draw(seed):
+        m.run(10, seed)
+        return [schools.get_group(i) for i in range(1000)]
+
+    first = draw(1)
+    assert [first.count(g) for g in (0, 1, None)] == [300, 200, 500]
+    assert draw(1) == first
+    assert draw(2) != first
+    with pytest.raises(RuntimeError, match="drawn at every reset"):
+        schools.set_group(0, 1)
+
+    # Proportions are of the agents still without a group
+    assert [len(halves.members_of(g)) for g in (0, 1)] == [500, 250]
+    with pytest.raises(ValueError, match="non-negative"):
+        grouping.random([-1])
 
 
 def test_several_layers_weights_and_targets():

@@ -63,6 +63,9 @@ PYBIND11_MODULE(_core, m) {
 	auto m_graph = m.def_submodule("graph", docs::layer::graph_module);
 	epiworldpy::export_graph(m_graph);
 
+	auto m_grouping = m.def_submodule("grouping", docs::layer::grouping_module);
+	epiworldpy::export_grouping(m_grouping);
+
 	auto m_layer = m.def_submodule("layer", docs::layer::layer_module);
 	epiworldpy::export_layer(m_layer);
 

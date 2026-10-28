@@ -18,6 +18,7 @@ using Mixing = layer::Mixing<int>;
 using Generator = Network::Generator;
 using ContactProb = std::variant<double, std::vector<double>>;
 using Rewiring = Network::Rewiring;
+using Grouping = Mixing::Grouping;
 
 /* Python objects that only carry a generator or a rewiring function from the
  * graph functions to the layer; they wrap the std::function so Python does not
@@ -29,6 +30,32 @@ struct GraphGenerator {
 struct GraphRewiring {
 	Rewiring fun;
 };
+
+/* Sets the contacts of a mixing layer: exactly one of a contact matrix and
+ * contact probabilities. */
+static void set_contacts(Mixing &mix, std::optional<std::vector<double>> &cm,
+						 std::optional<ContactProb> &cp) {
+	if (cm.has_value() == cp.has_value())
+		throw std::invalid_argument(
+			"Give exactly one of contact_matrix and contact_prob.");
+
+	if (cm)
+		mix.set_contact_matrix(std::move(*cm));
+	else
+		std::visit([&](auto p) { mix.set_contact_prob(p); }, *cp);
+}
+
+void epiworldpy::export_grouping(py::module &m) {
+	py::class_<Grouping>(m, "Grouping", doc::grouping_cls);
+
+	m.def(
+		"random",
+		[](std::vector<epiworld_double> sizes, bool as_proportion) {
+			return grouping::random<int>(std::move(sizes), as_proportion);
+		},
+		doc::grouping_random, py::arg("sizes"),
+		py::arg("as_proportion") = false);
+}
 
 void epiworldpy::export_graph(py::module &m) {
 	py::class_<GraphGenerator>(m, "Generator", doc::generator_cls);
@@ -221,10 +248,6 @@ void epiworldpy::export_layer(py::module &m) {
 			[](std::string name, const std::vector<std::optional<size_t>> &groups,
 			   std::optional<std::vector<double>> contact_matrix,
 			   std::optional<ContactProb> contact_prob) {
-				if (contact_matrix.has_value() == contact_prob.has_value())
-					throw std::invalid_argument(
-						"Give exactly one of contact_matrix and contact_prob.");
-
 				// Groups: None leaves the agent out of the layer
 				std::vector<size_t> g(groups.size());
 				size_t n_groups = 0;
@@ -249,16 +272,23 @@ void epiworldpy::export_layer(py::module &m) {
 
 				auto mix = layer::mixing<int>(std::move(name));
 				mix->set_groups(std::move(g), n_groups);
-
-				if (contact_matrix)
-					mix->set_contact_matrix(std::move(*contact_matrix));
-				else
-					std::visit([&](auto p) { mix->set_contact_prob(p); },
-							   *contact_prob);
-
+				set_contacts(*mix, contact_matrix, contact_prob);
 				return mix;
 			},
 			doc::mixing, py::arg("name"), py::arg("groups"),
+			py::arg("contact_matrix") = py::none(),
+			py::arg("contact_prob") = py::none())
+		.def(
+			"mixing",
+			[](std::string name, const Grouping &groups,
+			   std::optional<std::vector<double>> contact_matrix,
+			   std::optional<ContactProb> contact_prob) {
+				auto mix = layer::mixing<int>(std::move(name));
+				mix->set_groups(groups);
+				set_contacts(*mix, contact_matrix, contact_prob);
+				return mix;
+			},
+			doc::mixing_grouping, py::arg("name"), py::arg("groups"),
 			py::arg("contact_matrix") = py::none(),
 			py::arg("contact_prob") = py::none());
 }
