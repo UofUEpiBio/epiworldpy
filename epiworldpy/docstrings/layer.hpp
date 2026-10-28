@@ -159,10 +159,6 @@ Examples
 
 inline constexpr const char *contact_layer_cls =
 	R"doc(Base class of every contact layer.
-
-The connected models (for example,
-:class:`~epiworldpy.epimodels.ModelSIRCONN`) draw contacts from the list of
-infected agents and ignore layers for now.
 )doc";
 
 inline constexpr const char *get_name = R"doc(Get the layer's name.

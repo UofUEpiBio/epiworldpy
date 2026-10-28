@@ -9,10 +9,8 @@ namespace epiworldpy::docstrings::entity {
 inline constexpr const char *cls =
 	R"doc(A group of agents, such as a household, school, or age group.
 
-Mixing models (for example, :class:`~epiworldpy.epimodels.ModelSIRMixing`)
-use entities as the groups of their contact matrix. Add an entity to a model
-with :meth:`Model.add_entity`; its distribution function assigns agents to it
-when the model is run.
+Add an entity to a model with :meth:`Model.add_entity`; its distribution
+function assigns agents to it when the model is run.
 
 Examples
 --------
