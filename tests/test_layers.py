@@ -152,6 +152,19 @@ def test_mixing_within_groups():
     tr = transmissions(m)
     assert len(tr["sources"]) > 0
     assert set(zip(tr["sources"].tolist(), tr["targets"].tolist())) <= logged
+
+    # ...and keeps who shared a group: agent 500's nine housemates on day 1
+    mates = hh.groupmates_of(500)
+    assert sorted(mates) == ["agent", "last_day", "n_days"]
+    assert mates["agent"].tolist() == list(range(501, 510))
+    assert set(mates["last_day"].tolist()) == {1}
+    assert set(mates["n_days"].tolist()) == {1}
+
+    # The history covers whole runs: a move between runs drops it
+    hh.set_group(501, 0)
+    with pytest.raises(RuntimeError, match="no history"):
+        hh.groupmates_of(500)
+    hh.set_group(501, 50)
     hh.disable_tracing()
     assert not hh.is_tracing()
 
