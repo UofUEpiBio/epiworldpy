@@ -233,6 +233,8 @@ def test_grouping_random():
     assert [len(halves.members_of(g)) for g in (0, 1)] == [500, 250]
     with pytest.raises(ValueError, match="non-negative"):
         grouping.random([-1])
+    with pytest.raises(ValueError, match="whole numbers"):
+        grouping.random([1.9])
 
 
 def test_several_layers_weights_and_targets():

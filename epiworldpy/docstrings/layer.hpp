@@ -33,7 +33,7 @@ size ``s`` takes ``floor(s * n)`` of the ``n`` agents still without a group.
 Parameters
 ----------
 sizes : list of float
-    One size per group: a number of agents, or a proportion in [0, 1].
+    One size per group: a whole number of agents, or a proportion in [0, 1].
 as_proportion : bool, default False
     Whether the sizes are proportions of the agents not yet in a group.
 
