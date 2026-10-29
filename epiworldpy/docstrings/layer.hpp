@@ -7,6 +7,42 @@
 // clang-format off
 namespace epiworldpy::docstrings::layer {
 
+// -- epiworldpy.grouping ------------------------------------------------------
+
+inline constexpr const char *grouping_module =
+	R"doc(Groupings for mixing layers: groups drawn afresh at the start of every run.
+
+A grouping (:func:`random`) goes to :func:`epiworldpy.layer.mixing` in place of
+fixed groups, as a network generator goes to :func:`epiworldpy.layer.network`.
+)doc";
+
+inline constexpr const char *grouping_cls =
+	R"doc(A grouping, from :func:`random`.
+
+Pass it to :func:`epiworldpy.layer.mixing` as the groups; the layer draws them
+with it at the start of every run.
+)doc";
+
+inline constexpr const char *grouping_random =
+	R"doc(Random groups of given sizes.
+
+Group by group, in order, the agents are drawn at random from those not yet in
+a group; agents left over are in no group. With ``as_proportion``, a group of
+size ``s`` takes ``floor(s * n)`` of the ``n`` agents still without a group.
+
+Parameters
+----------
+sizes : list of float
+    One size per group: a number of agents, or a proportion in [0, 1].
+as_proportion : bool, default False
+    Whether the sizes are proportions of the agents not yet in a group.
+
+Returns
+-------
+Grouping
+    A grouping that draws new groups for every run.
+)doc";
+
 // -- epiworldpy.graph ---------------------------------------------------------
 
 inline constexpr const char *graph_module =
@@ -139,9 +175,10 @@ inline constexpr const char *layer_module =
 
 A model draws the contacts of its agents from its layers, all of them in one
 draw. A network layer (:class:`Network`, from :func:`network`) holds ties
-between agents; a mixing layer (:class:`Mixing`, created by the mixing
-models) samples contacts between groups with a contact matrix. Network models
-start with no layers: add one with :meth:`epiworldpy.Model.add_layer`.
+between agents; a mixing layer (:class:`Mixing`, from :func:`mixing`) draws
+contacts by group, fixed or drawn at every run by a grouping
+(:mod:`epiworldpy.grouping`). Models start with no layers: add one with
+:meth:`epiworldpy.Model.add_layer`.
 
 A layer object is the model's layer once added: editing it (for example,
 with :meth:`Network.add_edge`) edits the model. An edit made during a run
@@ -151,7 +188,7 @@ Examples
 --------
 >>> from epiworldpy import epimodels, graph, layer
 >>> sir = epimodels.ModelSIR("flu", n=1000, prevalence=0.01,
-...                          transmission_rate=0.3, recovery_rate=0.1)
+...                          transmission_prob=0.3, recovery_rate=0.1)
 >>> contacts = layer.network("contacts", graph.smallworld(k=5, p=0.01))
 >>> sir.add_layer(contacts)
 >>> sir.run(ndays=50, seed=1912)
@@ -528,6 +565,33 @@ contact_prob : float or list of float, optional
     Probability, in [0, 1], that two members of a group meet on a given day:
     one for every group or one per group. 1 makes every group a clique
     (everyone meets everyone, every day), with no ties stored.
+
+Returns
+-------
+Mixing
+    The layer, to add with :meth:`epiworldpy.Model.add_layer`.
+)doc";
+
+inline constexpr const char *mixing_grouping =
+	R"doc(Create a mixing layer whose groups are drawn at every run.
+
+Give exactly one of ``contact_matrix`` and ``contact_prob``. The groups exist
+once the model has run, and moving an agent between runs is an error (the next
+run draws them again).
+
+Parameters
+----------
+name : str
+    Name of the layer (unique within a model).
+groups : Grouping
+    A grouping, from :mod:`epiworldpy.grouping`, that draws the groups at the
+    start of every run.
+contact_matrix : list of float, optional
+    Expected number of contacts per day between groups, a square matrix
+    flattened by columns (one row per group of the grouping).
+contact_prob : float or list of float, optional
+    Probability, in [0, 1], that two members of a group meet on a given day:
+    one for every group or one per group.
 
 Returns
 -------
