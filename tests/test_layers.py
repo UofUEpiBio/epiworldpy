@@ -55,6 +55,14 @@ def test_network_layers():
     with pytest.raises(Exception):
         m.get_layer("nope")
 
+    # bernoulli(0) draws no ties (it used to give an almost complete graph)
+    e = sir(200)
+    none = layer.network("none", graph.bernoulli(0))
+    e.add_layer(none)
+    e.run(20, 1)
+    assert len(none.get_edgelist()["from"]) == 0
+    assert len(transmissions(e)["sources"]) == 0
+
 
 def test_fixed_network_edits_persist():
     m = epimodels.ModelSIS(
