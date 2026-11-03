@@ -59,6 +59,32 @@ DEFUNCT = {
     ("Agent", "get_neighbors"): "Use model.get_layer(name).get_edgelist().",
 }
 
+# Entities (removed in epiworld's phase 3d-3a) became the groups of a mixing
+# layer.
+_ENTITY = (
+    "Entities are gone: groups live in a mixing layer. "
+    "model.add_layer(layer.mixing(name, groups, ...)), with groups a list "
+    "(one group per agent) or grouping.random(sizes, as_proportion); the "
+    "layer's members_of(group) and get_group(agent) read them."
+)
+
+DEFUNCT.update(
+    {
+        (cls_name, name): _ENTITY
+        for cls_name, names in {
+            "Model": ["add_entity", "get_entity", "get_n_entities"],
+            "Agent": [
+                "add_entity",
+                "rm_entity",
+                "has_entity",
+                "get_entities",
+                "get_n_entities",
+            ],
+        }.items()
+        for name in names
+    }
+)
+
 
 _RANDOM_MIXING = (
     "with a random-mixing layer: everyone in one group, a contact matrix of 1, "
@@ -91,12 +117,17 @@ DEFUNCT_MODELS = {
 
 def model_stub(name: str):
     """A stand-in for a removed model that raises with its replacement."""
-    msg = DEFUNCT_MODELS[name]
+    return _function_stub(f"epimodels.{name}", name, DEFUNCT_MODELS[name])
 
+
+def entity_stub():
+    """A stand-in for the removed ``Entity`` class."""
+    return _function_stub("Entity", "Entity", _ENTITY)
+
+
+def _function_stub(label: str, name: str, msg: str):
     def defunct(*args, **kwargs):
-        raise RuntimeError(
-            f"epimodels.{name}() is defunct as of epiworldpy 1.0.0. {msg}"
-        )
+        raise RuntimeError(f"{label}() is defunct as of epiworldpy 1.0.0. {msg}")
 
     defunct.__name__ = name
     defunct.__qualname__ = name

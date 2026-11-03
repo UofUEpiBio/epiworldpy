@@ -75,6 +75,13 @@ error that names their replacement.
 - `get_transmissions()` gains `layers`: the layer each infection came
   through. Layers have a weight (`set_weight(param)`) and virus targets
   (`add_virus_target(virus)`).
+- Entities are gone; groups live in mixing layers
+  ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
+  `Entity`, `Model.add_entity()`, `get_entity()`, `get_n_entities()`, and
+  `Agent.add_entity()`, `rm_entity()`, `has_entity()`, `get_entities()`,
+  `get_n_entities()` are defunct. Use `layer.mixing(name, groups, ...)` with a
+  list of groups or `grouping.random()`, and read groups with the layer's
+  `members_of()` and `get_group()`.
 
 ## Documentation
 

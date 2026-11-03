@@ -378,6 +378,9 @@ def test_defunct_models(name, replacement):
         (lambda m: m.agents_from_edgelist([0], [1], 2, False), "graph.edgelist"),
         (lambda m: m.add_edge(0, 1), "get_layer"),
         (lambda m: m.get_agent(0).get_neighbors(m), "get_edgelist"),
+        (lambda m: m.add_entity(None), "layer.mixing"),
+        (lambda m: m.get_agent(0).get_entities(), "members_of"),
+        (lambda m: epiworld.Entity("home"), "grouping.random"),
     ],
 )
 def test_defunct(call, replacement):

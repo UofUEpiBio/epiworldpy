@@ -236,43 +236,10 @@ tool : Tool
     The tool to add.
 )doc";
 
-inline constexpr const char *add_entity = R"doc(Add an entity to the model.
-
-Agents are assigned to the entity when the model is run (see
-:meth:`Entity.set_distribution`).
-
-Parameters
-----------
-entity : Entity
-    The entity to add.
-)doc";
-
-inline constexpr const char *get_entity = R"doc(Get an entity by ID.
-
-Parameters
-----------
-entity_id : int
-    ID of the entity.
-
-Returns
--------
-Entity
-    The entity.
-)doc";
-
-inline constexpr const char *get_n_entities =
-	R"doc(Get the number of entities in the model.
-
-Returns
--------
-int
-    Number of entities.
-)doc";
-
 inline constexpr const char *reset = R"doc(Reset the model to its initial state.
 
-Restores the population, clears the database, and redistributes viruses,
-tools, and entities. :meth:`run` calls it before each simulation.
+Restores the population, clears the database, and redistributes viruses
+and tools. :meth:`run` calls it before each simulation.
 )doc";
 
 inline constexpr const char *print =
