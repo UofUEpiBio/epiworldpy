@@ -95,15 +95,20 @@ error that names their replacement.
   model.add_globalevent(b)            # the model keeps a copy
   ```
 
-  `flavor` decides who bubbles together; `ties` decides who then meets:
+  `flavor` decides who bubbles together; `ties` decides who then meets.
+  These are the closest settings for two styles of rule used during
+  COVID-19, not exact matches:
 
-  | Policy | `flavor` | `ties` |
-  |---|---|---|
-  | Households join one or a few others (New Zealand; UK support bubbles; Belgium, May 2020) | `"household"` | `"complete"` |
-  | One close contact per person (Belgium, October 2020) | `"peer"` | `"existing"` |
+  | Policy style | Settings |
+  |---|---|
+  | Households join one or a few others (New Zealand; UK support bubbles; Belgium, May 2020) | `"household"`, `group_size` = households per bubble, `ties="complete"` |
+  | One close contact per person (Belgium, October 2020) | `"peer"`, `max_households=2` (the default), `ties="existing"` |
 
-  `flavor="peer"` with `ties="complete"` makes both households meet in full,
-  not just the two people.
+  The second is an approximation: `"peer"` commits whole households, so one
+  accepted choice pairs two households and their other members choose no one
+  else, and `"existing"` spares every tie between the two households. A larger
+  `max_households` lets more members choose, with larger bubbles.
+  `flavor="peer"` with `ties="complete"` makes both households meet in full.
 
 ## Documentation
 
