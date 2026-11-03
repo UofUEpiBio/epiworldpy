@@ -494,6 +494,21 @@ date : int, default -99
     Day on which to call ``fun``. A negative value calls it every day.
 )doc";
 
+inline constexpr const char *add_globalevent_bubbles =
+	R"doc(Add a social-bubble policy (see :class:`Bubbles`).
+
+The model keeps its own copy of the policy: changes to the Python object
+after it is added do not affect the model. Read the model's copy, e.g., its
+bubbles after a run, with :meth:`Bubbles.get_from`. With
+``ties="complete"``, also add the household layer
+(:meth:`Bubbles.make_layer`).
+
+Parameters
+----------
+bubbles : Bubbles
+    The policy.
+)doc";
+
 inline constexpr const char *rm_globalevent = R"doc(Remove a global event.
 
 Parameters

@@ -4,6 +4,7 @@
 
 from ._core import (  # type: ignore[import]
     Agent,
+    Bubbles,
     DataBase,
     DiagramType,
     Model,
@@ -23,6 +24,7 @@ Entity = _entity_stub()  # removed in 1.0.0: calling it raises
 
 __all__ = [
     "Agent",
+    "Bubbles",
     "DataBase",
     "DiagramType",
     "Model",

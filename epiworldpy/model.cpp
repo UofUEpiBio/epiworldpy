@@ -244,6 +244,12 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			doc::get_agents)
 		.def(
 			"add_globalevent",
+			[](Model<int> &self, Bubbles<int> &bubbles) {
+				self.add_globalevent(bubbles);
+			},
+			doc::add_globalevent_bubbles, py::arg("bubbles"))
+		.def(
+			"add_globalevent",
 			[](Model<int> &self, std::function<void(Model<int> *)> fun,
 			   std::string name,
 			   int date) { self.add_globalevent(fun, name, date); },

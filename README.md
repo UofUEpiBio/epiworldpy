@@ -82,6 +82,28 @@ error that names their replacement.
   `get_n_entities()` are defunct. Use `layer.mixing(name, groups, ...)` with a
   list of groups or `grouping.random()`, and read groups with the layer's
   `members_of()` and `get_group()`.
+- Social bubbles: `Bubbles` is new in epiworldpy
+  ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
+  `ties="complete"`, bubblemates meet in a household layer (a within-group
+  mixing layer, one group per household) that `make_layer()` builds and you
+  add; the bubbles are larger groups of it while the policy is in force:
+
+  ```python
+  b = epiworldpy.Bubbles(hh, "household", 3, ties="complete",
+                         layer="household", bubble_contact_prob=0.5)
+  model.add_layer(b.make_layer(1.0))  # household_contact_prob
+  model.add_globalevent(b)            # the model keeps a copy
+  ```
+
+  `flavor` decides who bubbles together; `ties` decides who then meets:
+
+  | Policy | `flavor` | `ties` |
+  |---|---|---|
+  | Households join one or a few others (New Zealand; UK support bubbles; Belgium, May 2020) | `"household"` | `"complete"` |
+  | One close contact per person (Belgium, October 2020) | `"peer"` | `"existing"` |
+
+  `flavor="peer"` with `ties="complete"` makes both households meet in full,
+  not just the two people.
 
 ## Documentation
 

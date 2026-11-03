@@ -3,6 +3,7 @@ include_directories(include/epiworld)
 
 python_add_library(_core MODULE
     agent.cpp
+    bubbles.cpp
     database.cpp
     diagram.cpp
     layer.cpp
