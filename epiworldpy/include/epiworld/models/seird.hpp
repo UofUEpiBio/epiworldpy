@@ -145,7 +145,11 @@ inline ModelSEIRD<TSeq>::ModelSEIRD(
     this->set_population_size(n);
   
   // Adding statuses
-  this->add_state("Susceptible", default_update_susceptible<TSeq>);
+  // Exposed agents carry the virus but are not infectious yet
+  this->add_state(
+      "Susceptible",
+      sampler::make_update_susceptible<TSeq>({ModelSEIRD<TSeq>::EXPOSED})
+  );
   this->add_state("Exposed",  this->update_exposed_seir);
   this->add_state("Infected", this->update_infected);
   this->add_state("Removed");
