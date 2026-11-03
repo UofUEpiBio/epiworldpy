@@ -78,6 +78,40 @@ error that names their replacement.
 - `get_transmissions()` gains `layers`: the layer each infection came
   through. Layers have a weight (`set_weight(param)`) and virus targets
   (`add_virus_target(virus)`).
+- Entities are gone; groups live in mixing layers
+  ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
+  `Entity`, `Model.add_entity()`, `get_entity()`, `get_n_entities()`, and
+  `Agent.add_entity()`, `rm_entity()`, `has_entity()`, `get_entities()`,
+  `get_n_entities()` are defunct. Use `layer.mixing(name, groups, ...)` with a
+  list of groups or `grouping.random()`, and read groups with the layer's
+  `members_of()` and `get_group()`.
+- Social bubbles: `Bubbles` is new in epiworldpy
+  ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
+  `ties="complete"`, bubblemates meet in a household layer (a within-group
+  mixing layer, one group per household) that `make_layer()` builds and you
+  add; the bubbles are larger groups of it while the policy is in force:
+
+  ```python
+  b = epiworldpy.Bubbles(hh, "household", 3, ties="complete",
+                         layer="household", bubble_contact_prob=0.5)
+  model.add_layer(b.make_layer(1.0))  # household_contact_prob
+  model.add_globalevent(b)            # the model keeps a copy
+  ```
+
+  `flavor` decides who bubbles together; `ties` decides who then meets.
+  These are the closest settings for two styles of rule used during
+  COVID-19, not exact matches:
+
+  | Policy style | Settings |
+  |---|---|
+  | Households join one or a few others (New Zealand; UK support bubbles; Belgium, May 2020) | `"household"`, `group_size` = households per bubble, `ties="complete"` |
+  | One close contact per person (Belgium, October 2020) | `"peer"`, `max_households=2` (the default), `ties="existing"` |
+
+  The second is an approximation: `"peer"` commits whole households, so one
+  accepted choice pairs two households and their other members choose no one
+  else, and `"existing"` spares every tie between the two households. A larger
+  `max_households` lets more members choose, with larger bubbles.
+  `flavor="peer"` with `ties="complete"` makes both households meet in full.
 
 ## Documentation
 

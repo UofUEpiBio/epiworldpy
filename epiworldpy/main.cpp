@@ -6,18 +6,18 @@
 #include <pybind11/stl.h> // silently fails when removed.
 
 #include "agent.hpp"
+#include "bubbles.hpp"
 #include "database.hpp"
 #include "diagram.hpp"
 #include "docstrings/agent.hpp"
+#include "docstrings/bubbles.hpp"
 #include "docstrings/database.hpp"
 #include "docstrings/diagram.hpp"
-#include "docstrings/entity.hpp"
 #include "docstrings/layer.hpp"
 #include "docstrings/epimodels.hpp"
 #include "docstrings/model.hpp"
 #include "docstrings/tool.hpp"
 #include "docstrings/virus.hpp"
-#include "entity.hpp"
 #include "layer.hpp"
 #include "misc.hpp"
 #include "model.hpp"
@@ -44,9 +44,9 @@ PYBIND11_MODULE(_core, m) {
 											   docs::diagram::diagram_type);
 	auto diagram = py::class_<ModelDiagram, std::shared_ptr<ModelDiagram>>(
 		m, "ModelDiagram", docs::diagram::cls);
-	auto entity = py::class_<Entity<int>, std::shared_ptr<Entity<int>>>(
-		m, "Entity", docs::entity::cls);
 	auto tool = py::class_<Tool<int>>(m, "Tool", docs::tool::cls);
+	auto bubbles =
+		py::class_<Bubbles<int>>(m, "Bubbles", docs::bubbles::cls);
 	auto virus = py::class_<Virus<int>>(m, "Virus", docs::virus::cls);
 
 	epiworldpy::export_agent(agent);
@@ -56,8 +56,8 @@ PYBIND11_MODULE(_core, m) {
 	epiworldpy::export_database(database);
 	epiworldpy::export_diagram_type(diagram_type);
 	epiworldpy::export_diagram(diagram);
-	epiworldpy::export_entity(entity);
 	epiworldpy::export_tool(tool);
+	epiworldpy::export_bubbles(bubbles);
 	epiworldpy::export_virus(virus);
 
 	auto m_graph = m.def_submodule("graph", docs::layer::graph_module);

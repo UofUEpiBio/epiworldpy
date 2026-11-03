@@ -39,8 +39,6 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			 doc::get_tools)
 		.def("get_n_tools", &Agent<int>::get_n_tools,
 			 doc::get_n_tools)
-		.def("get_n_entities", &Agent<int>::get_n_entities,
-			 doc::get_n_entities)
 		.def("has_tool",
 			 py::overload_cast<epiworld_fast_uint>(&Agent<int>::has_tool,
 												   py::const_),
@@ -57,10 +55,6 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			 py::overload_cast<std::string_view>(&Agent<int>::has_virus,
 												 py::const_),
 			 doc::has_virus_name, py::arg("name"))
-		.def("has_entity",
-			 py::overload_cast<epiworld_fast_uint>(&Agent<int>::has_entity,
-												   py::const_),
-			 doc::has_entity, py::arg("t"))
 		.def(
 			"change_state",
 			[](Agent<int> &self, Model<int> &model,
@@ -93,20 +87,5 @@ void epiworldpy::export_agent(py::class_<epiworld::Agent<int>> &c) {
 			[](Agent<int> &self, Model<int> &model,
 			   epiworld_fast_uint tool_idx) { self.rm_tool(model, tool_idx); },
 			doc::rm_tool,
-			py::arg("model"), py::arg("tool_idx"))
-		.def(
-			"add_entity",
-			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
-				self.add_entity(model, entity);
-			},
-			doc::add_entity, py::arg("model"), py::arg("entity"))
-		.def(
-			"rm_entity",
-			[](Agent<int> &self, Model<int> &model, Entity<int> &entity) {
-				self.rm_entity(model, entity);
-			},
-			doc::rm_entity, py::arg("model"),
-			py::arg("entity"))
-		.def("get_entities", &Agent<int>::get_entities,
-			 doc::get_entities);
+			py::arg("model"), py::arg("tool_idx"));
 }

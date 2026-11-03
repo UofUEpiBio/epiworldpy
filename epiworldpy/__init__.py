@@ -4,9 +4,9 @@
 
 from ._core import (  # type: ignore[import]
     Agent,
+    Bubbles,
     DataBase,
     DiagramType,
-    Entity,
     Model,
     ModelDiagram,
     NativeUpdateFun,
@@ -16,15 +16,17 @@ from ._core import (  # type: ignore[import]
     __epiworld_version__,
 )
 from . import epimodels, graph, grouping, layer
+from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
 
 _install_defunct({"Model": Model, "Agent": Agent})
+Entity = _entity_stub()  # removed in 1.0.0: calling it raises
 
 __all__ = [
     "Agent",
+    "Bubbles",
     "DataBase",
     "DiagramType",
-    "Entity",
     "Model",
     "ModelDiagram",
     "NativeUpdateFun",

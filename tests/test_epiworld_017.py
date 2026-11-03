@@ -283,29 +283,18 @@ class TestFixes:
             healthy.mutate_virus(m)
 
 
-class TestAgentToolsEntities:
-    def test_rm_tool_add_rm_entity(self):
+class TestAgentTools:
+    def test_rm_tool(self):
         # Agent changes are queued as events and applied at the end of a step,
         # so we make them from global events during a run.
         m = make_sir(100)
         m.add_tool(epiworld.Tool("mask", 1.0, True, transmission_reduction=0.5))
-        m.add_entity(epiworld.Entity("home"))
 
         def change(model):
-            agent = model.get_agent(0)
             if model.today() == 1:
-                agent.rm_tool(model, 0)
-                agent.add_entity(model, model.get_entity(0))
-            elif model.today() == 3:
-                agent.rm_entity(model, model.get_entity(0))
+                model.get_agent(0).rm_tool(model, 0)
 
         m.add_globalevent(change, "change")
 
         m.run(2, SEED)
-        agent = m.get_agent(0)
-        assert agent.get_n_tools() == 0
-        assert list(agent.get_entities()) == [0]
-        assert 0 in list(m.get_entity(0).get_agents_ids())
-
-        m.run(4, SEED)
-        assert list(m.get_agent(0).get_entities()) == []
+        assert m.get_agent(0).get_n_tools() == 0

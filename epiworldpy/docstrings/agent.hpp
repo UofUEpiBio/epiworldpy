@@ -13,8 +13,8 @@ Agents are created by the model (``n`` of them, given to its constructor) and
 accessed with :meth:`Model.get_agent` or :meth:`Model.get_agents`; they cannot
 be created directly. Their contacts come from the model's layers (see
 :mod:`epiworldpy.layer`). Each agent has a
-state (an index into :meth:`Model.get_states`), at most one active virus, any
-number of tools, and may belong to entities.
+state (an index into :meth:`Model.get_states`), at most one active virus, and
+any number of tools.
 
 Methods that change an agent (``set_virus``, ``add_tool``, ``change_state``,
 ...) do not act immediately: they record an event that the model applies at
@@ -81,15 +81,6 @@ int
     Number of tools.
 )doc";
 
-inline constexpr const char *get_n_entities =
-	R"doc(Get the number of entities the agent belongs to.
-
-Returns
--------
-int
-    Number of entities.
-)doc";
-
 inline constexpr const char *has_tool_id =
 	R"doc(Check whether the agent has a tool, by ID.
 
@@ -144,20 +135,6 @@ Returns
 -------
 bool
     ``True`` if the agent's active virus has that name.
-)doc";
-
-inline constexpr const char *has_entity =
-	R"doc(Check whether the agent belongs to an entity, by ID.
-
-Parameters
-----------
-t : int
-    ID of the entity (see :meth:`Entity.get_id`).
-
-Returns
--------
-bool
-    ``True`` if the agent belongs to the entity.
 )doc";
 
 inline constexpr const char *change_state = R"doc(Move the agent to a new state.
@@ -239,39 +216,6 @@ model : Model
     The model the agent belongs to.
 tool_idx : int
     Position of the tool in :meth:`get_tools` (not the tool's ID).
-)doc";
-
-inline constexpr const char *add_entity = R"doc(Add the agent to an entity.
-
-The agent joins the entity at the end of the current step.
-
-Parameters
-----------
-model : Model
-    The model the agent belongs to.
-entity : Entity
-    The entity to join.
-)doc";
-
-inline constexpr const char *rm_entity = R"doc(Remove the agent from an entity.
-
-The agent leaves the entity at the end of the current step.
-
-Parameters
-----------
-model : Model
-    The model the agent belongs to.
-entity : Entity
-    The entity to leave.
-)doc";
-
-inline constexpr const char *get_entities =
-	R"doc(Get the entities the agent belongs to.
-
-Returns
--------
-list of int
-    IDs of the entities (see :meth:`Model.get_entity`).
 )doc";
 
 } // namespace epiworldpy::docstrings::agent

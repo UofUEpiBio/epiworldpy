@@ -183,17 +183,6 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			 py::arg("virus"))
 		.def("add_tool", &Model<int>::add_tool,
 			 doc::add_tool, py::arg("tool"))
-		.def("add_entity", &Model<int>::add_entity,
-			 doc::add_entity, py::arg("entity"))
-		.def(
-			"get_entity",
-			[](Model<int> &self, size_t entity_id) -> Entity<int> & {
-				return self.get_entity(entity_id);
-			},
-			py::return_value_policy::reference_internal,
-			doc::get_entity, py::arg("entity_id"))
-		.def("get_n_entities", &Model<int>::get_n_entities,
-			 doc::get_n_entities)
 		.def("reset", &Model<int>::reset,
 			 doc::reset)
 		.def(
@@ -253,6 +242,12 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			},
 			py::return_value_policy::reference_internal,
 			doc::get_agents)
+		.def(
+			"add_globalevent",
+			[](Model<int> &self, Bubbles<int> &bubbles) {
+				self.add_globalevent(bubbles);
+			},
+			doc::add_globalevent_bubbles, py::arg("bubbles"))
 		.def(
 			"add_globalevent",
 			[](Model<int> &self, std::function<void(Model<int> *)> fun,

@@ -1,7 +1,7 @@
 # Building blocks
 
 The classes models are made of. Use them to add viruses, interventions, or
-groups to a model, or to build a custom model from an empty
+policies (such as social bubbles) to a model, or to build a custom model from an empty
 {class}`~epiworldpy.Model`.
 
 ```{eval-rst}
@@ -16,7 +16,7 @@ groups to a model, or to build a custom model from an empty
    Agent
    Virus
    Tool
-   Entity
+   Bubbles
    UpdateFun
    NativeUpdateFun
 ```
