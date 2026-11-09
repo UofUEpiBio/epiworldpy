@@ -218,6 +218,8 @@ def test_placement():
     infected = [i for i, s in enumerate(stages) if s == "Infected"]
     assert len(infected) == 30 and min(infected) >= 900
     assert m.get_db().get_hist_tool()["counts"].sum() == 50
+    with pytest.raises(ValueError, match=r"shares in \[0, 1\]"):
+        assign.group_shares("subset", [1.1])
 
     # Fixed labels, and labels from a function (once per agent and run)
     m.assign_virus(0, assign.labels(["Infected"] * 5 + [None] * 995))

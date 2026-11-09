@@ -140,14 +140,14 @@ def group_shares(layer: str, x: Sequence[float]) -> Assign:
     layer : str
         Name of the mixing layer.
     x : list of float
-        One share per group (or one for every group).
+        One share per group (or one for every group), in [0, 1].
 
     Returns
     -------
     Assign
         The placement.
     """
-    _check_values(list(x), "x")
+    _check_values(list(x), "x", at_most_one=True)
     return _make("group_shares", list(x), layer=layer)
 
 
