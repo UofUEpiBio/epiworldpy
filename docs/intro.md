@@ -16,8 +16,8 @@ models. Some of the main features include:
 - Transmission can be a function of agents’ features.
 - Out-of-the-box parallelization for multiple simulations.
 
-See the [performance benchmark](performance.md) for a comparison of
-the currently covered workloads and its limitations.
+See the [performance benchmark](performance.md) for a comparison of the
+currently covered workloads and its limitations.
 
 This is a short introduction to epiworldpy; for complete documentation,
 see the API documentation page [on the
@@ -57,9 +57,10 @@ virus.run(50, 1912)
 
     _________________________________________________________________________
     |Running the model...
-    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
+    |
 
-    <epiworldpy._core.epimodels.ModelSIR at 0x10a52c3b0>
+    <epiworldpy._core.Model at 0xffff7dd03df0>
 
 We can now visualize the model’s compartments/outputs:
 
@@ -70,10 +71,10 @@ import matplotlib.pyplot as plt
 # Get the data from the database
 history = virus.get_db().get_hist_total()
 
-# Extract unique states and dates; states is already unique, since epiworldpy
-# encodes lists of strings as a list of unique strings ('values') and an array
-# of indices ('indexes').
-states = history['states']['values'][history['states']['indexes']]
+# Extract the stages and dates; epiworldpy encodes lists of strings as a list
+# of unique strings ('values') and an array of indices ('indexes'). The model
+# has no statuses, so there is one row per stage and day.
+states = history['stages']['values'][history['stages']['indexes']]
 dates = history['dates']
 counts = history['counts']
 unique_states = np.unique(states)
@@ -118,13 +119,13 @@ import pandas as pd
 
 # Get the data from the database.
 transition_matrix = virus.get_db().get_hist_transition_matrix(False)
-transition_matrix['state_from'] = transition_matrix['state_from']['values'][transition_matrix['state_from']['indexes']]
-transition_matrix['state_to'] = transition_matrix['state_to']['values'][transition_matrix['state_to']['indexes']]
+for col in ('status_from', 'stage_from', 'status_to', 'stage_to'):
+  transition_matrix[col] = transition_matrix[col]['values'][transition_matrix[col]['indexes']]
 transition_matrix = pd.DataFrame(transition_matrix)
 
-# Subsetting rows where states_from != states_to.
+# Subsetting rows where stage_from != stage_to.
 transition_matrix = transition_matrix[
-  transition_matrix['state_from'] != transition_matrix['state_to']
+  transition_matrix['stage_from'] != transition_matrix['stage_to']
 ]
 
 # Selecting only those where counts > 0
@@ -132,7 +133,7 @@ transition_matrix = transition_matrix[
   transition_matrix['counts'] > 0
 ]
 
-daily_incidence = transition_matrix.groupby(['dates', 'state_to'])['counts'].sum().unstack()
+daily_incidence = transition_matrix.groupby(['dates', 'stage_to'])['counts'].sum().unstack()
 
 # Plot!
 plt.figure(figsize=(10, 6))
@@ -151,24 +152,72 @@ plt.show()
 src="intro_files/figure-commonmark/case-type-incidence-output-1.svg"
 id="case-type-incidence" />
 
-## SEIR model with a fully connected graph
+## A model built from its parts
 
-The SEIRCONN model is similar to the SIR model but includes an exposed
-state. Here, we simulate a population of 10,000 agents with a 0.01
-prevalence, a 0.1 transmission rate, a 0.5 recovery rate, and 7
-day-incubation period. The population is fully connected, meaning agents
-can transmit the disease to any other agent:
+A virus carries the stages of the disease and the transitions between
+them, each reading a model parameter. Here the same SIR model, from an
+empty model: susceptible agents are infected by contact, and infected
+agents recover each day with probability “Recovery rate”. The virus is
+placed on 1% of the agents at the start of each run (see
+`epiworldpy.assign`):
 
 ``` python
-model = epimodels.ModelSEIRCONN(
+from epiworldpy import Model, Virus, assign
+
+flu = (Virus("hypothetical")
+       .add_stage("Susceptible")
+       .add_stage("Infected", infectious=True)
+       .add_stage("Recovered")
+       .add_infection("Susceptible", "Infected", rate="Transmission probability")
+       .add_rate("Infected", "Recovered", rate="Recovery rate", effect="recovery"))
+
+sir = Model(100000)
+sir.add_param(0.7, "Transmission probability")
+sir.add_param(0.3, "Recovery rate")
+sir.add_virus(flu, assign.share(0.01))
+sir.add_layer(layer.network("contacts", graph.smallworld(k = 10, p = .01)))
+sir.run(50, 1912)
+```
+
+    _________________________________________________________________________
+    |Running the model...
+    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
+    |
+
+    <epiworldpy._core.Model at 0xffff41d6d730>
+
+With the same parameters and seed, it gives the same history as
+`epimodels.ModelSIR()`. A latent period is a duration (`add_after()`
+with `Duration.geometric("Latent period")`), a death a rate with
+`effect="death"` into a stage out of every layer
+(`set_contact(stage, 0)`), and a strain of the model’s virus a copy
+(`model.get_virus(0).clone()`) whose transitions read other parameters
+(`use_param()`).
+
+## SEIR model with random mixing
+
+The SEIR model is similar to the SIR model but includes an exposed
+state. Here, we simulate a population of 10,000 agents with a 0.01
+prevalence, a 0.1 transmission probability per contact, a 1/7 recovery
+rate, and a 7-day latent period. The population mixes at random: a
+mixing layer puts everyone in one group, and each agent meets “Contact
+rate” (10) others a day, any of whom can transmit the disease:
+
+``` python
+model = epimodels.ModelSEIR(
   name              = 'hypothetical',
   prevalence        = 0.01,
   n                 = 10000,
-  contact_rate      = 10,
-  latent_period   = 7,
+  latent_period     = 7,
   transmission_prob = 0.1,
   recovery_rate     = 1 / 7
 )
+
+# Everyone meets "Contact rate" others a day, at random
+model.add_param(10, "Contact rate")
+everyone = layer.mixing("everyone", [0] * 10000, contact_matrix=[1.0])
+everyone.set_contact_rate("Contact rate")
+model.add_layer(everyone)
 
 # Run for 100 days with a seed of 132.
 model.run(100, 132)
@@ -176,9 +225,9 @@ model.run(100, 132)
 
     _________________________________________________________________________
     Running the model...
-    |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+    ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||| done.
 
-    <epiworldpy._core.epimodels.ModelSEIRCONN at 0x10b4131f0>
+    <epiworldpy._core.Model at 0xffff41cee730>
 
 We can get the effective reproductive number, over time, too:
 
@@ -211,7 +260,7 @@ for pack in packs:
 
 plt.xlabel("Date (day index)")
 plt.ylabel("Effective Reproductive Rate")
-plt.title("Hypothetical SEIRCONN Model Effective Reproductive Rate")
+plt.title("Hypothetical SEIR Model Effective Reproductive Rate")
 plt.legend()
 plt.grid(True)
 plt.show()
@@ -348,20 +397,23 @@ plt.show()
 
 epiworldpy supports running multiple simulations using the
 `run_multiple` function. The following code simulates 50 SIR models with
-1000 agents each. Each agent is connected to ten other agents. One
+1000 agents each. Each agent meets two others a day, at random. One
 percent of the population has the virus, with a 90% chance of
 transmission. Infected individuals recover at a 0.1 rate. The results
 are saved in a dataframe:
 
 ``` python
-model = epimodels.ModelSIRCONN(
+model = epimodels.ModelSIR(
   name = "hypothetical",
   prevalence = 0.01,
   n = 1000,
-  contact_rate = 2,
   transmission_prob = 0.9,
   recovery_rate = 0.1
 )
+model.add_param(2, "Contact rate")
+everyone = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
+everyone.set_contact_rate("Contact rate")
+model.add_layer(everyone)
 
 model.run_multiple(100, 50, nthreads=2)
 ```
