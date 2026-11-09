@@ -7,7 +7,7 @@ import pytest
 
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
-from epiworldpy import graph, grouping, layer
+from epiworldpy import assign, graph, layer
 
 
 def transmissions(model):
@@ -118,8 +118,8 @@ def test_mixing_within_groups():
         seeds = {t for s, t in zip(tr["sources"], tr["targets"]) if s < 0}
         reached = {hh.get_group(i) for i in seeds} - {None}
         expected = seeds | {i for i in range(1000) if hh.get_group(i) in reached}
-        states = m.get_agents_states()
-        return {i for i in range(1000) if states[i] == 1}, expected
+        stages = m.get_agents_stages()
+        return {i for i in range(1000) if stages[i] == "Infected"}, expected
 
     infected, expected = infected_vs_expected()
     assert infected == expected
@@ -188,14 +188,14 @@ def test_mixing_within_groups():
             "households", [i // 10 for i in range(1000)], **contacts
         ))
         s.run(30, 2026)
-        return list(s.get_agents_states())
+        return s.get_agents_stages()
 
     diag = [4.5 if i % 101 == 0 else 0.0 for i in range(100 * 100)]
     assert same_run(contact_prob=0.5) == same_run(contact_matrix=diag)
 
     with pytest.raises(ValueError, match="exactly one"):
         layer.mixing("x", [0, 1])
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError, match="non-negative"):
         layer.mixing("x", [0, -1], contact_prob=1)
     with pytest.raises(TypeError):
         layer.mixing("x", [0, 0.5], contact_prob=1)
@@ -207,22 +207,18 @@ def test_mixing_within_groups():
         hh.set_contact_prob(1.5)
 
 
-def test_grouping_random():
-    # Groups drawn at random at every run: the sizes hold (agents left over
-    # are in no group), the same seed draws the same groups and another seed
-    # others, and a move between runs is an error
+def test_groups_drawn_at_every_run():
+    # Groups drawn at random at every run, from a placement whose labels are
+    # the groups: the counts hold (agents left over are in no group), the same
+    # seed draws the same groups and another seed others, and a move between
+    # runs is an error
     m = epimodels.ModelSIR(
         "flu", n=1000, prevalence=0.01, transmission_prob=0.2,
         recovery_rate=0.1
     )
     m.verbose_off()
-    schools = layer.mixing(
-        "schools", grouping.random([300, 200]), contact_prob=0.05
-    )
-    halves = layer.mixing(
-        "halves", grouping.random([0.5, 0.5], as_proportion=True),
-        contact_prob=0.05
-    )
+    schools = layer.mixing("schools", assign.counts([300, 200]), contact_prob=0.05)
+    halves = layer.mixing("halves", assign.shares([0.5, 0.5]), contact_prob=0.05)
     m.add_layer(schools)
     m.add_layer(halves)
 
@@ -237,12 +233,15 @@ def test_grouping_random():
     with pytest.raises(RuntimeError, match="drawn at every reset"):
         schools.set_group(0, 1)
 
-    # Proportions are of the agents still without a group
-    assert [len(halves.members_of(g)) for g in (0, 1)] == [500, 250]
-    with pytest.raises(ValueError, match="non-negative"):
-        grouping.random([-1])
-    with pytest.raises(ValueError, match="whole numbers"):
-        grouping.random([1.9])
+    # A share is of all the agents, drawn from those not yet in a group
+    assert [len(halves.members_of(g)) for g in (0, 1)] == [500, 500]
+
+    # The number of groups comes from the placement, or from contact_prob
+    with pytest.raises(ValueError, match="how many groups"):
+        layer.mixing("x", assign.share(0.5), contact_prob=0.1)
+    assert layer.mixing(
+        "x", assign.share(0.5), contact_prob=[0.1, 0.1]
+    ).get_n_groups() == 2
 
 
 def test_several_layers_weights_and_targets():
@@ -265,16 +264,17 @@ def test_several_layers_weights_and_targets():
     m.run(20, 1)
     assert set(transmissions(m)["layers"]) == {1}
 
-    # A layer that targets another virus does not spread this one
-    other = epiworld.Virus("other", 0.0, True, 0.5, 0.1, 0.0)
-    other.set_state(1, 2, 2)  # Infected, Recovered
+    # A layer that targets another virus (a strain, placed on nobody) does not
+    # spread this one. The target is the model's copy: only it has a lineage.
+    other = m.get_virus(0).clone()
+    other.set_name("other")
     m.add_virus(other)
-    b.add_virus_target(other)
+    b.add_virus_target(m.get_virus(1))
     m.run(20, 1)
     assert len(transmissions(m)["layers"]) == 0
 
 
-def test_contact_rate_and_infectious_states():
+def test_contact_rate_and_infectious_stages():
     # Random mixing: "Contact rate" is read every day, so a global event that
     # sets it to 0 on day 10 stops new infections from day 11 on
     m = epimodels.ModelSIR(
@@ -294,20 +294,24 @@ def test_contact_rate_and_infectious_states():
     m.run(30, 2211)
     assert max(transmissions(m)["dates"]) == 10
 
-    # Exposed agents that never leave Exposed infect nobody, until every state
-    # is made infectious
-    s = epimodels.ModelSEIR(
-        "flu", n=2000, prevalence=0.01, transmission_prob=0.5,
-        latent_period=1e9, recovery_rate=0,
-    )
-    s.verbose_off()
-    assert s.get_infectious_states() == [2]
-    s.add_layer(layer.mixing("everyone", [0] * 2000, contact_matrix=[5.0]))
-    s.run(5, 1)
-    assert len(transmissions(s)["sources"]) == 0
-    s.set_infectious_states([])
-    s.run(5, 1)
-    assert len(transmissions(s)["sources"]) > 0
+    # Agents in a stage that is not infectious (exposed agents that never
+    # become infectious) infect nobody, and do once it is declared infectious
+    def exposed(infectious):
+        v = (epiworld.Virus("flu")
+             .add_stage("Susceptible")
+             .add_stage("Exposed", carrier=True, infectious=infectious)
+             .add_stage("Infected", infectious=True)
+             .add_infection("Susceptible", "Exposed", rate=0.5)
+             .add_after("Exposed", "Infected", epiworld.Duration.fixed(10**6)))
+        s = epiworld.Model(2000)
+        s.verbose_off()
+        s.add_virus(v, assign.share(0.01))
+        s.add_layer(layer.mixing("everyone", [0] * 2000, contact_matrix=[5.0]))
+        s.run(5, 1)
+        return len(transmissions(s)["sources"])
+
+    assert exposed(False) == 0
+    assert exposed(True) > 0
 
     # A contact rate needs a contact matrix
     hh = layer.mixing("hh", [0] * 2000, contact_prob=1)
@@ -347,11 +351,10 @@ def test_seir_quarantine_traces_every_layer():
     expected = {(carrier - 1) % n, (carrier + 1) % n}
     expected |= {i for i in range(n) if i // 4 == carrier // 4} - {carrier}
 
-    states = m.get_agents_states()
-    labels = m.get_states()
-    assert labels[states[carrier]] == "Isolated"
-    quarantined = {i for i in range(n)
-                   if labels[states[i]] == "Quarantined Susceptible"}
+    statuses = m.get_agents_statuses()
+    assert statuses[carrier] == "Isolated"
+    assert m.get_stage(m.get_agent(carrier)) == "Infected"
+    quarantined = {i for i in range(n) if statuses[i] == "Quarantined"}
     assert quarantined == expected
     assert m.get_param("Detection delay") == 0.0
 
@@ -367,8 +370,6 @@ def test_seir_quarantine_traces_every_layer():
 def test_defunct_models(name, replacement):
     with pytest.raises(RuntimeError, match="defunct.*" + replacement):
         getattr(epimodels, name)("flu", 1000, 0.01, 2.0, 0.5, 0.1)
-    with pytest.raises(ValueError, match="set_infectious_states"):
-        epiworld.UpdateFun.susceptible(exclude=[1])
 
 
 @pytest.mark.parametrize(
@@ -380,7 +381,8 @@ def test_defunct_models(name, replacement):
         (lambda m: m.get_agent(0).get_neighbors(m), "get_edgelist"),
         (lambda m: m.add_entity(None), "layer.mixing"),
         (lambda m: m.get_agent(0).get_entities(), "members_of"),
-        (lambda m: epiworld.Entity("home"), "grouping.random"),
+        (lambda m: epiworld.Entity("home"), "assign.counts"),
+        (lambda m: epiworld.grouping.random([1]), "assign.counts"),
     ],
 )
 def test_defunct(call, replacement):

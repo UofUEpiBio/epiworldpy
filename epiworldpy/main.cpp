@@ -6,10 +6,12 @@
 #include <pybind11/stl.h> // silently fails when removed.
 
 #include "agent.hpp"
+#include "assign.hpp"
 #include "bubbles.hpp"
 #include "database.hpp"
 #include "diagram.hpp"
 #include "docstrings/agent.hpp"
+#include "docstrings/assign.hpp"
 #include "docstrings/bubbles.hpp"
 #include "docstrings/database.hpp"
 #include "docstrings/diagram.hpp"
@@ -32,26 +34,25 @@ namespace docs = epiworldpy::docstrings;
 #define MACRO_STRINGIFY(x) STRINGIFY(x)
 
 PYBIND11_MODULE(_core, m) {
-	auto agent = py::class_<Agent<int>>(m, "Agent", docs::agent::cls);
-	auto native_update_fun = py::class_<epiworldpy::NativeUpdateFun>(
-		m, "NativeUpdateFun", docs::model::native_update_fun_cls);
-	auto update_fun = py::class_<UpdateFun<int>>(m, "UpdateFun",
-												 docs::model::update_fun_cls);
-	auto model = py::class_<Model<int>>(m, "Model", docs::model::cls);
-	auto database = py::class_<DataBase<int>, std::shared_ptr<DataBase<int>>>(
+	auto agent = py::class_<Agent>(m, "Agent", docs::agent::cls);
+	auto model = py::class_<Model>(m, "Model", docs::model::cls);
+	auto database = py::class_<DataBase, std::shared_ptr<DataBase>>(
 		m, "DataBase", docs::database::cls);
 	auto diagram_type = py::enum_<DiagramType>(m, "DiagramType",
 											   docs::diagram::diagram_type);
 	auto diagram = py::class_<ModelDiagram, std::shared_ptr<ModelDiagram>>(
 		m, "ModelDiagram", docs::diagram::cls);
-	auto tool = py::class_<Tool<int>>(m, "Tool", docs::tool::cls);
+	auto tool = py::class_<Tool>(m, "Tool", docs::tool::cls);
 	auto bubbles =
-		py::class_<Bubbles<int>>(m, "Bubbles", docs::bubbles::cls);
-	auto virus = py::class_<Virus<int>>(m, "Virus", docs::virus::cls);
+		py::class_<Bubbles>(m, "Bubbles", docs::bubbles::cls);
+	auto virus = py::class_<Virus>(m, "Virus", docs::virus::cls);
+	auto value = py::class_<Value>(m, "Value", docs::virus::value_cls);
+	auto duration =
+		py::class_<Duration>(m, "Duration", docs::virus::duration_cls);
 
+	auto m_assign = m.def_submodule("assign", docs::assign::module);
+	epiworldpy::export_assign(m_assign);
 	epiworldpy::export_agent(agent);
-	epiworldpy::export_native_update_fun(native_update_fun);
-	epiworldpy::export_update_fun(update_fun);
 	epiworldpy::export_model(model);
 	epiworldpy::export_database(database);
 	epiworldpy::export_diagram_type(diagram_type);
@@ -59,12 +60,12 @@ PYBIND11_MODULE(_core, m) {
 	epiworldpy::export_tool(tool);
 	epiworldpy::export_bubbles(bubbles);
 	epiworldpy::export_virus(virus);
+	epiworldpy::export_value(value);
+	epiworldpy::export_duration(duration);
 
 	auto m_graph = m.def_submodule("graph", docs::layer::graph_module);
 	epiworldpy::export_graph(m_graph);
 
-	auto m_grouping = m.def_submodule("grouping", docs::layer::grouping_module);
-	epiworldpy::export_grouping(m_grouping);
 
 	auto m_layer = m.def_submodule("layer", docs::layer::layer_module);
 	epiworldpy::export_layer(m_layer);

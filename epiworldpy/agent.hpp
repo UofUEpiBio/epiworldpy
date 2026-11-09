@@ -5,7 +5,7 @@
 #include <pybind11/pybind11.h>
 
 namespace epiworldpy {
-void export_agent(pybind11::class_<epiworld::Agent<int>> &c);
+void export_agent(pybind11::class_<epiworld::Agent> &c);
 } // namespace epiworldpy
 
 #endif /* EPIWORLDPY_AGENT_HPP */

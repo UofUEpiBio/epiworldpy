@@ -31,14 +31,12 @@ class TestSEIRDRandomMixing:
         m = self.make_model()
         m.run(DAYS, SEED)
 
-    def test_states(self):
+    def test_stages(self):
         m = self.make_model()
-        assert "Deceased" in m.get_states()
-
-    def test_state_of(self):
-        m = self.make_model()
-        idx = m.state_of("Susceptible")
-        assert idx >= 0
+        assert m.get_stages() == [
+            "Susceptible", "Exposed", "Infected", "Removed", "Deceased"
+        ]
+        assert m.get_statuses() == ["Free"]
 
 
 class TestSEIRQuarantine:
@@ -65,13 +63,14 @@ class TestSEIRQuarantine:
         m = self.make_model()
         m.run(DAYS, SEED)
 
-    def test_has_correct_states(self):
+    def test_stages_and_statuses(self):
         m = self.make_model()
-        states = set(m.get_states())
-        assert "Susceptible" in states
-        assert "Exposed" in states
-        assert "Infected" in states
-        assert "Recovered" in states
+        assert m.get_stages() == [
+            "Susceptible", "Exposed", "Infected", "Severe", "Recovered"
+        ]
+        assert m.get_statuses() == [
+            "Free", "Quarantined", "Isolated", "Hospitalized"
+        ]
 
     def test_history_has_data(self):
         m = self.make_model()

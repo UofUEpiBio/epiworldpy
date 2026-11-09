@@ -1,13 +1,12 @@
-"""Groupings for mixing layers: groups drawn afresh at the start of every run.
+"""Groupings for mixing layers: removed in epiworldpy 1.0.0.
 
-A grouping (:func:`random`) goes to :func:`epiworldpy.layer.mixing` in place
-of fixed groups, as a network generator goes to
-:func:`epiworldpy.layer.network`.
+A mixing layer's groups drawn at every run are a placement whose labels are
+the groups (see :mod:`epiworldpy.assign`). Calling :func:`random` raises with
+its replacement.
 """
 
-from .. import _core
+from .._defunct import grouping_stub
 
-Grouping = _core.grouping.Grouping
-random = _core.grouping.random
+random = grouping_stub("random")
 
-__all__ = ["Grouping", "random"]
+__all__ = ["random"]

@@ -1,34 +1,35 @@
 #ifndef EPIWORLDPY_DOCSTRINGS_MODEL_HPP
 #define EPIWORLDPY_DOCSTRINGS_MODEL_HPP
 
-// NumPy-style docstrings for epiworldpy.Model, epiworldpy.UpdateFun, and
-// epiworldpy.NativeUpdateFun (see tests/test_docstrings.py).
+// NumPy-style docstrings for epiworldpy.Model (see tests/test_docstrings.py).
 
 // clang-format off
 namespace epiworldpy::docstrings::model {
 
 inline constexpr const char *cls =
-	R"doc(An agent-based model: a population, its states, viruses, and tools.
+	R"doc(An agent-based model: a population, its viruses, tools, and contacts.
 
-``Model`` is the base class of every model in :mod:`epiworldpy.epimodels`.
-Those come with their states, parameters, and virus already set up, so a
-typical workflow only needs contacts (a layer) and a call to :meth:`run`::
+The models in :mod:`epiworldpy.epimodels` come with their parameters and
+virus already set up, so a typical workflow only needs contacts (a layer)
+and a call to :meth:`run`::
 
     from epiworldpy import epimodels, graph, layer
 
     covid = epimodels.ModelSIR("COVID-19", n=1000, prevalence=0.01,
-                               transmission_rate=0.9, recovery_rate=0.1)
+                               transmission_prob=0.9, recovery_rate=0.1)
     covid.add_layer(layer.network("contacts", graph.smallworld(k=5, p=0.01)))
     covid.run(ndays=100, seed=1912)
     covid.get_db().get_hist_total()
 
-An empty ``Model(n)`` can be used to build a custom model with
-:meth:`add_state`, :meth:`add_virus`, :meth:`add_tool`, and
-:meth:`add_layer`.
+An empty ``Model(n)`` builds a custom model: add parameters
+(:meth:`add_param`), a virus that carries the stages of the disease and the
+transitions between them (:class:`Virus`), placed with :mod:`epiworldpy.assign`
+(:meth:`add_virus`), tools (:meth:`add_tool`), and layers (:meth:`add_layer`).
+The first virus gives the model its stages.
 )doc";
 
 inline constexpr const char *init =
-	R"doc(Create an empty model of ``n`` agents, with no states, viruses, tools, or contacts.
+	R"doc(Create an empty model of ``n`` agents, with no viruses, tools, or contacts.
 
 Parameters
 ----------
@@ -75,78 +76,6 @@ Returns
 -------
 epiworldpy.layer.ContactLayer
     The model's layer.
-)doc";
-
-inline constexpr const char *add_state_native =
-	R"doc(Add a state updated by a built-in epiworld function.
-
-Parameters
-----------
-lab : str
-    Label of the new state.
-fun : NativeUpdateFun
-    Update function for agents in this state, from
-    :meth:`UpdateFun.susceptible` or :meth:`UpdateFun.rate`.
-
-Returns
--------
-int
-    Index of the new state.
-)doc";
-
-inline constexpr const char *add_state = R"doc(Add a state to the model.
-
-Parameters
-----------
-lab : str
-    Label of the new state.
-fun : callable or None, default None
-    Update function ``fun(agent, model) -> None`` called on every agent in
-    this state at each step, or ``None`` for a state agents only leave
-    through events (for example, recovery). See also :class:`UpdateFun`
-    for epiworld's built-in update functions, which are much faster than
-    Python callbacks.
-
-Returns
--------
-int
-    Index of the new state.
-)doc";
-
-inline constexpr const char *get_states =
-	R"doc(Get the labels of the model's states.
-
-Returns
--------
-list of str
-    State labels, in index order.
-)doc";
-
-inline constexpr const char *get_n_states = R"doc(Get the number of states.
-
-Returns
--------
-int
-    Number of states.
-)doc";
-
-inline constexpr const char *state_of =
-	R"doc(Get the index of a state from its label.
-
-Parameters
-----------
-name : str
-    Label of the state.
-
-Returns
--------
-int
-    Index of the state.
-
-Raises
-------
-RuntimeError
-    If the model has no state with that label.
 )doc";
 
 inline constexpr const char *get_name =
@@ -216,30 +145,40 @@ int
 
 inline constexpr const char *add_virus = R"doc(Add a virus to the model.
 
-The model keeps a copy of ``virus`` and distributes it to agents when the
-model is run (see :meth:`Virus.set_distribution`).
+The model keeps its own copy of ``virus``: only that copy gets an id (and a
+lineage), so give agents and tools the model's copy (:meth:`get_virus`). The
+first virus gives the model its stages; a second one is a strain of it, with
+the same stages and transitions (a copy, :meth:`Virus.clone`, whose
+transitions may read other parameters, :meth:`Virus.use_param`).
 
 Parameters
 ----------
 virus : Virus
-    The virus to add.
+    The virus, with its natural history.
+assign : epiworldpy.assign.Assign or None, default None
+    Who has the virus at the start of each run (see :mod:`epiworldpy.assign`;
+    stage names are the virus's stages). The seeds start in the stage the
+    infection leads to. ``None`` places it on nobody.
 )doc";
 
 inline constexpr const char *add_tool = R"doc(Add a tool to the model.
 
-The model keeps a copy of ``tool`` and distributes it to agents when the
-model is run (see :meth:`Tool.set_distribution`).
+The model keeps its own copy of ``tool``: only that copy gets an id, so give
+agents the model's copy (:meth:`get_tool`).
 
 Parameters
 ----------
 tool : Tool
-    The tool to add.
+    The tool.
+assign : epiworldpy.assign.Assign or None, default None
+    Who has the tool at the start of each run (see :mod:`epiworldpy.assign`).
+    ``None`` gives it to nobody.
 )doc";
 
 inline constexpr const char *reset = R"doc(Reset the model to its initial state.
 
-Restores the population, clears the database, and redistributes viruses
-and tools. :meth:`run` calls it before each simulation.
+Restores the population, clears the database, and places the viruses, tools,
+and initial stages again. :meth:`run` calls it before each simulation.
 )doc";
 
 inline constexpr const char *print =
@@ -249,30 +188,6 @@ Parameters
 ----------
 lite : bool, default False
     If ``True``, print a shorter summary.
-)doc";
-
-inline constexpr const char *initial_states =
-	R"doc(Set the initial distribution of agents across states.
-
-The meaning of ``proportions`` is model specific. For the SEIR family, for
-example, ``proportions[0]`` is the share of the initially infected agents
-placed in ``Infected`` rather than ``Exposed``, and ``proportions[1]`` is the
-share of the remaining agents placed in ``Recovered``. The distribution is
-applied when the model is reset, which happens at the start of every run.
-Models without a state-based initializer ignore the call.
-
-Parameters
-----------
-proportions : list of float
-    Proportions used by the model's initializer.
-queue : list of int, default []
-    Queuing flags used by the model's initializer. Leave empty for the
-    default.
-
-Returns
--------
-Model
-    The model itself.
 )doc";
 
 inline constexpr const char *run = R"doc(Run the model.
@@ -327,7 +242,7 @@ fmt : str, default "%03lu-episimulation.csv"
     File name pattern, which must contain exactly one ``%`` format (the
     simulation ID). The type of data is appended to each file name.
 total_hist : bool, default True
-    Save the totals per state and day (see :meth:`DataBase.get_hist_total`).
+    Save the totals per status, stage, and day (see :meth:`DataBase.get_hist_total`).
 virus_info : bool, default False
     Save information about the viruses.
 virus_hist : bool, default False
@@ -521,74 +436,6 @@ inline constexpr const char *run_globalevents =
 	R"doc(Run the global events scheduled for today.
 )doc";
 
-inline constexpr const char *set_state_function_native_id =
-	R"doc(Replace a state's update function with a built-in epiworld function.
-
-Parameters
-----------
-state : int
-    Index of the state.
-fun : NativeUpdateFun
-    New update function, from :meth:`UpdateFun.susceptible` or
-    :meth:`UpdateFun.rate`.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *set_state_function_native_name =
-	R"doc(Replace a state's update function with a built-in epiworld function.
-
-Parameters
-----------
-name : str
-    Label of the state.
-fun : NativeUpdateFun
-    New update function, from :meth:`UpdateFun.susceptible` or
-    :meth:`UpdateFun.rate`.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *set_state_function_id =
-	R"doc(Replace a state's update function.
-
-Parameters
-----------
-state : int
-    Index of the state.
-fun : callable or None
-    New update function ``fun(agent, model) -> None``, or ``None`` to
-    remove it.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
-inline constexpr const char *set_state_function_name =
-	R"doc(Replace a state's update function.
-
-Parameters
-----------
-name : str
-    Label of the state.
-fun : callable or None
-    New update function ``fun(agent, model) -> None``, or ``None`` to
-    remove it.
-
-Returns
--------
-Model
-    The model itself.
-)doc";
-
 inline constexpr const char *get_db =
 	R"doc(Get the database with the results of the last run.
 
@@ -630,60 +477,6 @@ Parameters
 ----------
 name : str
     New name.
-)doc";
-
-inline constexpr const char *get_agents_states =
-	R"doc(Get the current state of every agent.
-
-Returns
--------
-list of int
-    State index of each agent, in ID order.
-)doc";
-
-inline constexpr const char *get_agents_in_state =
-	R"doc(Get the agents currently in a state.
-
-Only available once the model has been run.
-
-Parameters
-----------
-state : int
-    Index of the state.
-
-Returns
--------
-numpy.ndarray
-    IDs of the agents in that state.
-)doc";
-
-inline constexpr const char *set_infectious_states =
-	R"doc(Set the states whose agents transmit.
-
-By default every state transmits (any agent carrying a virus). Agents in the
-other states may carry a virus (e.g., Exposed in an SEIR model) but infect
-nobody, in any layer; they can still be met (in a mixing layer, they take
-their share of each agent's contacts). Called during a run (e.g., from a
-global event), it applies from the next step.
-
-Parameters
-----------
-states : list of int
-    State ids (starting at 0); an empty list makes every state infectious.
-
-Returns
--------
-Model
-    The model.
-)doc";
-
-inline constexpr const char *get_infectious_states =
-	R"doc(Get the states set with :meth:`set_infectious_states`.
-
-Returns
--------
-list of int
-    The states (empty: every state transmits).
 )doc";
 
 inline constexpr const char *set_transmission_mode =
@@ -780,16 +573,16 @@ int
 inline constexpr const char *queuing_on =
 	R"doc(Turn on the queuing system (the default).
 
-With queuing, each step only updates agents that may change state (for
-example, susceptible agents with an infected neighbor), which is much faster
+With queuing, each step only updates agents that may change stage (for
+example, susceptible agents with an infected contact), which is much faster
 in large populations. It does not change the results.
 )doc";
 
 inline constexpr const char *queuing_off =
 	R"doc(Turn off the queuing system, so every agent is updated at every step.
 
-Needed when an update function may change the state of agents that have no
-infected neighbors.
+Every agent is then visited at every step, whether or not it may change
+stage. It does not change the results.
 
 Returns
 -------
@@ -804,10 +597,6 @@ Returns
 -------
 bool
     ``True`` if queuing is on.
-)doc";
-
-inline constexpr const char *print_state_codes =
-	R"doc(Print the index and label of each state.
 )doc";
 
 inline constexpr const char *get_elapsed =
@@ -844,7 +633,7 @@ fn_tool_info : str, default ""
 fn_tool_hist : str, default ""
     History of each tool (see :meth:`DataBase.get_hist_tool`).
 fn_total_hist : str, default ""
-    Totals per state and day (see :meth:`DataBase.get_hist_total`).
+    Totals per status, stage, and day (see :meth:`DataBase.get_hist_total`).
 fn_transmission : str, default ""
     Transmission events (see :meth:`DataBase.get_transmissions`).
 fn_transition : str, default ""
@@ -861,95 +650,172 @@ fn_hospitalizations : str, default ""
     Hospitalizations (see :meth:`DataBase.get_hospitalizations`).
 )doc";
 
-// UpdateFun and NativeUpdateFun.
+// Viruses, tools, and the natural history.
 
-inline constexpr const char *update_fun_cls =
-	R"doc(Factories for state update functions.
-
-An update function is called on each agent in a state at every step and
-decides whether the agent moves to another state. Pass the functions returned
-here to :meth:`Model.add_state` or :meth:`Model.set_state_function`.
-)doc";
-
-inline constexpr const char *update_fun_default =
-	R"doc(Get an empty update function: agents in the state never change on their own.
-
-Returns
--------
-None
-    ``None``, which :meth:`Model.add_state` treats as no update function.
-)doc";
-
-inline constexpr const char *default_update_susceptible =
-	R"doc(Get epiworld's default update function for susceptible agents.
-
-Each susceptible agent can be infected by the viruses of its neighbors, with
-probabilities that account for the viruses and the agents' tools.
-
-Returns
--------
-callable
-    The update function.
-)doc";
-
-inline constexpr const char *default_update_exposed =
-	R"doc(Get epiworld's default update function for infected agents.
-
-Each infected agent can recover or die, with the probabilities set by its
-virus and tools.
-
-Returns
--------
-callable
-    The update function.
-)doc";
-
-inline constexpr const char *update_fun_susceptible =
-	R"doc(Get a native update function for susceptible agents.
-
-Each susceptible agent can be infected by its contacts in every layer of the
-model that are in one of the model's infectious states (see
-:meth:`Model.set_infectious_states`). It is :meth:`default_update_susceptible`:
-the model may push infections from the infected agents instead when that is
-cheaper (see :meth:`Model.set_transmission_mode`).
+inline constexpr const char *assign_virus = R"doc(Change where a virus of the model is placed.
 
 Parameters
 ----------
-exclude : None
-    Defunct; passing it raises. Use :meth:`Model.set_infectious_states`.
-
-Returns
--------
-NativeUpdateFun
-    The update function.
+virus_pos : int
+    Position of the virus in the model (starting at 0).
+assign : epiworldpy.assign.Assign
+    Who has the virus at the start of each run (stage names are the model's
+    stages).
 )doc";
 
-inline constexpr const char *update_fun_rate =
-	R"doc(Get a native update function that moves agents at fixed daily rates.
-
-Each day, an agent moves to ``target_states[i]`` with the probability given by
-the model parameter ``param_names[i]``. With several targets, at most one
-transition happens per day.
+inline constexpr const char *rm_virus = R"doc(Remove a virus from the model.
 
 Parameters
 ----------
-param_names : list of str
-    Names of the model parameters holding the daily probabilities.
-target_states : list of int
-    Index of the state each probability leads to, of the same length as
-    ``param_names``.
+virus_pos : int
+    Position of the virus in the model (starting at 0).
+)doc";
+
+inline constexpr const char *get_virus = R"doc(Get the model's copy of a virus.
+
+Parameters
+----------
+virus_pos : int
+    Position of the virus in the model (starting at 0).
 
 Returns
 -------
-NativeUpdateFun
-    The update function.
+Virus
+    The model's virus (not a copy): its id and lineage are the model's.
 )doc";
 
-inline constexpr const char *native_update_fun_cls =
-	R"doc(A state update function implemented in C++.
+inline constexpr const char *assign_tool = R"doc(Change where a tool of the model is placed.
 
-Create one with :meth:`UpdateFun.susceptible` or :meth:`UpdateFun.rate` and
-pass it to :meth:`Model.add_state` or :meth:`Model.set_state_function`.
+Parameters
+----------
+tool_pos : int
+    Position of the tool in the model (starting at 0).
+assign : epiworldpy.assign.Assign
+    Who has the tool at the start of each run.
+)doc";
+
+inline constexpr const char *rm_tool = R"doc(Remove a tool from the model.
+
+Parameters
+----------
+tool_pos : int
+    Position of the tool in the model (starting at 0).
+)doc";
+
+inline constexpr const char *get_tool = R"doc(Get the model's copy of a tool.
+
+Parameters
+----------
+tool_pos : int
+    Position of the tool in the model (starting at 0).
+
+Returns
+-------
+Tool
+    The model's tool (not a copy): its id is the model's.
+)doc";
+
+inline constexpr const char *set_initial =
+	R"doc(Place agents in stages without the virus at the start of each run.
+
+For example, ``assign.shares({"Recovered": 0.3})`` starts 30% of the agents
+already recovered. The virus's seeds are placed first.
+
+Parameters
+----------
+assign : epiworldpy.assign.Assign
+    The placement; its labels are the model's stages.
+)doc";
+
+inline constexpr const char *get_stages = R"doc(Get the model's stages.
+
+Returns
+-------
+list of str
+    The labels of the stages, in order (from the model's first virus).
+)doc";
+
+inline constexpr const char *get_statuses = R"doc(Get the model's statuses.
+
+Returns
+-------
+list of str
+    The labels of the statuses (e.g., quarantine), or ``["Free"]`` for a
+    model without statuses.
+)doc";
+
+inline constexpr const char *get_stage = R"doc(Get the stage of an agent.
+
+Parameters
+----------
+agent : Agent
+    The agent (from :meth:`get_agent`).
+
+Returns
+-------
+str
+    The label of the agent's stage.
+)doc";
+
+inline constexpr const char *get_status = R"doc(Get the status of an agent.
+
+Parameters
+----------
+agent : Agent
+    The agent (from :meth:`get_agent`).
+
+Returns
+-------
+str
+    The label of the agent's status (``"Free"`` without statuses).
+)doc";
+
+inline constexpr const char *get_agents_stages =
+	R"doc(Get the stage of every agent.
+
+Returns
+-------
+list of str
+    The label of each agent's stage, by agent id.
+)doc";
+
+inline constexpr const char *get_agents_statuses =
+	R"doc(Get the status of every agent.
+
+Returns
+-------
+list of str
+    The label of each agent's status, by agent id (``"Free"`` without
+    statuses).
+)doc";
+
+inline constexpr const char *fire = R"doc(Apply a transition to an agent now.
+
+An agent moves only along a declared transition; an external one
+(:meth:`Virus.add_external`) moves only when fired.
+
+Parameters
+----------
+transition : str
+    Name of the transition (e.g., ``"Vaccination"``, or
+    ``"Infected -> Recovered"`` for an unnamed one).
+agent_id : int
+    ID of the agent.
+
+Returns
+-------
+bool
+    ``True`` if the agent was in a stage the transition leaves, and moved.
+)doc";
+
+inline constexpr const char *draw_natural_history =
+	R"doc(Draw the model's natural history as a Mermaid diagram.
+
+Returns
+-------
+str
+    The diagram's Mermaid source: the stages, and the transitions between
+    them.
 )doc";
 
 } // namespace epiworldpy::docstrings::model

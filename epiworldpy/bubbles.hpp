@@ -6,7 +6,7 @@
 
 namespace epiworldpy {
 /* The social-bubbles intervention, epiworld's Bubbles global event. */
-void export_bubbles(pybind11::class_<epiworld::Bubbles<int>> &c);
+void export_bubbles(pybind11::class_<epiworld::Bubbles> &c);
 } // namespace epiworldpy
 
 #endif /* EPIWORLDPY_BUBBLES_HPP */

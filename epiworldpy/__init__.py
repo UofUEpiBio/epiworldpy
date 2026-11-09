@@ -7,35 +7,65 @@ from ._core import (  # type: ignore[import]
     Bubbles,
     DataBase,
     DiagramType,
+    Duration,
     Model,
     ModelDiagram,
-    NativeUpdateFun,
     Tool,
-    UpdateFun,
+    Value,
     Virus,
     __epiworld_version__,
 )
-from . import epimodels, graph, grouping, layer
+from . import assign, epimodels, graph, grouping, layer
+from ._defunct import class_stub as _class_stub
 from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
 
-_install_defunct({"Model": Model, "Agent": Agent})
+_install_defunct({"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool})
 Entity = _entity_stub()  # removed in 1.0.0: calling it raises
+UpdateFun = _class_stub("UpdateFun")  # removed in 1.0.0: using it raises
+NativeUpdateFun = _class_stub("NativeUpdateFun")
+
+
+def _only_name(cls, init, rest: str):
+    """Make ``cls(name, ...)`` reject the arguments it took before 1.0.0."""
+
+    def __init__(self, name, *args, **kwargs):
+        if args:
+            raise TypeError(f"{cls.__name__}() takes only a name. {rest}")
+        init(self, name, **kwargs)
+
+    __init__.__doc__ = init.__doc__
+    cls.__init__ = __init__
+
+
+_only_name(
+    Virus,
+    Virus.__init__,
+    "The stages and transitions are declared on the virus (add_stage(), "
+    "add_infection(), add_rate(), add_after()), and its placement is given "
+    "to Model.add_virus(virus, assign).",
+)
+_only_name(
+    Tool,
+    Tool.__init__,
+    "Its effects are keyword arguments (e.g., susceptibility_reduction=0.9), "
+    "and its placement is given to Model.add_tool(tool, assign).",
+)
 
 __all__ = [
     "Agent",
     "Bubbles",
     "DataBase",
     "DiagramType",
+    "Duration",
     "Model",
     "ModelDiagram",
-    "NativeUpdateFun",
     "Tool",
-    "UpdateFun",
+    "Value",
     "Virus",
+    "assign",
     "epimodels",
     "graph",
-    "grouping",
     "layer",
 ]
 
@@ -339,9 +369,9 @@ def extract_database_results(db, *whats) -> DatabaseResults:
         The database, from :meth:`Model.get_db`.
     *whats : str
         The results to collect: ``"total_hist"``, ``"virus_hist"``,
-        ``"tool_hist"``, ``"transition"``, ``"transmission"``,
-        ``"reproductive"``, or ``"generation"`` (see the corresponding
-        :class:`DataBase` methods).
+        ``"tool_hist"``, ``"transition"``, ``"transitions"``,
+        ``"transmission"``, ``"reproductive"``, or ``"generation"`` (see the
+        corresponding :class:`DataBase` methods).
 
     Returns
     -------
@@ -359,6 +389,7 @@ def extract_database_results(db, *whats) -> DatabaseResults:
         "virus_hist",
         "tool_hist",
         "transition",
+        "transitions",
         "transmission",
         "reproductive",
         "generation",
@@ -385,6 +416,8 @@ def extract_database_results(db, *whats) -> DatabaseResults:
                 results[what] = db.get_hist_tool()
             case "transition":
                 results[what] = db.get_hist_transition_matrix(False)
+            case "transitions":
+                results[what] = db.get_hist_transitions()
             case "transmission":
                 results[what] = db.get_transmissions()
             case "reproductive":

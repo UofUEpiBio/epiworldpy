@@ -95,7 +95,7 @@ fn_tool_info : str
 fn_tool_hist : str
     History of each tool (see :meth:`get_hist_tool`).
 fn_total_hist : str
-    Totals per state and day (see :meth:`get_hist_total`).
+    Totals per status, stage, and day (see :meth:`get_hist_total`).
 fn_transmission : str
     Transmission events (see :meth:`get_transmissions`).
 fn_transition : str
@@ -113,53 +113,56 @@ fn_hospitalizations : str, default ""
 )doc";
 
 inline constexpr const char *get_hist_virus =
-	R"doc(Get the number of agents with each virus, by state and day.
+	R"doc(Get the number of agents with each virus, by status, stage, and day.
 
 Returns
 -------
 dict
-    ``"dates"``, ``"ids"`` (virus IDs), ``"states"`` (state labels), and
-    ``"counts"``, one entry per row.
+    ``"dates"``, ``"ids"`` (virus IDs), ``"statuses"`` and ``"stages"``
+    (labels), and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_hist_tool =
-	R"doc(Get the number of agents with each tool, by state and day.
+	R"doc(Get the number of agents with each tool, by status, stage, and day.
 
 Returns
 -------
 dict
-    ``"dates"``, ``"ids"`` (tool IDs), ``"states"`` (state labels), and
-    ``"counts"``, one entry per row.
+    ``"dates"``, ``"ids"`` (tool IDs), ``"statuses"`` and ``"stages"``
+    (labels), and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_today_transition_matrix =
-	R"doc(Get the number of agents who moved between each pair of states today.
+	R"doc(Get the number of agents who moved between each pair of cells today.
+
+A cell is a pair of a status and a stage (just the stage without statuses).
 
 Returns
 -------
 dict
-    ``"counts"``: a flattened ``S x S`` matrix, where ``S`` is the number of
-    states, stored by columns: entry ``i + j * S`` counts the agents who
-    moved from state ``i`` to state ``j``.
+    ``"counts"``: a flattened ``C x C`` matrix, where ``C`` is the number of
+    cells, stored by columns: entry ``i + j * C`` counts the agents who
+    moved from cell ``i`` to cell ``j``.
 )doc";
 
 inline constexpr const char *get_today_virus =
-	R"doc(Get the number of agents with each virus, by state, today.
+	R"doc(Get the number of agents with each virus, by status and stage, today.
 
 Returns
 -------
 dict
-    ``"states"`` (state labels), ``"ids"`` (virus IDs), and ``"counts"``,
-    one entry per row.
+    ``"statuses"`` and ``"stages"`` (labels), ``"ids"`` (virus IDs), and
+    ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_today_total =
-	R"doc(Get the number of agents in each state today.
+	R"doc(Get the number of agents in each status and stage today.
 
 Returns
 -------
 dict
-    ``"states"`` (state labels) and ``"counts"``, one entry per state.
+    ``"statuses"`` and ``"stages"`` (labels) and ``"counts"``, one entry per
+    pair.
 )doc";
 
 inline constexpr const char *size =
@@ -200,13 +203,15 @@ founder : bool, default False
 )doc";
 
 inline constexpr const char *get_hist_total =
-	R"doc(Get the number of agents in each state, by day.
+	R"doc(Get the number of agents in each status and stage, by day.
+
+Without statuses, the status is ``"Free"``.
 
 Returns
 -------
 dict
-    ``"dates"``, ``"states"`` (state labels), and ``"counts"``, one entry
-    per row.
+    ``"dates"``, ``"statuses"`` and ``"stages"`` (labels), and ``"counts"``,
+    one entry per row.
 )doc";
 
 inline constexpr const char *get_reproductive_number =
@@ -249,7 +254,9 @@ dict
 )doc";
 
 inline constexpr const char *get_hist_transition_matrix =
-	R"doc(Get the number of agents who moved between each pair of states, by day.
+	R"doc(Get the number of agents who moved between each pair of cells, by day.
+
+A cell is a pair of a status and a stage.
 
 Parameters
 ----------
@@ -259,8 +266,8 @@ skip_zeros : bool, default False
 Returns
 -------
 dict
-    ``"state_from"``, ``"state_to"`` (state labels), ``"dates"``, and
-    ``"counts"``, one entry per row.
+    ``"status_from"``, ``"stage_from"``, ``"status_to"``, ``"stage_to"``
+    (labels), ``"dates"``, and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_active_cases =
@@ -285,7 +292,7 @@ inline constexpr const char *get_hospitalizations =
 	R"doc(Get the number of hospitalized agents, by day, virus, and tool.
 
 Only models that track hospitalizations (for example,
-:class:`~epiworldpy.epimodels.ModelSEIRNetworkQuarantine`) record them.
+:func:`~epiworldpy.epimodels.ModelSEIRQuarantine`) record them.
 
 Returns
 -------
@@ -295,7 +302,7 @@ dict
 )doc";
 
 inline constexpr const char *get_transition_probability =
-	R"doc(Estimate the daily probability of moving between each pair of states.
+	R"doc(Estimate the daily probability of moving between each pair of cells.
 
 Parameters
 ----------
@@ -303,14 +310,24 @@ print : bool, default False
     Whether to also print the matrix.
 normalize : bool, default True
     Whether to divide the counts by the number of agents in each origin
-    state, giving probabilities; otherwise, return the counts.
+    cell, giving probabilities; otherwise, return the counts.
 
 Returns
 -------
 list of float
-    A flattened ``S x S`` matrix, where ``S`` is the number of states,
-    stored by columns: entry ``i + j * S`` is the probability of moving
-    from state ``i`` to state ``j``.
+    A flattened ``C x C`` matrix, where ``C`` is the number of cells (pairs
+    of a status and a stage), stored by columns: entry ``i + j * C`` is the
+    probability of moving from cell ``i`` to cell ``j``.
+)doc";
+
+inline constexpr const char *get_hist_transitions =
+	R"doc(Get how many times each transition fired, by day.
+
+Returns
+-------
+dict
+    ``"dates"``, ``"transitions"`` (names: ``"<from> -> <to>"`` unless
+    named), and ``"counts"``, one entry per row.
 )doc";
 
 } // namespace epiworldpy::docstrings::database

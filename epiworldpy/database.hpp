@@ -6,8 +6,8 @@
 
 namespace epiworldpy {
 void export_database(
-	pybind11::class_<epiworld::DataBase<int>,
-					 std::shared_ptr<epiworld::DataBase<int>>> &c);
+	pybind11::class_<epiworld::DataBase,
+					 std::shared_ptr<epiworld::DataBase>> &c);
 }
 
 #endif /* EPIWORLDPY_DATABASE_HPP */

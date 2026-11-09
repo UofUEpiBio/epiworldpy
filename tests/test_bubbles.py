@@ -90,8 +90,7 @@ def test_bubble_contact_prob():
             m.add_globalevent(b)
             m.verbose_off()
             m.run(60, seed)
-            removed = m.get_states().index("Removed")
-            total += sum(s == removed for s in m.get_agents_states())
+            total += m.get_agents_stages().count("Removed")
         return total
 
     assert total_removed(0.0) < total_removed(1.0)

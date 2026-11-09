@@ -2,7 +2,7 @@
 
 import pytest
 import epiworldpy.epimodels as epimodels
-from epiworldpy import graph, layer
+from epiworldpy import assign, graph, layer
 
 DAYS = 50
 SEED = 42
@@ -43,21 +43,11 @@ class TestModelAPI:
     def test_get_ndays(self, seirconn):
         assert seirconn.get_ndays() == DAYS
 
-    def test_get_n_states(self, seirconn):
-        # SEIR has 4 states
-        assert seirconn.get_n_states() == 4
-
-    def test_state_of(self, seirconn):
-        idx = seirconn.state_of("Susceptible")
-        assert idx == 0
-
-    def test_state_of_unknown(self, seirconn):
-        # Unknown state should return -1 or raise
-        try:
-            idx = seirconn.state_of("NonExistentState")
-            assert idx < 0
-        except Exception:
-            pass  # Either -1 or exception is acceptable
+    def test_stages(self, seirconn):
+        assert seirconn.get_stages() == [
+            "Susceptible", "Exposed", "Infected", "Removed"
+        ]
+        assert seirconn.get_statuses() == ["Free"]
 
     def test_get_n_viruses(self, seirconn):
         assert seirconn.get_n_viruses() == 1
@@ -134,10 +124,24 @@ class TestDatabaseAPI:
     def test_get_hist_transition_matrix(self, seirconn):
         db = seirconn.get_db()
         tm = db.get_hist_transition_matrix(skip_zeros=True)
-        assert "state_from" in tm
-        assert "state_to" in tm
-        assert "dates" in tm
-        assert "counts" in tm
+        assert sorted(tm) == [
+            "counts", "dates", "stage_from", "stage_to", "status_from",
+            "status_to",
+        ]
+        assert set(tm["stage_from"]["values"]) <= set(seirconn.get_stages())
+
+    def test_get_hist_transitions(self, seirconn):
+        # How many times each transition fired: the infections are the
+        # agent-to-agent transmissions
+        tr = seirconn.get_db().get_hist_transitions()
+        names = list(tr["transitions"]["values"])
+        assert names == [
+            "Susceptible -> Exposed", "Exposed -> Infected",
+            "Infected -> Removed",
+        ]
+        infections = tr["counts"][tr["transitions"]["indexes"] == 0].sum()
+        tm = seirconn.get_db().get_transmissions()
+        assert infections == (tm["sources"] >= 0).sum()
 
     def test_get_generation_time(self, sir_smallworld):
         db = sir_smallworld.get_db()
@@ -150,17 +154,15 @@ class TestDatabaseAPI:
     def test_get_today_total(self, seirconn):
         db = seirconn.get_db()
         today = db.get_today_total()
-        assert "states" in today
-        assert "counts" in today
-        # 4 states in SEIR
+        assert sorted(today) == ["counts", "stages", "statuses"]
+        # 4 stages in SEIR, no statuses
         assert len(today["counts"]) == 4
+        assert today["counts"].sum() == 5000
 
     def test_get_today_virus(self, seirconn):
         db = seirconn.get_db()
         tv = db.get_today_virus()
-        assert "states" in tv
-        assert "ids" in tv
-        assert "counts" in tv
+        assert sorted(tv) == ["counts", "ids", "stages", "statuses"]
 
     def test_transition_probability(self, seirconn):
         db = seirconn.get_db()
@@ -217,28 +219,25 @@ class TestRunMultiple:
             assert r > 0
 
 
-class TestInitialStates:
+class TestInitialStages:
     @staticmethod
     def _day0(model):
         hist = model.get_db().get_hist_total()
-        names = hist["states"]["values"]
+        names = hist["stages"]["values"]
         return {
-            str(names[state]): int(count)
-            for date, state, count in zip(
-                hist["dates"], hist["states"]["indexes"], hist["counts"]
+            str(names[stage]): int(count)
+            for date, stage, count in zip(
+                hist["dates"], hist["stages"]["indexes"], hist["counts"]
             )
             if date == 0
         }
 
-    def test_seirconn_initial_states(self):
-        """initial_states should place agents in Exposed, Infected, and Recovered."""
-        # Target counts: S=7112, E=11, I=1116, R=1761. The half-unit offsets
-        # keep epiworld's truncation on the intended integers.
-        n = 10000
+    @staticmethod
+    def _seir(n, prevalence):
         m = epimodels.ModelSEIR(
             name="covid-19",
             n=n,
-            prevalence=(1127 + 0.5) / n,
+            prevalence=prevalence,
             transmission_prob=0.1,
             latent_period=7.0,
             recovery_rate=0.14,
@@ -248,8 +247,15 @@ class TestInitialStates:
         everyone = layer.mixing("everyone", [0] * n, contact_matrix=[1.0])
         everyone.set_contact_rate("Contact rate")
         m.add_layer(everyone)
-        assert m.initial_states([(1116 + 0.5) / 1127, (1761 + 0.5) / 8873]) is m
         m.verbose_off()
+        return m
+
+    def test_seeds_and_initial_stages(self):
+        """The seeds go to carrier stages, and set_initial() places agents
+        in stages without the virus."""
+        m = self._seir(10000, 0.0)
+        m.assign_virus(0, assign.counts({"Exposed": 11, "Infected": 1116}))
+        m.set_initial(assign.counts({"Removed": 1761}))
         m.run(0, SEED)
         assert self._day0(m) == {
             "Susceptible": 7112,
@@ -258,26 +264,26 @@ class TestInitialStates:
             "Removed": 1761,
         }
 
-    def test_initial_states_survives_rerun(self):
-        """The distribution is reapplied on every run, not only the first."""
-        m = epimodels.ModelSEIR(
-            name="covid-19",
-            n=1000,
-            prevalence=0.1,
-            transmission_prob=0.1,
-            latent_period=7.0,
-            recovery_rate=0.14,
-        )
-        # Everyone meets "Contact rate" others a day, at random
-        m.add_param(2.0, "Contact rate")
-        everyone = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
-        everyone.set_contact_rate("Contact rate")
-        m.add_layer(everyone)
-        m.initial_states([1.0, 0.5])
-        m.verbose_off()
+    def test_initial_stages_survive_rerun(self):
+        """The placement is drawn on every run, not only the first: the seeds
+        start in the stage the infection leads to, and a share is of the
+        agents left."""
+        m = self._seir(1000, 0.1)
+        m.set_initial(assign.shares({"Removed": 0.5}))
         m.run(0, SEED)
         first = self._day0(m)
         m.run(0, SEED + 1)
         assert self._day0(m) == first
-        assert first["Exposed"] == 0
+        assert first["Exposed"] == 100
         assert first["Removed"] == 450
+
+    def test_labels_are_checked(self):
+        m = self._seir(100, 0.1)
+        with pytest.raises(ValueError, match='no stage "Recover"'):
+            m.set_initial(assign.shares({"Recover": 0.1}))
+        with pytest.raises(ValueError, match=r"\[0, 1\]"):
+            assign.share(1.5)
+        with pytest.raises(ValueError, match="whole"):
+            assign.count(2.5)
+        with pytest.raises(ValueError, match="agent ids"):
+            assign.agents([-1])
