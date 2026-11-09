@@ -5,10 +5,22 @@ import pytest
 
 import epiworldpy as epiworld
 import epiworldpy.epimodels as epimodels
-from epiworldpy import graph, layer
+from epiworldpy import assign, graph, layer
 
 DAYS = 30
 SEED = 1
+
+
+def sir_virus(name):
+    """A SIR natural history, reading two model parameters."""
+    return (epiworld.Virus(name)
+            .add_stage("Susceptible")
+            .add_stage("Infected", infectious=True)
+            .add_stage("Recovered")
+            .add_infection("Susceptible", "Infected",
+                           rate="Transmission probability")
+            .add_rate("Infected", "Recovered", rate="Recovery rate",
+                      effect="recovery"))
 
 
 def make_sir(n=2000):
@@ -83,97 +95,58 @@ class TestTransmissionMode:
         assert m.get_last_transmission_mode() == mode
 
     def test_custom_model_can_push(self):
-        # UpdateFun.default_update_susceptible() must be epiworld's own
-        # function; the model only pushes for that exact function.
+        # A model built from scratch pushes too: its susceptible stage is
+        # sampled by the model itself
         m = epiworld.Model(2000)
-        m.add_state("S", epiworld.UpdateFun.default_update_susceptible())
-        infected = m.add_state("I", epiworld.UpdateFun.default_update_exposed())
-        recovered = m.add_state("R")
-        virus = epiworld.Virus("v", 0.05, True, 0.5, 0.2, 0.0)
-        virus.set_state(infected, recovered, recovered)
-        m.add_virus(virus)
+        m.add_param(0.5, "Transmission probability")
+        m.add_param(0.2, "Recovery rate")
+        m.add_virus(sir_virus("v"), assign.share(0.05))
         m.add_layer(layer.network("contacts", graph.smallworld(k=10, p=0.01)))
         m.verbose_off()
         m.set_transmission_mode("push")
         m.run(5, SEED)
         assert m.get_last_transmission_mode() == "push"
-
-
-class TestNativeUpdateFun:
-    @staticmethod
-    def make_seir(n=2000):
-        # SEIR from epiworld's own update functions: exposed agents do not
-        # transmit, and every transition runs in C++.
-        m = epiworld.Model(n)
-        m.add_param(0.25, "Incubation rate")
-        m.add_param(0.2, "Recovery rate")
-        m.add_state("S", epiworld.UpdateFun.susceptible())
-        m.add_state("E", epiworld.UpdateFun.rate(["Incubation rate"], [2]))
-        m.add_state("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
-        m.add_state("R")
-        m.set_infectious_states([2])  # Exposed do not transmit
-        virus = epiworld.Virus("v", 0.05, True, 0.5, 0.0, 0.0)
-        virus.set_state(1, 3, 3)
-        m.add_virus(virus)
-        m.add_layer(layer.network("contacts", graph.smallworld(k=10, p=0.01)))
-        m.verbose_off()
-        return m
-
-    @pytest.mark.parametrize("mode", ["push", "pull"])
-    def test_seir_runs_natively(self, mode):
-        m = self.make_seir()
-        m.set_transmission_mode(mode)
-        m.run(DAYS, SEED)
-        # The susceptible sampler must reach the model unchanged, or the model
-        # could not recognize it and push.
-        assert m.get_last_transmission_mode() == mode
-        counts = m.get_db().get_today_total()["counts"]
-        assert counts.sum() == m.size()
-        assert counts[3] > 0  # someone recovered through the rate function
 
     def test_push_and_pull_agree(self):
         finals = {}
         for mode in ("push", "pull"):
             recovered = []
             for seed in range(20):
-                m = self.make_seir(500)
+                m = epimodels.ModelSEIR("v", n=500, prevalence=0.05,
+                                        transmission_prob=0.5,
+                                        latent_period=4, recovery_rate=0.2)
+                m.add_layer(
+                    layer.network("contacts", graph.smallworld(k=10, p=0.01))
+                )
+                m.verbose_off()
                 m.set_transmission_mode(mode)
                 m.run(DAYS, seed)
-                recovered.append(m.get_db().get_today_total()["counts"][3])
+                recovered.append(m.get_agents_stages().count("Removed"))
             finals[mode] = np.mean(recovered)
         assert finals["push"] == pytest.approx(finals["pull"], rel=0.15)
 
-    def test_set_state_function(self):
-        m = self.make_seir()
-        m.set_state_function("I", epiworld.UpdateFun.rate(["Recovery rate"], [3]))
-        m.set_state_function(0, epiworld.UpdateFun.susceptible())
-        m.set_transmission_mode("push")
-        m.run(5, SEED)
-        assert m.get_last_transmission_mode() == "push"
-
-    def test_rate_competing_transitions(self):
+    def test_rates_compete(self):
+        # Two rates out of a stage: each agent makes at most one transition a
+        # day, and equal rates reach both targets about equally often
+        v = (epiworld.Virus("v")
+             .add_stage("S")
+             .add_stage("X", infectious=True)
+             .add_stage("A")
+             .add_stage("B")
+             .add_infection("S", "X", rate=0)
+             .add_rate("X", "A", rate="to A")
+             .add_rate("X", "B", rate="to B"))
         m = epiworld.Model(1000)
         m.add_param(0.5, "to A")
         m.add_param(0.5, "to B")
-        m.add_state("X", epiworld.UpdateFun.rate(["to A", "to B"], [1, 2]))
-        m.add_state("A")
-        m.add_state("B")
+        m.add_virus(v, assign.share(1.0))
         m.verbose_off()
-        # Without a virus the queue would skip every agent.
-        m.queuing_off()
         m.run(1, SEED)
-        # Each agent makes at most one transition, and equal rates reach both
-        # targets about equally often.
-        counts = m.get_db().get_today_total()["counts"]
-        assert counts.sum() == 1000
-        assert counts[1] > 250 and counts[2] > 250
-        assert abs(int(counts[1]) - int(counts[2])) < 100
-
-    def test_rate_checks_lengths(self):
-        with pytest.raises(RuntimeError):
-            epiworld.UpdateFun.rate(["a", "b"], [1])
-        with pytest.raises(RuntimeError):
-            epiworld.UpdateFun.rate([], [])
+        stages = m.get_agents_stages()
+        a, b = stages.count("A"), stages.count("B")
+        assert a + b + stages.count("X") == 1000
+        assert a > 250 and b > 250
+        assert abs(a - b) < 100
 
 
 class TestModelQueries:
@@ -186,16 +159,13 @@ class TestModelQueries:
     def test_size(self, ran):
         assert ran.size() == len(ran) == 2000
 
-    def test_agents_states_and_in_state(self, ran):
-        states = np.asarray(ran.get_agents_states())
-        assert len(states) == ran.size()
-        for s in range(ran.get_n_states()):
-            ids = ran.get_agents_in_state(s)
-            assert sorted(ids) == list(np.flatnonzero(states == s))
-
-    def test_agents_in_state_before_run(self):
-        with pytest.raises(RuntimeError):
-            make_sir().get_agents_in_state(0)
+    def test_agents_stages(self, ran):
+        stages = ran.get_agents_stages()
+        assert len(stages) == ran.size()
+        assert set(stages) <= set(ran.get_stages())
+        assert [ran.get_stage(ran.get_agent(i)) for i in range(10)] == stages[:10]
+        assert ran.get_agents_statuses() == ["Free"] * ran.size()
+        assert ran.get_status(ran.get_agent(0)) == "Free"
 
     def test_has_param(self, ran):
         assert ran.has_param("Recovery rate")
@@ -222,7 +192,7 @@ class TestModelQueries:
         for m in (a, b):
             m.seed(123)
             m.run(DAYS, -1)
-        assert list(a.get_agents_states()) == list(b.get_agents_states())
+        assert a.get_agents_stages() == b.get_agents_stages()
 
     def test_elapsed(self, ran):
         elapsed = ran.get_elapsed()
@@ -240,28 +210,16 @@ class TestFixes:
         tr = m.get_db().get_transmissions()
         assert len(tr["targets"]) == len(tr["sources"]) > 0
 
-    def test_default_update_exposed_kills(self):
+    def test_deaths_are_deaths(self):
         # Deaths used to be recorded as recoveries.
-        m = epiworld.Model(200)
-        m.add_state("S", epiworld.UpdateFun.default_update_susceptible())
-        infected = m.add_state("I", epiworld.UpdateFun.default_update_exposed())
-        recovered = m.add_state("R")
-        dead = m.add_state("D")
-        virus = epiworld.Virus("v", 0.5, True, 0.0, 0.0, 1.0)
-        virus.set_state(infected, recovered, dead)
-        m.add_virus(virus)
+        m = epimodels.ModelSIRD("v", n=200, prevalence=0.5,
+                                transmission_prob=0.0, recovery_rate=0.0,
+                                death_rate=1.0)
         m.verbose_off()
         m.run(10, SEED)
-        counts = np.bincount(m.get_agents_states(), minlength=4)
-        assert counts[recovered] == 0
-        assert counts[dead] == 100
-
-    def test_virus_incubation_default(self):
-        m = make_sir()
-        virus = epiworld.Virus("v", 1, False, 0.1, 0.1, 0.1)
-        assert virus.get_incubation(m) == pytest.approx(7.0)
-        virus = epiworld.Virus("v", 1, False, 0.1, 0.1, 0.1, incubation=3.0)
-        assert virus.get_incubation(m) == pytest.approx(3.0)
+        stages = m.get_agents_stages()
+        assert stages.count("Recovered") == 0
+        assert stages.count("Deceased") == 100
 
     def test_mutate_virus(self):
         m = make_sir()
@@ -288,7 +246,8 @@ class TestAgentTools:
         # Agent changes are queued as events and applied at the end of a step,
         # so we make them from global events during a run.
         m = make_sir(100)
-        m.add_tool(epiworld.Tool("mask", 1.0, True, transmission_reduction=0.5))
+        m.add_tool(epiworld.Tool("mask", transmission_reduction=0.5),
+                   assign.share(1.0))
 
         def change(model):
             if model.today() == 1:

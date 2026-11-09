@@ -15,31 +15,30 @@ carrier transmits a virus, or its carrier's chance of dying, and can increase
 its carrier's chance of recovering. Add it to a model with
 :meth:`Model.add_tool`.
 
-As with :class:`Virus`, each effect can be a constant, a model parameter, or
-a Python function.
+Each effect can be a constant, a model parameter, or a Python function. The
+recovery enhancer acts on the transitions declared with
+``effect="recovery"``, and the death reduction on those with
+``effect="death"`` (see :meth:`Virus.add_rate`).
 
 Examples
 --------
->>> from epiworldpy import Tool, epimodels
+>>> from epiworldpy import Tool, assign, epimodels
 >>> model = epimodels.ModelSIR("COVID-19", n=10000, prevalence=0.01,
 ...                            transmission_prob=0.4, recovery_rate=0.95)
->>> vaccine = Tool("Vaccine", prevalence=0.5, as_proportion=True,
-...                susceptibility_reduction=0.9, transmission_reduction=0.5)
->>> model.add_tool(vaccine)
+>>> vaccine = Tool("Vaccine", susceptibility_reduction=0.9,
+...                transmission_reduction=0.5)
+>>> model.add_tool(vaccine, assign.share(0.5))
 )doc";
 
 inline constexpr const char *init = R"doc(Create a tool.
+
+The effects are keyword arguments. Who has the tool is set when it is added
+to a model (:meth:`Model.add_tool`).
 
 Parameters
 ----------
 name : str
     Name of the tool.
-prevalence : float
-    Proportion or number of agents who receive the tool at the start (see
-    ``as_proportion``).
-as_proportion : bool
-    If ``True``, ``prevalence`` is a proportion; otherwise, a number of
-    agents.
 susceptibility_reduction : float, default 0.0
     Proportion by which the tool reduces its carrier's probability of
     being infected.
@@ -169,69 +168,6 @@ inline constexpr const char *set_death_reduction_fun =
 #undef EPIWORLDPY_DOC_PARAM
 #undef EPIWORLDPY_DOC_FUN
 
-inline constexpr const char *set_state =
-	R"doc(Set the states agents move to when this tool is acquired or lost.
-
-Parameters
-----------
-init : int
-    State of an agent when it receives the tool.
-post : int
-    State of an agent when it loses the tool.
-)doc";
-
-inline constexpr const char *set_queue =
-	R"doc(Set how acquiring or losing this tool updates the queuing system.
-
-Values follow :meth:`Agent.change_state`'s ``queue`` argument.
-
-Parameters
-----------
-init : int
-    Queue change when an agent receives the tool.
-post : int
-    Queue change when an agent loses the tool.
-)doc";
-
-inline constexpr const char *get_state =
-	R"doc(Get the states set with :meth:`set_state`.
-
-Returns
--------
-dict
-    Keys ``"init"`` and ``"post"``.
-)doc";
-
-inline constexpr const char *get_queue =
-	R"doc(Get the queue changes set with :meth:`set_queue`.
-
-Returns
--------
-dict
-    Keys ``"init"`` and ``"post"``.
-)doc";
-
-inline constexpr const char *set_distribution =
-	R"doc(Set how the tool is distributed to agents at the start of a run.
-
-By default, the tool goes to a random ``prevalence`` of the agents.
-
-Parameters
-----------
-fun : callable
-    Function ``fun(tool, model) -> None`` that gives the tool to the
-    initial agents, for example with :meth:`Agent.add_tool`.
-)doc";
-
-inline constexpr const char *distribute =
-	R"doc(Distribute the tool to agents with its distribution function.
-
-Parameters
-----------
-model : Model
-    The model to distribute the tool in.
-)doc";
-
 inline constexpr const char *print = R"doc(Print information about the tool.
 )doc";
 
@@ -286,6 +222,17 @@ Returns
 -------
 bool
     True if the tool acts on the virus's lineage.
+)doc";
+
+inline constexpr const char *clone = R"doc(Copy the tool.
+
+The copy is a new tool: added to a model, it gets its own id, so the model
+records it apart from the original. Rename it with :meth:`set_name`.
+
+Returns
+-------
+Tool
+    The copy.
 )doc";
 
 } // namespace epiworldpy::docstrings::tool

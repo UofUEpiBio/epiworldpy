@@ -5,9 +5,11 @@
 #include <pybind11/pybind11.h>
 
 namespace epiworldpy {
-void export_virus_to_agent_fun(
-	pybind11::class_<epiworld::VirusToAgentFun<int>> &c);
-void export_virus(pybind11::class_<epiworld::Virus<int>> &c);
+/* A virus and its natural history; the values and durations of its
+ * transitions. */
+void export_virus(pybind11::class_<epiworld::Virus> &c);
+void export_value(pybind11::class_<epiworld::Value> &c);
+void export_duration(pybind11::class_<epiworld::Duration> &c);
 } // namespace epiworldpy
 
 #endif /* EPIWORLDPY_VIRUS_HPP */

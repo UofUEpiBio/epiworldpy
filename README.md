@@ -80,8 +80,55 @@ error that names their replacement.
   `Entity`, `Model.add_entity()`, `get_entity()`, `get_n_entities()`, and
   `Agent.add_entity()`, `rm_entity()`, `has_entity()`, `get_entities()`,
   `get_n_entities()` are defunct. Use `layer.mixing(name, groups, ...)` with a
-  list of groups or `grouping.random()`, and read groups with the layer's
-  `members_of()` and `get_group()`.
+  list of groups or a placement (`assign.counts(sizes)`), and read groups with
+  the layer's `members_of()` and `get_group()`.
+- Natural histories replace states
+  ([epiworld#363](https://github.com/UofUEpiBio/epiworld/pull/363)). A virus
+  carries the stages of the disease and the transitions between them, each
+  naming the model parameters it reads:
+
+  ```python
+  flu = (Virus("Flu")
+         .add_stage("Susceptible")
+         .add_stage("Infected", infectious=True)
+         .add_stage("Recovered")
+         .add_infection("Susceptible", "Infected", rate="Transmission probability")
+         .add_rate("Infected", "Recovered", rate="Recovery rate", effect="recovery"))
+  model.add_virus(flu, assign.share(0.01))
+  ```
+
+  `Duration` (for `add_after()`) and `Value` (`Value.inverse()`,
+  `Value.complement()`, `Value.fun()`) give the transitions their timing and
+  values; `add_external()` declares a transition that `Model.fire()` applies.
+  `Virus(name)` takes only a name, and `Tool(name, ...)` takes its effects as
+  keywords. The state API is defunct: `Model.add_state()`,
+  `set_state_function()`, `get_states()`, `state_of()`, `initial_states()`,
+  `set_infectious_states()`, `get_agents_states()`, `UpdateFun`,
+  `NativeUpdateFun`, `Agent.get_state()`, `change_state()`, `rm_virus()`, and
+  the probabilities, states and distributions of `Virus` and `Tool`
+  (`set_prob_infecting()`, `set_state()`, `set_distribution()`, ...). Use
+  `Model.get_stages()`, `get_statuses()`, `get_stage(agent)`,
+  `get_agents_stages()`, `fire()`, and `draw_natural_history()`.
+- Placement is one vocabulary, `epiworldpy.assign`: `share()`, `count()`,
+  `shares()`, `counts()`, `group_shares()`, `group_counts()`, `agents()`,
+  `labels()`, `by()`. It places viruses (`Model.add_virus(virus, assign)`,
+  `assign_virus()`), tools (`add_tool(tool, assign)`, `assign_tool()`),
+  agents in stages without the virus (`set_initial(assign.shares({"Recovered":
+  0.3}))`), and the groups of a mixing layer. `grouping.random()` is defunct.
+- The outputs report a status and a stage: `get_hist_total()` returns
+  `statuses` and `stages` (in place of `states`), and so do
+  `get_today_total()`, `get_hist_virus()`, `get_hist_tool()` and
+  `get_today_virus()`; the transition matrix has `status_from`, `stage_from`,
+  `status_to` and `stage_to`. `get_hist_transitions()` counts how many times
+  each transition fired.
+- Models come from the registry
+  ([epiworld#356](https://github.com/UofUEpiBio/epiworld/pull/356)):
+  `epimodels.make_model(id, values, virus_name)`, `list_models()` and
+  `get_model_info(id)`. `ModelSIR()` and the other named constructors keep
+  their arguments and return a `Model`. A second virus is a strain of the
+  model's: a copy (`model.get_virus(0).clone()`) with its own name. The model
+  keeps its own copy of each virus and tool, and only that copy has an id:
+  give agents and tools `model.get_virus(i)` and `model.get_tool(i)`.
 - Social bubbles: `Bubbles` is new in epiworldpy
   ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
   `ties="complete"`, bubblemates meet in a household layer (a within-group

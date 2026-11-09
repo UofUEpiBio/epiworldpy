@@ -1,7 +1,7 @@
 #include "model.hpp"
 #include "docstrings/epimodels.hpp"
 #include "docstrings/model.hpp"
-#include "agent-meat-state.hpp"
+#include "natural_history.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
@@ -11,27 +11,6 @@ using namespace epiworld;
 namespace py = pybind11;
 namespace doc = epiworldpy::docstrings::model;
 namespace mdoc = epiworldpy::docstrings::epimodels;
-
-template <typename T, typename... Args>
-void export_model_with_init(py::class_<T, Model<int>> &c, const char *doc,
-							Args &&...args) {
-	c.def(py::init<Args...>(), doc, std::forward<Args>(args)...);
-}
-
-template <typename T>
-auto model_of(py::module &m, const char *name, const char *doc)
-	-> py::class_<T, Model<int>> {
-	return py::class_<T, Model<int>>(m, (std::string("Model") + name).c_str(),
-									 doc);
-}
-
-template <typename ModelT, typename... Args>
-void bind_model(py::module &m, const char *pyname, const char *doc,
-				const char *ctor_doc, Args &&...args) {
-	auto cls = model_of<ModelT>(m, pyname, doc);
-	cls.def(py::init<std::decay_t<Args>...>(), ctor_doc,
-			std::forward<Args>(args)...);
-}
 
 static auto transmission_mode_to_str(TransmissionMode mode) -> std::string {
 	switch (mode) {
@@ -45,15 +24,7 @@ static auto transmission_mode_to_str(TransmissionMode mode) -> std::string {
 	throw std::logic_error("Unknown transmission mode.");
 }
 
-static auto get_agents_in_state(const Model<int> &self,
-								epiworld_fast_uint state)
-	-> py::array_t<size_t> {
-	auto ids = self.get_agents_in_state(state);
-	return py::array_t<size_t>(ids.size(), ids.begin());
-}
-
-static auto get_elapsed(const Model<int> &self, std::string unit)
-	-> py::dict {
+static auto get_elapsed(const Model &self, std::string unit) -> py::dict {
 	epiworld_double last, total;
 	std::string abbr;
 	self.get_elapsed(std::move(unit), &last, &total, &abbr, false);
@@ -61,144 +32,177 @@ static auto get_elapsed(const Model<int> &self, std::string unit)
 					py::arg("unit") = abbr);
 }
 
-static void run_multiple(Model<int> &m, int ndays, int nexperiments, int seed,
+static void run_multiple(Model &m, int ndays, int nexperiments, int seed,
 						 const py::object &fun, bool reset, bool verbose,
 						 int nthreads) {
-	std::function<void(size_t, Model<int> *)> cb;
+	std::function<void(size_t, Model *)> cb;
 	if (fun.is_none()) {
-		cb = make_save_run<int>();
+		cb = make_save_run();
 	} else {
-		cb = fun.cast<std::function<void(size_t, Model<int> *)>>();
+		cb = fun.cast<std::function<void(size_t, Model *)>>();
 	}
 
 	m.run_multiple(ndays, nexperiments, seed, cb, reset, verbose, nthreads);
 }
 
-void epiworldpy::export_native_update_fun(
-	pybind11::class_<NativeUpdateFun> &c) {
-	c.def("__repr__",
-		  [](const NativeUpdateFun &) { return "<epiworldpy.NativeUpdateFun>"; });
+static auto get_statuses(const Model &self) -> std::vector<std::string> {
+	const Statuses *st = self.get_statuses();
+	if (st == nullptr)
+		return {"Free"};
+	return st->get_stages();
 }
 
-void epiworldpy::export_update_fun(
-	pybind11::class_<epiworld::UpdateFun<int>> &c) {
-	// Return epiworld's own functions (not copies): the model recognizes
-	// default_update_susceptible by address to enable push transmission.
-	c.def_static(
-		 "default",
-		 []() {
-			 return (std::function<void(Agent<int> *, Model<int> *)>)nullptr;
-		 },
-		 doc::update_fun_default)
-		.def_static("default_update_susceptible",
-					[] {
-						return std::function<void(Agent<int> *, Model<int> *)>(
-							default_update_susceptible<int>);
-					},
-					doc::default_update_susceptible)
-		.def_static("default_update_exposed",
-					[] {
-						return std::function<void(Agent<int> *, Model<int> *)>(
-							default_update_exposed<int>);
-					},
-					doc::default_update_exposed)
-		.def_static(
-			"susceptible",
-			[](py::object exclude) {
-				if (!exclude.is_none())
-					throw std::invalid_argument(
-						"`exclude` is defunct as of epiworldpy 1.0.0: the model "
-						"says which states transmit, for every layer, with "
-						"Model.set_infectious_states(states).");
-				return NativeUpdateFun{default_update_susceptible<int>};
-			},
-			py::arg("exclude") = py::none(), doc::update_fun_susceptible)
-		.def_static(
-			"rate",
-			[](std::vector<std::string> param_names,
-			   std::vector<epiworld_fast_uint> target_states) {
-				return NativeUpdateFun{new_state_update_transition<int>(
-					std::move(param_names), std::move(target_states))};
-			},
-			py::arg("param_names"), py::arg("target_states"),
-			doc::update_fun_rate);
+/* The label of each agent's stage (or status; "Free" without statuses) */
+static auto agents_labels(Model &self, bool status)
+	-> std::vector<std::string> {
+	if (status && (self.get_statuses() == nullptr))
+		return std::vector<std::string>(self.size(), "Free");
+	const std::vector<std::string> &labels =
+		status ? self.get_statuses()->get_stages() : model_nh(self).get_stages();
+	std::vector<std::string> out;
+	out.reserve(self.size());
+	for (const auto &a : self.get_agents())
+		out.push_back(labels[static_cast<size_t>(status ? self.get_status(a)
+														: self.get_stage(a))]);
+	return out;
 }
 
-void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
+void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 	c.def(py::init<size_t>(), doc::init, py::arg("n"))
 		.def(
 			"add_layer",
-			[](Model<int> &self, std::shared_ptr<ContactLayer<int>> layer) {
+			[](Model &self, std::shared_ptr<ContactLayer> layer) {
 				self.add_layer(std::move(layer));
 			},
 			doc::add_layer, py::arg("layer"))
 		.def(
 			"get_layer",
-			[](Model<int> &self, std::string_view name) -> ContactLayer<int> & {
+			[](Model &self, std::string_view name) -> ContactLayer & {
 				return self.get_layer(name);
 			},
 			py::return_value_policy::reference_internal, doc::get_layer,
 			py::arg("name"))
 		.def(
 			"get_layer",
-			[](Model<int> &self, size_t id) -> ContactLayer<int> & {
+			[](Model &self, size_t id) -> ContactLayer & {
 				return self.get_layer(id);
 			},
 			py::return_value_policy::reference_internal, doc::get_layer_id,
 			py::arg("id"))
-		.def(
-			"add_state",
-			[](Model<int> &self, std::string lab, const NativeUpdateFun &fun) {
-				return self.add_state(std::move(lab), fun.fun);
-			},
-			py::arg("lab"), py::arg("fun"),
-			doc::add_state_native)
-		.def("add_state",
-			 static_cast<epiworld_fast_int (epiworld::Model<>::*)(
-				 std::string, UpdateFun<int>)>(&Model<int>::add_state),
-			 py::arg("lab"), py::arg("fun") = nullptr,
-			 doc::add_state)
-		.def("get_states", &Model<int>::get_states,
-			 doc::get_states)
-		.def("get_n_states", &Model<int>::get_n_states,
-			 doc::get_n_states)
-		.def("state_of",
-			 static_cast<epiworld_fast_int (Model<int>::*)(std::string_view)>(
-				 &Model<int>::state_of),
-			 doc::state_of, py::arg("name"))
-		.def("get_name", &Model<int>::get_name,
-			 doc::get_name)
-		.def("get_n_viruses", &Model<int>::get_n_viruses,
-			 doc::get_n_viruses)
-		.def("get_n_tools", &Model<int>::get_n_tools,
-			 doc::get_n_tools)
-		.def("get_ndays", &Model<int>::get_ndays,
-			 doc::get_ndays)
-		.def("get_n_replicates", &Model<int>::get_n_replicates,
+		.def("get_name", &Model::get_name, doc::get_name)
+		.def("get_n_viruses", &Model::get_n_viruses, doc::get_n_viruses)
+		.def("get_n_tools", &Model::get_n_tools, doc::get_n_tools)
+		.def("get_ndays", &Model::get_ndays, doc::get_ndays)
+		.def("get_n_replicates", &Model::get_n_replicates,
 			 doc::get_n_replicates)
-		.def("get_sim_id", &Model<int>::get_sim_id,
-			 doc::get_sim_id)
-		.def("today", &Model<int>::today, doc::today)
-		.def("add_virus", &Model<int>::add_virus, doc::add_virus,
-			 py::arg("virus"))
-		.def("add_tool", &Model<int>::add_tool,
-			 doc::add_tool, py::arg("tool"))
-		.def("reset", &Model<int>::reset,
-			 doc::reset)
+		.def("get_sim_id", &Model::get_sim_id, doc::get_sim_id)
+		.def("today", &Model::today, doc::today)
 		.def(
-			"print", [](const Model<int> &m, bool lite) { m.print(lite); },
+			"add_virus",
+			[](Model &self, const Virus &virus, const PyAssign *assign) {
+				// A placement's labels are the virus's stages
+				self.add_virus(
+					virus,
+					assign_from_py(assign, assign ? stage_resolver(virus_nh(virus))
+												  : LabelOf()));
+			},
+			doc::add_virus, py::arg("virus"), py::arg("assign") = py::none())
+		.def(
+			"assign_virus",
+			[](Model &self, size_t virus_pos, const PyAssign &assign) {
+				self.assign_virus(virus_pos,
+								  assign_from_py(&assign,
+												 stage_resolver(model_nh(self))));
+			},
+			doc::assign_virus, py::arg("virus_pos"), py::arg("assign"))
+		.def("rm_virus", &Model::rm_virus, doc::rm_virus,
+			 py::arg("virus_pos"))
+		.def(
+			"get_virus",
+			[](Model &self, size_t virus_pos) -> Virus & {
+				return self.get_virus(virus_pos);
+			},
+			py::return_value_policy::reference_internal, doc::get_virus,
+			py::arg("virus_pos"))
+		.def(
+			"add_tool",
+			[](Model &self, const Tool &tool, const PyAssign *assign) {
+				// A tool's placement takes no stage names
+				self.add_tool(tool, assign_from_py(assign, LabelOf()));
+			},
+			doc::add_tool, py::arg("tool"), py::arg("assign") = py::none())
+		.def(
+			"assign_tool",
+			[](Model &self, size_t tool_pos, const PyAssign &assign) {
+				self.assign_tool(tool_pos, assign_from_py(&assign, LabelOf()));
+			},
+			doc::assign_tool, py::arg("tool_pos"), py::arg("assign"))
+		.def("rm_tool", &Model::rm_tool, doc::rm_tool, py::arg("tool_pos"))
+		.def(
+			"get_tool",
+			[](Model &self, size_t tool_pos) -> Tool & {
+				return self.get_tool(tool_pos);
+			},
+			py::return_value_policy::reference_internal, doc::get_tool,
+			py::arg("tool_pos"))
+		.def(
+			"set_initial",
+			[](Model &self, const PyAssign &assign) {
+				// The labels are the model's stages
+				self.set_initial(
+					assign_from_py(&assign, stage_resolver(model_nh(self))));
+			},
+			doc::set_initial, py::arg("assign"))
+		.def(
+			"get_stages",
+			[](const Model &self) { return model_nh(self).get_stages(); },
+			doc::get_stages)
+		.def("get_statuses", &get_statuses, doc::get_statuses)
+		.def(
+			"get_stage",
+			[](const Model &self, const Agent &agent) {
+				return model_nh(self).get_stages()[static_cast<size_t>(
+					self.get_stage(agent))];
+			},
+			doc::get_stage, py::arg("agent"))
+		.def(
+			"get_status",
+			[](const Model &self, const Agent &agent) -> std::string {
+				const Statuses *st = self.get_statuses();
+				if (st == nullptr)
+					return "Free";
+				return st->get_stages()[static_cast<size_t>(
+					self.get_status(agent))];
+			},
+			doc::get_status, py::arg("agent"))
+		.def(
+			"get_agents_stages",
+			[](Model &self) { return agents_labels(self, false); },
+			doc::get_agents_stages)
+		.def(
+			"get_agents_statuses",
+			[](Model &self) { return agents_labels(self, true); },
+			doc::get_agents_statuses)
+		.def(
+			"fire",
+			[](Model &self, std::string_view transition, size_t agent_id) {
+				return self.fire(self.transition_id(transition),
+								 self.get_agent(agent_id));
+			},
+			doc::fire, py::arg("transition"), py::arg("agent_id"))
+		.def("draw_natural_history", &Model::draw_natural_history,
+			 doc::draw_natural_history)
+		.def("reset", &Model::reset, doc::reset)
+		.def(
+			"print", [](const Model &m, bool lite) { m.print(lite); },
 			doc::print, py::arg("lite") = false)
-		.def("initial_states", &Model<int>::initial_states,
-			 doc::initial_states, py::arg("proportions"),
-			 py::arg("queue") = std::vector<int>{})
-		.def("run", &Model<int>::run,
-			 doc::run,
-			 py::arg("ndays"), py::arg("seed") = -1)
+		.def("run", &Model::run, doc::run, py::arg("ndays"),
+			 py::arg("seed") = -1)
 		.def("run_multiple", &run_multiple, doc::run_multiple,
 			 py::arg("ndays"), py::arg("nexperiments"), py::arg("seed_") = -1,
 			 py::arg("fun") = py::none(), py::arg("reset") = true,
 			 py::arg("verbose") = true, py::arg("nthreads") = 1)
-		.def_static("make_save_run", &make_save_run<int>, doc::make_save_run,
+		.def_static("make_save_run", &make_save_run, doc::make_save_run,
 					py::arg("fmt") = "%03lu-episimulation.csv",
 					py::arg("total_hist") = true, py::arg("virus_info") = false,
 					py::arg("virus_hist") = false, py::arg("tool_info") = false,
@@ -209,154 +213,93 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 					py::arg("active_cases") = false,
 					py::arg("outbreak_size") = false,
 					py::arg("hospitalizations") = false)
-		.def("verbose_on", &Model<int>::verbose_on, doc::verbose_on)
-		.def("verbose_off", &Model<int>::verbose_off, doc::verbose_off)
-		.def("get_verbose", &Model<int>::get_verbose,
-			 doc::get_verbose)
+		.def("verbose_on", &Model::verbose_on, doc::verbose_on)
+		.def("verbose_off", &Model::verbose_off, doc::verbose_off)
+		.def("get_verbose", &Model::get_verbose, doc::get_verbose)
 		.def(
 			"params",
-			[](Model<int> &self) -> std::map<std::string, epiworld_double> {
+			[](Model &self) -> std::map<std::string, epiworld_double> {
 				return self.params();
 			},
 			doc::params)
-		.def("add_param", &Model<int>::add_param,
-			 doc::add_param, py::arg("initial_val"),
-			 py::arg("pname"), py::arg("overwrite") = false)
-		.def("get_param", &Model<int>::get_param,
-			 doc::get_param, py::arg("pname"))
-		.def("set_param", &Model<int>::set_param,
-			 doc::set_param, py::arg("pname"), py::arg("val"))
-		.def("par", &Model<int>::par,
-			 doc::par, py::arg("pname"))
+		.def("add_param", &Model::add_param, doc::add_param,
+			 py::arg("initial_val"), py::arg("pname"),
+			 py::arg("overwrite") = false)
+		.def("get_param", &Model::get_param, doc::get_param, py::arg("pname"))
+		.def("set_param", &Model::set_param, doc::set_param, py::arg("pname"),
+			 py::arg("val"))
+		.def("par", &Model::par, doc::par, py::arg("pname"))
 		.def(
 			"get_agent",
-			[](Model<int> &self, size_t i) -> Agent<int> & {
-				return self.get_agent(i);
-			},
-			py::return_value_policy::reference_internal,
-			doc::get_agent, py::arg("i"))
+			[](Model &self, size_t i) -> Agent & { return self.get_agent(i); },
+			py::return_value_policy::reference_internal, doc::get_agent,
+			py::arg("i"))
 		.def(
 			"get_agents",
-			[](Model<int> &self) -> std::vector<Agent<int>> & {
+			[](Model &self) -> std::vector<Agent> & {
 				return self.get_agents();
 			},
-			py::return_value_policy::reference_internal,
-			doc::get_agents)
+			py::return_value_policy::reference_internal, doc::get_agents)
 		.def(
 			"add_globalevent",
-			[](Model<int> &self, Bubbles<int> &bubbles) {
-				self.add_globalevent(bubbles);
-			},
+			[](Model &self, Bubbles &bubbles) { self.add_globalevent(bubbles); },
 			doc::add_globalevent_bubbles, py::arg("bubbles"))
 		.def(
 			"add_globalevent",
-			[](Model<int> &self, std::function<void(Model<int> *)> fun,
-			   std::string name,
+			[](Model &self, std::function<void(Model *)> fun, std::string name,
 			   int date) { self.add_globalevent(fun, name, date); },
 			doc::add_globalevent, py::arg("fun"),
 			py::arg("name") = "global event", py::arg("date") = -99)
 		.def("rm_globalevent",
-			 py::overload_cast<std::string>(&Model<int>::rm_globalevent),
+			 py::overload_cast<std::string>(&Model::rm_globalevent),
 			 doc::rm_globalevent, py::arg("name"))
-		.def("run_globalevents", &Model<int>::run_globalevents,
+		.def("run_globalevents", &Model::run_globalevents,
 			 doc::run_globalevents)
-		.def(
-			"set_state_function",
-			[](Model<int> &self, epiworld_fast_uint state,
-			   const NativeUpdateFun &fun) -> Model<int> & {
-				return self.set_state_function(state, fun.fun);
-			},
-			py::return_value_policy::reference_internal,
-			doc::set_state_function_native_id,
-			py::arg("state"), py::arg("fun"))
-		.def(
-			"set_state_function",
-			[](Model<int> &self, std::string_view name,
-			   const NativeUpdateFun &fun) -> Model<int> & {
-				return self.set_state_function(name, fun.fun);
-			},
-			py::return_value_policy::reference_internal,
-			doc::set_state_function_native_name, py::arg("name"),
-			py::arg("fun"))
-		.def("set_state_function",
-			 py::overload_cast<epiworld_fast_uint, UpdateFun<int>>(
-				 &Model<int>::set_state_function),
-			 doc::set_state_function_id,
-			 py::arg("state"), py::arg("fun"))
-		.def(
-			"set_state_function",
-			[](Model<int> &self, std::string_view name, UpdateFun<int> fun)
-				-> Model<int> & { return self.set_state_function(name, fun); },
-			py::return_value_policy::reference_internal,
-			doc::set_state_function_name, py::arg("name"),
-			py::arg("fun"))
-		.def("get_db", py::overload_cast<>(&Model<int>::get_db),
-			 py::return_value_policy::reference_internal,
-			 doc::get_db)
-		.def("size", &Model<int>::size, doc::size)
-		.def("__len__", &Model<int>::size, doc::len)
-		.def("seed", &Model<int>::seed,
-			 doc::seed,
-			 py::arg("s"))
-		.def("set_name", &Model<int>::set_name, doc::set_name,
-			 py::arg("name"))
-		.def("get_agents_states", &Model<int>::get_agents_states,
-			 doc::get_agents_states)
-		.def("get_agents_in_state", &get_agents_in_state,
-			 doc::get_agents_in_state,
-			 py::arg("state"))
-		.def("set_infectious_states", &Model<int>::set_infectious_states,
-			 doc::set_infectious_states, py::arg("states"))
-		.def("get_infectious_states", &Model<int>::get_infectious_states,
-			 doc::get_infectious_states)
+		.def("get_db", py::overload_cast<>(&Model::get_db),
+			 py::return_value_policy::reference_internal, doc::get_db)
+		.def("size", &Model::size, doc::size)
+		.def("__len__", &Model::size, doc::len)
+		.def("seed", &Model::seed, doc::seed, py::arg("s"))
+		.def("set_name", &Model::set_name, doc::set_name, py::arg("name"))
 		.def(
 			"set_transmission_mode",
-			[](Model<int> &self, std::string_view mode,
-			   double kappa) -> Model<int> & {
+			[](Model &self, std::string_view mode, double kappa) -> Model & {
 				return self.set_transmission_mode(mode, kappa);
 			},
 			py::return_value_policy::reference_internal,
-			doc::set_transmission_mode,
-			py::arg("mode"), py::arg("kappa") = EPI_DEFAULT_TRANSMISSION_KAPPA)
+			doc::set_transmission_mode, py::arg("mode"),
+			py::arg("kappa") = EPI_DEFAULT_TRANSMISSION_KAPPA)
 		.def(
 			"get_transmission_mode",
-			[](const Model<int> &self) {
+			[](const Model &self) {
 				return transmission_mode_to_str(self.get_transmission_mode());
 			},
 			doc::get_transmission_mode)
 		.def(
 			"get_last_transmission_mode",
-			[](const Model<int> &self) {
+			[](const Model &self) {
 				return transmission_mode_to_str(
 					self.get_last_transmission_mode());
 			},
 			doc::get_last_transmission_mode)
-		.def("get_transmission_kappa", &Model<int>::get_transmission_kappa,
+		.def("get_transmission_kappa", &Model::get_transmission_kappa,
 			 doc::get_transmission_kappa)
-		.def("has_param", &Model<int>::has_param,
-			 doc::has_param,
-			 py::arg("pname"))
-		.def("has_globalevent", &Model<int>::has_globalevent,
-			 doc::has_globalevent, py::arg("name"))
-		.def("get_n_globalevents", &Model<int>::get_n_globalevents,
+		.def("has_param", &Model::has_param, doc::has_param, py::arg("pname"))
+		.def("has_globalevent", &Model::has_globalevent, doc::has_globalevent,
+			 py::arg("name"))
+		.def("get_n_globalevents", &Model::get_n_globalevents,
 			 doc::get_n_globalevents)
-		.def("queuing_on", &Model<int>::queuing_on,
-			 doc::queuing_on)
+		.def("queuing_on", &Model::queuing_on, doc::queuing_on)
 		.def(
 			"queuing_off",
-			[](Model<int> &self) -> Model<int> & { return self.queuing_off(); },
-			py::return_value_policy::reference_internal,
-			doc::queuing_off)
-		.def("is_queuing_on", &Model<int>::is_queuing_on,
-			 doc::is_queuing_on)
-		.def("print_state_codes", &Model<int>::print_state_codes,
-			 doc::print_state_codes)
-		.def("get_elapsed", &get_elapsed,
-			 doc::get_elapsed,
+			[](Model &self) -> Model & { return self.queuing_off(); },
+			py::return_value_policy::reference_internal, doc::queuing_off)
+		.def("is_queuing_on", &Model::is_queuing_on, doc::is_queuing_on)
+		.def("get_elapsed", &get_elapsed, doc::get_elapsed,
 			 py::arg("unit") = "auto")
 		.def(
 			"write_data",
-			[](const Model<int> &self, std::string fn_virus_info,
+			[](const Model &self, std::string fn_virus_info,
 			   std::string fn_virus_hist, std::string fn_tool_info,
 			   std::string fn_tool_hist, std::string fn_total_hist,
 			   std::string fn_transmission, std::string fn_transition,
@@ -369,8 +312,7 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 								fn_generation_time, fn_active_cases,
 								fn_outbreak_size, fn_hospitalizations);
 			},
-			doc::write_data,
-			py::arg("fn_virus_info") = std::string(""),
+			doc::write_data, py::arg("fn_virus_info") = std::string(""),
 			py::arg("fn_virus_hist") = std::string(""),
 			py::arg("fn_tool_info") = std::string(""),
 			py::arg("fn_tool_hist") = std::string(""),
@@ -384,99 +326,150 @@ void epiworldpy::export_model(py::class_<epiworld::Model<int>> &c) {
 			py::arg("fn_hospitalizations") = std::string(""));
 }
 
-template <typename T> struct ModelNamedArg {
-	using type = T;
-	const char *name;
-};
-
-template <typename T>
-constexpr auto make_arg(const char *name) -> ModelNamedArg<T> {
-	return {name};
+/* The registry: every built-in model whose arguments are numbers is built by
+ * make_model() (the named constructors in epiworldpy.epimodels call it). */
+static const ModelRegistry &registry() {
+	static const ModelRegistry reg = [] {
+		ModelRegistry r;
+		epimodels::register_models(r);
+		return r;
+	}();
+	return reg;
 }
 
-template <typename ModelT, typename... Args>
-void export_model_(pybind11::class_<ModelT, epiworld::Model<int>> &c,
-				   const char *doc, Args... args) {
-	c.def(py::init<typename Args::type...>(), py::arg(args.name)...,
-		  py::doc(doc));
+static auto model_info_dict(const ModelInfo &info, bool with_params)
+	-> py::dict {
+	py::dict d(py::arg("id") = info.id, py::arg("label") = info.label,
+			   py::arg("description") = info.description,
+			   py::arg("virus_name") = info.virus_name);
+	if (with_params) {
+		py::list params;
+		for (const auto &p : info.params)
+			params.append(py::dict(
+				py::arg("arg") = p.arg, py::arg("name") = p.name,
+				py::arg("value") = p.value, py::arg("min") = p.min,
+				py::arg("max") = p.max, py::arg("integer") = p.integer,
+				py::arg("description") = p.description));
+		d["params"] = params;
+	}
+	return d;
+}
+
+/* A named constructor: `pyname(name, <args>)` is make_model(id, {args}, name),
+ * with every argument required. */
+template <size_t N, size_t... I>
+static void def_shim(py::module &m, const char *pyname, std::string id,
+					 const char *doc, std::array<const char *, N> args,
+					 std::index_sequence<I...>) {
+	m.def(
+		pyname,
+		[id, args](const std::string &name, decltype((void)I, double())... v) {
+			return registry().make_model(id, {{args[I], v}...}, name);
+		},
+		doc, py::arg("name"), py::arg(args[I])...);
+}
+
+template <size_t N>
+static void def_shim(py::module &m, const char *pyname, std::string id,
+					 const char *doc, std::array<const char *, N> args) {
+	def_shim(m, pyname, std::move(id), doc, args, std::make_index_sequence<N>{});
 }
 
 void epiworldpy::export_all_models(pybind11::module &m) {
 
-	auto diffnet = model_of<epimodels::ModelDiffNet<int>>(m, "DiffNet",
-														   mdoc::diffnet);
-	auto seir = model_of<epimodels::ModelSEIR<int>>(m, "SEIR", mdoc::seir);
-	auto seird = model_of<epimodels::ModelSEIRD<int>>(m, "SEIRD", mdoc::seird);
-	auto seirquarantine = model_of<epimodels::ModelSEIRQuarantine<int>>(
-		m, "SEIRQuarantine", mdoc::seirquarantine);
-	auto sir = model_of<epimodels::ModelSIR<int>>(m, "SIR", mdoc::sir);
-	auto sird = model_of<epimodels::ModelSIRD<int>>(m, "SIRD", mdoc::sird);
-	auto sis = model_of<epimodels::ModelSIS<int>>(m, "SIS", mdoc::sis);
-	auto sisd = model_of<epimodels::ModelSISD<int>>(m, "SISD", mdoc::sisd);
-	auto surv = model_of<epimodels::ModelSURV<int>>(m, "SURV", mdoc::surv);
+	// The named constructors (the argument names are the registry's)
+	def_shim<4>(m, "ModelSIR", "SIR", mdoc::sir,
+				{"n", "prevalence", "transmission_prob", "recovery_rate"});
+	def_shim<5>(m, "ModelSIRD", "SIRD", mdoc::sird,
+				{"n", "prevalence", "transmission_prob", "recovery_rate",
+				 "death_rate"});
+	def_shim<5>(m, "ModelSEIR", "SEIR", mdoc::seir,
+				{"n", "prevalence", "transmission_prob", "latent_period",
+				 "recovery_rate"});
+	def_shim<6>(m, "ModelSEIRD", "SEIRD", mdoc::seird,
+				{"n", "prevalence", "transmission_prob", "latent_period",
+				 "recovery_rate", "death_rate"});
+	def_shim<4>(m, "ModelSIS", "SIS", mdoc::sis,
+				{"n", "prevalence", "transmission_prob", "recovery_rate"});
+	def_shim<5>(m, "ModelSISD", "SISD", mdoc::sisd,
+				{"n", "prevalence", "transmission_prob", "recovery_rate",
+				 "death_rate"});
+	def_shim<13>(m, "ModelSURV", "SURV", mdoc::surv,
+				 {"n", "prevalence", "efficacy_vax", "latent_period",
+				  "infect_period", "prob_symptoms", "prop_vaccinated",
+				  "prop_vax_redux_transm", "prop_vax_redux_infect",
+				  "surveillance_prob", "transmission_prob", "prob_death",
+				  "prob_noreinfect"});
 
-	export_model_<epimodels::ModelDiffNet<int>>(
-		diffnet, mdoc::diffnet_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("prob_adopt"),
-		make_arg<bool>("normalize_exposure"), make_arg<double *>("data"),
-		make_arg<int>("data_ncols"), make_arg<std::vector<size_t>>("data_cols"),
-		make_arg<std::vector<double>>("params"));
-
-	export_model_<epimodels::ModelSEIR<int>>(
-		seir, mdoc::seir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("latent_period"), make_arg<double>("recovery_rate"));
-
-	export_model_<epimodels::ModelSEIRD<int>>(
-		seird, mdoc::seird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("latent_period"), make_arg<double>("recovery_rate"),
-		make_arg<double>("death_rate"));
-
-	seirquarantine.def(
-		py::init<const std::string &, epiworld_fast_uint, double, double,
-				 double, double, double, double, double, int, double, double,
-				 int, double, unsigned int>(),
-		mdoc::seirquarantine_init, py::arg("name"), py::arg("n"),
+	// The last two arguments of the quarantine model have defaults
+	m.def(
+		"ModelSEIRQuarantine",
+		[](const std::string &name, double n, double prevalence,
+		   double transmission_prob, double latent_period,
+		   double recovery_rate, double hospitalization_rate,
+		   double hospitalization_period, double detection_delay,
+		   double quarantine_period, double quarantine_willingness,
+		   double isolation_willingness, double isolation_period,
+		   double contact_tracing_prob, double contact_tracing_window) {
+			return registry().make_model(
+				"SEIRQuarantine",
+				{{"n", n},
+				 {"prevalence", prevalence},
+				 {"transmission_prob", transmission_prob},
+				 {"latent_period", latent_period},
+				 {"recovery_rate", recovery_rate},
+				 {"hospitalization_rate", hospitalization_rate},
+				 {"hospitalization_period", hospitalization_period},
+				 {"detection_delay", detection_delay},
+				 {"quarantine_period", quarantine_period},
+				 {"quarantine_willingness", quarantine_willingness},
+				 {"isolation_willingness", isolation_willingness},
+				 {"isolation_period", isolation_period},
+				 {"contact_tracing_prob", contact_tracing_prob},
+				 {"contact_tracing_window", contact_tracing_window}},
+				name);
+		},
+		mdoc::seirquarantine, py::arg("name"), py::arg("n"),
 		py::arg("prevalence"), py::arg("transmission_prob"),
 		py::arg("latent_period"), py::arg("recovery_rate"),
 		py::arg("hospitalization_rate"), py::arg("hospitalization_period"),
 		py::arg("detection_delay"), py::arg("quarantine_period"),
 		py::arg("quarantine_willingness"), py::arg("isolation_willingness"),
 		py::arg("isolation_period"), py::arg("contact_tracing_prob") = 1.0,
-		py::arg("contact_tracing_window") = 4u);
+		py::arg("contact_tracing_window") = 4.0);
 
-	export_model_<epimodels::ModelSIR<int>>(
-		sir, mdoc::sir_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("recovery_rate"));
+	m.def(
+		 "make_model",
+		 [](const std::string &id, std::map<std::string, double> values,
+			const std::string &virus_name) {
+			 return registry().make_model(id, values, virus_name);
+		 },
+		 mdoc::make_model, py::arg("id"),
+		 py::arg("values") = std::map<std::string, double>{},
+		 py::arg("virus_name") = "")
+		.def(
+			"list_models",
+			[] {
+				py::list out;
+				for (const auto &info : registry().list_models())
+					out.append(model_info_dict(info, false));
+				return out;
+			},
+			mdoc::list_models)
+		.def(
+			"get_model_info",
+			[](const std::string &id) {
+				return model_info_dict(registry().get_model_info(id), true);
+			},
+			mdoc::get_model_info, py::arg("id"));
 
-	export_model_<epimodels::ModelSIRD<int>>(
-		sird, mdoc::sird_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
-
-	export_model_<epimodels::ModelSIS<int>>(
-		sis, mdoc::sis_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("recovery_rate"));
-
-	export_model_<epimodels::ModelSISD<int>>(
-		sisd, mdoc::sisd_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<double>("prevalence"), make_arg<double>("transmission_prob"),
-		make_arg<double>("recovery_rate"), make_arg<double>("death_rate"));
-
-	// The argument names follow ModelSURV's constructor, and `prevalence` is a
-	// number of agents there, not a proportion.
-	export_model_<epimodels::ModelSURV<int>>(
-		surv, mdoc::surv_init, make_arg<std::string>("name"), make_arg<epiworld_fast_uint>("n"),
-		make_arg<epiworld_fast_uint>("prevalence"),
-		make_arg<double>("efficacy_vax"), make_arg<double>("latent_period"),
-		make_arg<double>("infect_period"), make_arg<double>("prob_symptoms"),
-		make_arg<double>("prop_vaccinated"),
-		make_arg<double>("prop_vax_redux_transm"),
-		make_arg<double>("prop_vax_redux_infect"),
-		make_arg<double>("surveillance_prob"),
-		make_arg<double>("transmission_prob"), make_arg<double>("prob_death"),
-		make_arg<double>("prob_noreinfect"));
+	// The diffusion network model takes data, so it keeps its constructor
+	py::class_<epimodels::ModelDiffNet, Model>(m, "ModelDiffNet", mdoc::diffnet)
+		.def(py::init<std::string, epiworld_fast_uint, double, double, bool,
+					  double *, int, std::vector<size_t>,
+					  std::vector<double>>(),
+			 mdoc::diffnet_init, py::arg("name"), py::arg("n"),
+			 py::arg("prevalence"), py::arg("prob_adopt"),
+			 py::arg("normalize_exposure"), py::arg("data"),
+			 py::arg("data_ncols"), py::arg("data_cols"), py::arg("params"));
 }

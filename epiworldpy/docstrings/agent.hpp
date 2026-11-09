@@ -12,13 +12,15 @@ inline constexpr const char *cls =
 Agents are created by the model (``n`` of them, given to its constructor) and
 accessed with :meth:`Model.get_agent` or :meth:`Model.get_agents`; they cannot
 be created directly. Their contacts come from the model's layers (see
-:mod:`epiworldpy.layer`). Each agent has a
-state (an index into :meth:`Model.get_states`), at most one active virus, and
-any number of tools.
+:mod:`epiworldpy.layer`). Each agent is in a stage
+(:meth:`Model.get_stage`), and a status if the model has them
+(:meth:`Model.get_status`); it has at most one active virus, and any number
+of tools.
 
-Methods that change an agent (``set_virus``, ``add_tool``, ``change_state``,
-...) do not act immediately: they record an event that the model applies at
-the end of the current simulation step.
+Methods that change an agent (``set_virus``, ``add_tool``, ...) do not act
+immediately: they record an event that the model applies at the end of the
+current simulation step. Give them the model's copy of the virus or tool
+(:meth:`Model.get_virus`, :meth:`Model.get_tool`).
 )doc";
 
 inline constexpr const char *get_id = R"doc(Get the agent's ID.
@@ -27,32 +29,6 @@ Returns
 -------
 int
     The agent's ID, which is also its index in :meth:`Model.get_agents`.
-)doc";
-
-inline constexpr const char *get_state = R"doc(Get the agent's current state.
-
-Returns
--------
-int
-    Index of the state in :meth:`Model.get_states`.
-)doc";
-
-inline constexpr const char *get_state_prev =
-	R"doc(Get the agent's previous state.
-
-Returns
--------
-int
-    Index of the state the agent was in before its last state change.
-)doc";
-
-inline constexpr const char *get_state_last_changed =
-	R"doc(Get the day the agent's state last changed.
-
-Returns
--------
-int
-    Simulation day of the last state change.
 )doc";
 
 inline constexpr const char *get_virus = R"doc(Get the agent's active virus.
@@ -137,45 +113,18 @@ bool
     ``True`` if the agent's active virus has that name.
 )doc";
 
-inline constexpr const char *change_state = R"doc(Move the agent to a new state.
-
-The change takes effect at the end of the current step.
-
-Parameters
-----------
-model : Model
-    The model the agent belongs to.
-new_state : int
-    Index of the new state (see :meth:`Model.get_states`).
-queue : int, default 0
-    How to update the queuing system (see :meth:`Model.queuing_on`): ``2``
-    adds the agent and its neighbors to the queue, ``1`` adds only the
-    agent, ``-1`` and ``-2`` undo those, and ``0`` leaves the queue
-    unchanged.
-)doc";
-
-inline constexpr const char *rm_virus = R"doc(Remove the agent's active virus.
-
-The agent moves to the virus's ``end`` state (see :meth:`Virus.set_state`)
-at the end of the current step.
-
-Parameters
-----------
-model : Model
-    The model the agent belongs to.
-)doc";
-
 inline constexpr const char *set_virus = R"doc(Infect the agent with a virus.
 
-The agent receives a copy of ``virus`` and moves to the virus's ``init``
-state (see :meth:`Virus.set_state`) at the end of the current step.
+At the end of the current step, the agent follows the infection transition
+out of its stage (see :meth:`Virus.add_infection`), carrying a copy of
+``virus``.
 
 Parameters
 ----------
 model : Model
     The model the agent belongs to.
 virus : Virus
-    The virus to infect the agent with.
+    The model's copy of the virus (:meth:`Model.get_virus`).
 )doc";
 
 inline constexpr const char *add_tool = R"doc(Give the agent a tool.
@@ -187,7 +136,7 @@ Parameters
 model : Model
     The model the agent belongs to.
 tool : Tool
-    The tool to give to the agent.
+    The model's copy of the tool (:meth:`Model.get_tool`).
 )doc";
 
 inline constexpr const char *mutate_virus =

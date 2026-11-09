@@ -31,18 +31,21 @@ def covid19():
 def test_db_simple(covid19):
     history = covid19.get_db().get_hist_total()
     dates = history["dates"]
-    states = history["states"]
+    stages = history["stages"]
+    statuses = history["statuses"]
     counts = history["counts"]
 
-    # Considering that the SEIR model has four states (susceptible, exposed, infected, and
-    # recovered), we expect DAYS + 1 * 4 (we do the plus one since the resulting time series
-    # starts at 0 and the upper bound is treated as inclusive by epiworld).
+    # The SEIR model has four stages (susceptible, exposed, infected, and
+    # removed) and no statuses ("Free"), so DAYS + 1 days (day 0 to DAYS) of
+    # four rows each, adding up to the population every day.
     EXPECTED_ENTRIES = (DAYS + 1) * 4
 
     assert len(dates) == EXPECTED_ENTRIES
-    assert len(states["values"]) == 4
-    assert len(states["indexes"]) == EXPECTED_ENTRIES
+    assert list(stages["values"]) == ["Susceptible", "Exposed", "Infected", "Removed"]
+    assert list(statuses["values"]) == ["Free"]
+    assert len(stages["indexes"]) == EXPECTED_ENTRIES
     assert len(counts) == EXPECTED_ENTRIES
+    assert counts.sum() == 10000 * (DAYS + 1)
 
 
 def test_db_reproductive_number(covid19):

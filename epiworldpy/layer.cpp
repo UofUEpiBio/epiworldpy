@@ -1,5 +1,6 @@
 #include "layer.hpp"
 #include "docstrings/layer.hpp"
+#include "natural_history.hpp"
 
 #include <pybind11/functional.h>
 #include <pybind11/stl.h>
@@ -13,12 +14,11 @@ using namespace epiworld;
 namespace py = pybind11;
 namespace doc = epiworldpy::docstrings::layer;
 
-using Network = layer::Network<int>;
-using Mixing = layer::Mixing<int>;
+using Network = layer::Network;
+using Mixing = layer::Mixing;
 using Generator = Network::Generator;
 using ContactProb = std::variant<double, std::vector<double>>;
 using Rewiring = Network::Rewiring;
-using Grouping = Mixing::Grouping;
 
 /* Python objects that only carry a generator or a rewiring function from the
  * graph functions to the layer; they wrap the std::function so Python does not
@@ -31,30 +31,14 @@ struct GraphRewiring {
 	Rewiring fun;
 };
 
-/* Sets the contacts of a mixing layer: exactly one of a contact matrix and
- * contact probabilities. */
+/* Sets the contacts of a mixing layer: a contact matrix or contact
+ * probabilities (the caller checks there is exactly one). */
 static void set_contacts(Mixing &mix, std::optional<std::vector<double>> &cm,
 						 std::optional<ContactProb> &cp) {
-	if (cm.has_value() == cp.has_value())
-		throw std::invalid_argument(
-			"Give exactly one of contact_matrix and contact_prob.");
-
 	if (cm)
 		mix.set_contact_matrix(std::move(*cm));
 	else
 		std::visit([&](auto p) { mix.set_contact_prob(p); }, *cp);
-}
-
-void epiworldpy::export_grouping(py::module &m) {
-	py::class_<Grouping>(m, "Grouping", doc::grouping_cls);
-
-	m.def(
-		"random",
-		[](std::vector<epiworld_double> sizes, bool as_proportion) {
-			return grouping::random<int>(std::move(sizes), as_proportion);
-		},
-		doc::grouping_random, py::arg("sizes"),
-		py::arg("as_proportion") = false);
 }
 
 void epiworldpy::export_graph(py::module &m) {
@@ -65,21 +49,21 @@ void epiworldpy::export_graph(py::module &m) {
 	m.def(
 		 "smallworld",
 		 [](epiworld_fast_uint k, epiworld_double p, bool directed) {
-			 return GraphGenerator{graph::smallworld<int>(k, p, directed)};
+			 return GraphGenerator{graph::smallworld(k, p, directed)};
 		 },
 		 doc::smallworld, py::arg("k"), py::arg("p"),
 		 py::arg("directed") = false)
 		.def(
 			"bernoulli",
 			[](epiworld_double p, bool directed) {
-				return GraphGenerator{graph::bernoulli<int>(p, directed)};
+				return GraphGenerator{graph::bernoulli(p, directed)};
 			},
 			doc::bernoulli, py::arg("p"), py::arg("directed") = false)
 		.def(
 			"sbm",
 			[](std::vector<size_t> block_sizes,
 			   std::vector<double> mixing_matrix, bool row_major) {
-				return GraphGenerator{graph::sbm<int>(std::move(block_sizes),
+				return GraphGenerator{graph::sbm(std::move(block_sizes),
 													  std::move(mixing_matrix),
 													  row_major)};
 			},
@@ -97,38 +81,38 @@ void epiworldpy::export_graph(py::module &m) {
 			"rewire_degseq",
 			[](std::string param) {
 				return GraphRewiring{
-					graph::rewire_degseq<int>(std::move(param))};
+					graph::rewire_degseq(std::move(param))};
 			},
 			doc::rewire_degseq, py::arg("param"));
 }
 
 void epiworldpy::export_layer(py::module &m) {
-	py::class_<ContactLayer<int>, std::shared_ptr<ContactLayer<int>>>(
+	py::class_<ContactLayer, std::shared_ptr<ContactLayer>>(
 		m, "ContactLayer", doc::contact_layer_cls)
-		.def("get_name", &ContactLayer<int>::get_name, doc::get_name)
-		.def("get_id", &ContactLayer<int>::get_id, doc::get_id)
-		.def("set_weight", &ContactLayer<int>::set_weight, doc::set_weight,
+		.def("get_name", &ContactLayer::get_name, doc::get_name)
+		.def("get_id", &ContactLayer::get_id, doc::get_id)
+		.def("set_weight", &ContactLayer::set_weight, doc::set_weight,
 			 py::arg("param"))
 		.def(
 			"add_virus_target",
-			[](ContactLayer<int> &self, int lineage_id) {
+			[](ContactLayer &self, int lineage_id) {
 				self.add_virus_target(lineage_id);
 			},
 			doc::add_virus_target_id, py::arg("lineage_id"))
 		.def(
 			"add_virus_target",
-			[](ContactLayer<int> &self, const Virus<int> &virus) {
+			[](ContactLayer &self, const Virus &virus) {
 				self.add_virus_target(virus);
 			},
 			doc::add_virus_target, py::arg("virus"))
-		.def("enable_tracing", &ContactLayer<int>::enable_tracing,
+		.def("enable_tracing", &ContactLayer::enable_tracing,
 			 doc::enable_tracing, py::arg("max_contacts") = EPI_MAX_TRACKING)
-		.def("disable_tracing", &ContactLayer<int>::disable_tracing,
+		.def("disable_tracing", &ContactLayer::disable_tracing,
 			 doc::disable_tracing)
-		.def("is_tracing", &ContactLayer<int>::is_tracing, doc::is_tracing)
+		.def("is_tracing", &ContactLayer::is_tracing, doc::is_tracing)
 		.def(
 			"get_tracing",
-			[](ContactLayer<int> &self) -> py::dict {
+			[](ContactLayer &self) -> py::dict {
 				ContactTracing &log = self.get_tracing();
 				auto source = new std::vector<int>();
 				auto contact = new std::vector<int>();
@@ -149,7 +133,7 @@ void epiworldpy::export_layer(py::module &m) {
 			},
 			doc::get_tracing);
 
-	py::class_<Network, ContactLayer<int>, std::shared_ptr<Network>>(
+	py::class_<Network, ContactLayer, std::shared_ptr<Network>>(
 		m, "Network", doc::network_cls)
 		.def("size", &Network::size, doc::size)
 		.def("is_directed", &Network::is_directed, doc::is_directed)
@@ -177,7 +161,7 @@ void epiworldpy::export_layer(py::module &m) {
 			},
 			doc::set_rewiring, py::arg("rewiring"));
 
-	py::class_<Mixing, ContactLayer<int>, std::shared_ptr<Mixing>>(
+	py::class_<Mixing, ContactLayer, std::shared_ptr<Mixing>>(
 		m, "Mixing", doc::mixing_cls)
 		.def("set_contact_matrix", &Mixing::set_contact_matrix,
 			 doc::set_contact_matrix, py::arg("contact_matrix"))
@@ -234,33 +218,56 @@ void epiworldpy::export_layer(py::module &m) {
 	m.def(
 		 "network",
 		 [](std::string name, const GraphGenerator &generator) {
-			 return layer::network<int>(std::move(name), generator.fun);
+			 return layer::network(std::move(name), generator.fun);
 		 },
 		 doc::network, py::arg("name"), py::arg("graph"))
 		.def(
 			"network",
 			[](std::string name, const AdjList &graph) {
-				return layer::network<int>(std::move(name), graph);
+				return layer::network(std::move(name), graph);
 			},
 			doc::network_graph, py::arg("name"), py::arg("graph"))
 		.def(
 			"mixing",
-			[](std::string name, const std::vector<std::optional<size_t>> &groups,
+			[](std::string name, const py::object &groups,
 			   std::optional<std::vector<double>> contact_matrix,
 			   std::optional<ContactProb> contact_prob) {
-				// Groups: None leaves the agent out of the layer
-				std::vector<size_t> g(groups.size());
-				size_t n_groups = 0;
-				for (size_t i = 0; i < groups.size(); ++i) {
-					g[i] = groups[i].value_or(Mixing::NO_GROUP);
-					if (groups[i])
-						n_groups = std::max(n_groups, *groups[i] + 1);
+				if (contact_matrix.has_value() == contact_prob.has_value())
+					throw std::invalid_argument(
+						"Give exactly one of contact_matrix and contact_prob.");
+
+				// Groups: one per agent (None: out of the layer), or a
+				// placement whose labels are the groups
+				PyAssign a;
+				if (py::isinstance<PyAssign>(groups))
+					a = groups.cast<PyAssign>();
+				else {
+					a.form = "labels";
+					std::vector<std::optional<int>> gs;
+					try {
+						gs = groups.cast<std::vector<std::optional<int>>>();
+					} catch (const py::cast_error &) {
+						throw py::type_error(
+							"groups are a list of whole numbers (None for no "
+							"group) or a placement (e.g., assign.counts(sizes)).");
+					}
+					for (auto g : gs) {
+						if (g && (*g < 0))
+							throw std::invalid_argument(
+								"groups are non-negative integers (None for no "
+								"group) or a placement (e.g., "
+								"assign.counts(sizes)).");
+						a.labels.push_back(g ? py::object(py::int_(*g))
+											 : py::object(py::none()));
+					}
 				}
 
-				// The number of groups: the matrix's rows, or one probability
-				// per group (a single one is for every group)
-				const auto *q = contact_prob ?
-					std::get_if<std::vector<double>>(&*contact_prob) : nullptr;
+				// The number of groups: the matrix's rows, one probability
+				// per group, or the placement's labels
+				const auto *q = contact_prob
+									? std::get_if<std::vector<double>>(&*contact_prob)
+									: nullptr;
+				size_t n_groups = 0;
 				if (contact_matrix) {
 					n_groups = static_cast<size_t>(
 						std::lround(std::sqrt(double(contact_matrix->size()))));
@@ -269,26 +276,24 @@ void epiworldpy::export_layer(py::module &m) {
 							"contact_matrix must be a square matrix (flattened).");
 				} else if (q && (q->size() > 1))
 					n_groups = q->size();
+				else if ((a.form == "shares") || (a.form == "counts"))
+					n_groups = a.values.size();
+				else if (a.form == "labels") {
+					for (const auto &l : a.labels)
+						if (!l.is_none())
+							n_groups = std::max(n_groups, l.cast<size_t>() + 1);
+				} else
+					throw std::invalid_argument(
+						"With this placement, give one contact_prob per group "
+						"(or a contact_matrix), so the layer knows how many "
+						"groups there are.");
 
-				auto mix = layer::mixing<int>(std::move(name));
-				mix->set_groups(std::move(g), n_groups);
+				auto mix = layer::mixing(std::move(name));
+				mix->set_groups(assign_from_py(&a, LabelOf()), n_groups);
 				set_contacts(*mix, contact_matrix, contact_prob);
 				return mix;
 			},
 			doc::mixing, py::arg("name"), py::arg("groups"),
-			py::arg("contact_matrix") = py::none(),
-			py::arg("contact_prob") = py::none())
-		.def(
-			"mixing",
-			[](std::string name, const Grouping &groups,
-			   std::optional<std::vector<double>> contact_matrix,
-			   std::optional<ContactProb> contact_prob) {
-				auto mix = layer::mixing<int>(std::move(name));
-				mix->set_groups(groups);
-				set_contacts(*mix, contact_matrix, contact_prob);
-				return mix;
-			},
-			doc::mixing_grouping, py::arg("name"), py::arg("groups"),
 			py::arg("contact_matrix") = py::none(),
 			py::arg("contact_prob") = py::none());
 }

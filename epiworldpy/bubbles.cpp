@@ -26,7 +26,7 @@ static BubbleTies to_ties(const std::string &ties) {
 		"ties must be \"existing\" or \"complete\" (got \"" + ties + "\").");
 }
 
-void epiworldpy::export_bubbles(py::class_<Bubbles<int>> &c) {
+void epiworldpy::export_bubbles(py::class_<Bubbles> &c) {
 	c.def(py::init([](std::vector<size_t> household_id,
 					  const std::string &flavor, size_t group_size,
 					  epiworld_double transmission_factor, int start_day,
@@ -34,7 +34,7 @@ void epiworldpy::export_bubbles(py::class_<Bubbles<int>> &c) {
 					  size_t max_households, std::string param_name,
 					  const std::string &ties, std::string layer,
 					  double bubble_contact_prob) {
-			  return Bubbles<int>(
+			  return Bubbles(
 				  std::move(household_id), to_flavor(flavor), group_size,
 				  transmission_factor, start_day, end_day, rewire_every,
 				  std::move(name), max_households, std::move(param_name),
@@ -50,38 +50,38 @@ void epiworldpy::export_bubbles(py::class_<Bubbles<int>> &c) {
 		  py::arg("bubble_contact_prob") = 1.0)
 		.def(
 			"set_ties",
-			[](Bubbles<int> &self, const std::string &ties, std::string layer,
+			[](Bubbles &self, const std::string &ties, std::string layer,
 			   double bubble_contact_prob) {
 				self.set_ties(to_ties(ties), std::move(layer),
 							  bubble_contact_prob);
 			},
 			doc::set_ties, py::arg("ties"), py::arg("layer") = "",
 			py::arg("bubble_contact_prob") = 1.0)
-		.def("make_layer", &Bubbles<int>::make_layer, doc::make_layer,
+		.def("make_layer", &Bubbles::make_layer, doc::make_layer,
 			 py::arg("household_contact_prob") = 1.0)
-		.def_static("get_from", &Bubbles<int>::get_from, doc::get_from,
+		.def_static("get_from", &Bubbles::get_from, doc::get_from,
 					py::arg("model"), py::arg("name") = "Social bubble",
 					py::return_value_policy::reference, py::keep_alive<0, 1>())
-		.def("get_name", &Bubbles<int>::get_name, doc::get_name)
-		.def("get_bubble_id", &Bubbles<int>::get_bubble_id, doc::get_bubble_id)
+		.def("get_name", &Bubbles::get_name, doc::get_name)
+		.def("get_bubble_id", &Bubbles::get_bubble_id, doc::get_bubble_id)
 		.def(
 			"get_flavor",
-			[](const Bubbles<int> &self) {
+			[](const Bubbles &self) {
 				return self.get_flavor() == BubbleFlavor::Peer ? "peer"
 															   : "household";
 			},
 			doc::get_flavor)
 		.def(
 			"get_ties",
-			[](const Bubbles<int> &self) {
+			[](const Bubbles &self) {
 				return self.get_ties() == BubbleTies::Complete ? "complete"
 															   : "existing";
 			},
 			doc::get_ties)
-		.def("get_param_name", &Bubbles<int>::get_param_name,
+		.def("get_param_name", &Bubbles::get_param_name,
 			 doc::get_param_name)
-		.def("is_active", &Bubbles<int>::is_active, doc::is_active,
+		.def("is_active", &Bubbles::is_active, doc::is_active,
 			 py::arg("today"))
-		.def("get_last_epoch", &Bubbles<int>::get_last_epoch,
+		.def("get_last_epoch", &Bubbles::get_last_epoch,
 			 doc::get_last_epoch);
 }

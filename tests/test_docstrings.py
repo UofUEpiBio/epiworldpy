@@ -16,7 +16,7 @@ import re
 import pytest
 
 import epiworldpy
-from epiworldpy import epimodels, graph, grouping, layer
+from epiworldpy import assign, epimodels, graph, layer
 
 
 def _split_top_level(s: str) -> list[str]:
@@ -103,7 +103,7 @@ def _is_pybind(obj) -> bool:
 
 
 def _public_classes():
-    for mod in (epiworldpy, epimodels, graph, grouping, layer):
+    for mod in (epiworldpy, assign, epimodels, graph, layer):
         for name in sorted(dir(mod)):
             obj = getattr(mod, name)
             if (not name.startswith("_") and inspect.isclass(obj)
@@ -123,17 +123,20 @@ def _public_members(cls):
 
 CLASSES = list(_public_classes())
 
-# The functions of the compiled submodules (graph.smallworld(), ...)
+# The functions of the compiled submodules (graph.smallworld(), the model
+# registry and the named models, ...)
 BUILTINS = [
     (f"{mod.__name__}.{name}", getattr(mod, name))
-    for mod in (graph, grouping, layer)
+    for mod in (graph, layer, epimodels)
     for name in mod.__all__
     if _is_pybind(getattr(mod, name)) and not inspect.isclass(getattr(mod, name))
 ]
+# The Python functions (the savers, the placements)
 FUNCTIONS = [
-    (f"epiworldpy.{name}", getattr(epiworldpy, name))
-    for name in epiworldpy.__all__
-    if inspect.isfunction(getattr(epiworldpy, name))
+    (f"{mod.__name__}.{name}", getattr(mod, name))
+    for mod in (epiworldpy, assign)
+    for name in mod.__all__
+    if inspect.isfunction(getattr(mod, name))
 ]
 
 
