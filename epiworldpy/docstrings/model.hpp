@@ -814,8 +814,8 @@ inline constexpr const char *draw_natural_history =
 Returns
 -------
 str
-    The diagram's Mermaid source: the stages, and the transitions between
-    them.
+    The diagram's Mermaid source: the stages (and statuses), and one
+    unlabeled arrow per pair of them that some transition joins.
 )doc";
 
 } // namespace epiworldpy::docstrings::model

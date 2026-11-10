@@ -130,7 +130,10 @@ def test_transitions_by_name_strains_and_values():
     assert not m.fire("Vaccination", 0)  # infected, not susceptible
     with pytest.raises(Exception, match="Vaccinate"):
         m.fire("Vaccinate", 50)
-    assert "Vaccination" in m.draw_natural_history()
+    # The diagram: stages and unlabeled arrows (no names, kinds or values)
+    diagram = m.draw_natural_history()
+    assert "s0 --> s1" in diagram
+    assert "Vaccination" not in diagram and "|" not in diagram
 
     # A strain is a copy of the model's virus with its own name; this one reads
     # another parameter (use_param()) and does not transmit, so only its seeds
