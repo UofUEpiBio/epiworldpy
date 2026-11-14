@@ -69,6 +69,13 @@ static auto agents_labels(Model &self, bool status)
 
 void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 	c.def(py::init<size_t>(), doc::init, py::arg("n"))
+		// For C++ extensions (epiworldpy/extension.hpp): the model, in a
+		// capsule that does not own it
+		.def("_capsule",
+			 [](Model &self) {
+				 return py::capsule(static_cast<void *>(&self),
+									"epiworldpy.Model");
+			 })
 		.def(
 			"add_layer",
 			[](Model &self, std::shared_ptr<ContactLayer> layer) {

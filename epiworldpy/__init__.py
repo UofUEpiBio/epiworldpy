@@ -15,7 +15,8 @@ from ._core import (  # type: ignore[import]
     Virus,
     __epiworld_version__,
 )
-from . import assign, epimodels, graph, grouping, layer
+from . import assign, epimodels, extension, graph, grouping, layer
+from .extension import cpp_source, get_include
 from ._defunct import class_stub as _class_stub
 from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
@@ -64,7 +65,10 @@ __all__ = [
     "Value",
     "Virus",
     "assign",
+    "cpp_source",
     "epimodels",
+    "extension",
+    "get_include",
     "graph",
     "layer",
 ]

@@ -46,3 +46,20 @@ run.
    labels
    by
 ```
+
+## C++ extensions
+
+Compile C++ that works on a model built in Python (see
+[Extending epiworldpy in C++](../extending.md)).
+
+```{eval-rst}
+.. currentmodule:: epiworldpy
+
+.. autosummary::
+   :toctree: generated
+   :template: function.rst
+   :nosignatures:
+
+   cpp_source
+   get_include
+```
