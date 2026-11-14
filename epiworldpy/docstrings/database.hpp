@@ -132,19 +132,6 @@ dict
     (labels), and ``"counts"``, one entry per row.
 )doc";
 
-inline constexpr const char *get_today_transition_matrix =
-	R"doc(Get the number of agents who moved between each pair of cells today.
-
-A cell is a pair of a status and a stage (just the stage without statuses).
-
-Returns
--------
-dict
-    ``"counts"``: a flattened ``C x C`` matrix, where ``C`` is the number of
-    cells, stored by columns: entry ``i + j * C`` counts the agents who
-    moved from cell ``i`` to cell ``j``.
-)doc";
-
 inline constexpr const char *get_today_virus =
 	R"doc(Get the number of agents with each virus, by status and stage, today.
 

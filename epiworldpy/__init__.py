@@ -21,7 +21,9 @@ from ._defunct import class_stub as _class_stub
 from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
 
-_install_defunct({"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool})
+_install_defunct(
+    {"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool, "DataBase": DataBase}
+)
 Entity = _entity_stub()  # removed in 1.0.0: calling it raises
 UpdateFun = _class_stub("UpdateFun")  # removed in 1.0.0: using it raises
 NativeUpdateFun = _class_stub("NativeUpdateFun")
