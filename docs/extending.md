@@ -135,6 +135,7 @@ its first month as recovered.
 With scikit-build-core and CMake, for example:
 
 ```cmake
+find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(pybind11 CONFIG REQUIRED)
 execute_process(
   COMMAND ${Python_EXECUTABLE} -c "import epiworldpy; print(epiworldpy.get_include())"
