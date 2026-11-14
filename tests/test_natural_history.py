@@ -298,6 +298,8 @@ def test_registry():
         (lambda m: m.add_state("S"), "add_stage"),
         (lambda m: m.get_states(), "get_stages"),
         (lambda m: m.get_agents_states(), "get_agents_stages"),
+        (lambda m: m.get_db().get_today_transition_matrix(),
+         "get_hist_transition_matrix"),
         (lambda m: m.initial_states([0.5]), "set_initial"),
         (lambda m: m.set_infectious_states([1]), "infectious=True"),
         (lambda m: m.get_agent(0).get_state(), "get_stage"),

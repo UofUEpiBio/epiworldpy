@@ -146,6 +146,10 @@ DEFUNCT.update(
         ("Model", "get_agents_states"): (
             "Use model.get_agents_stages() and model.get_agents_statuses()."
         ),
+        ("DataBase", "get_today_transition_matrix"): (
+            "Use DataBase.get_hist_transition_matrix() (by day) or "
+            "DataBase.get_transition_probability()."
+        ),
         ("Model", "get_agents_in_state"): (
             "Use model.get_agents_stages() and model.get_agents_statuses()."
         ),

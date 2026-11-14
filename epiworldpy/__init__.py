@@ -15,12 +15,15 @@ from ._core import (  # type: ignore[import]
     Virus,
     __epiworld_version__,
 )
-from . import assign, epimodels, graph, grouping, layer
+from . import assign, epimodels, extension, graph, grouping, layer
+from .extension import cpp_source, get_include
 from ._defunct import class_stub as _class_stub
 from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
 
-_install_defunct({"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool})
+_install_defunct(
+    {"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool, "DataBase": DataBase}
+)
 Entity = _entity_stub()  # removed in 1.0.0: calling it raises
 UpdateFun = _class_stub("UpdateFun")  # removed in 1.0.0: using it raises
 NativeUpdateFun = _class_stub("NativeUpdateFun")
@@ -64,7 +67,10 @@ __all__ = [
     "Value",
     "Virus",
     "assign",
+    "cpp_source",
     "epimodels",
+    "extension",
+    "get_include",
     "graph",
     "layer",
 ]

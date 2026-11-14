@@ -30,6 +30,11 @@ classifiers = [
 ]
 
 [project.optional-dependencies]
+# Compiling C++ extensions in a session (epiworldpy.cpp_source())
+ext = [
+    "setuptools>=64",
+]
+
 test = [
     "epiworldpy[dev]",
     "pytest >= 8.4"

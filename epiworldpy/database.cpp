@@ -148,12 +148,6 @@ static auto get_hist_tool(DataBase &self) -> py::dict {
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_today_transition_matrix(DataBase &self) -> py::dict {
-	auto counts = new std::vector<int>();
-	self.get_today_transition_matrix(*counts);
-	return make_dict(make_dict_entry("counts", *counts));
-}
-
 static auto get_today_virus(DataBase &self) -> py::dict {
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
@@ -263,8 +257,6 @@ void epiworldpy::export_database(
 			py::arg("fn_hospitalizations") = std::string(""))
 		.def("get_hist_virus", &get_hist_virus, doc::get_hist_virus)
 		.def("get_hist_tool", &get_hist_tool, doc::get_hist_tool)
-		.def("get_today_transition_matrix", &get_today_transition_matrix,
-			 doc::get_today_transition_matrix)
 		.def("get_today_virus", &get_today_virus, doc::get_today_virus)
 		.def("get_today_total", &get_today_total, doc::get_today_total)
 		.def("size", &DataBase::size, doc::size)
@@ -293,8 +285,15 @@ void epiworldpy::export_database(
 			 doc::get_outbreak_size)
 		.def("get_hospitalizations", &get_hospitalizations,
 			 doc::get_hospitalizations)
-		.def("get_transition_probability",
-			 &DataBase::get_transition_probability,
-			 doc::get_transition_probability,
-			 py::arg("print") = false, py::arg("normalize") = true);
+		.def(
+			"get_transition_probability",
+			[](const DataBase &self, bool print, bool normalize) {
+				auto tm = self.get_transition_probability(
+					epiworld::Margin::pair, epiworld::all_diseases, normalize);
+				if (print)
+					tm.print();
+				return tm.values;
+			},
+			doc::get_transition_probability,
+			py::arg("print") = false, py::arg("normalize") = true);
 }

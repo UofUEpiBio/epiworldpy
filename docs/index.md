@@ -9,6 +9,7 @@
 
 intro
 performance
+extending
 ```
 
 ```{toctree}
