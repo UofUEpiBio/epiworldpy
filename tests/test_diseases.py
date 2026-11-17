@@ -130,6 +130,28 @@ def test_diseases(tmp_path):
     assert model.fire("Infected -> Recovered", rsv_agent, disease="RSV")
 
 
+def test_mutants_are_labelled():
+    """Variants born by mutation are in the database, not among the viruses."""
+    model = epimodels.ModelSIR("Flu", n=500, prevalence=0.05,
+                               transmission_prob=0.4, recovery_rate=0.1)
+    model.add_layer(layer.network("contacts", graph.smallworld(k=8, p=0.05)))
+    model.verbose_off()
+    model.get_virus(0).set_mutation(lambda agent, virus, model: True)
+    model.run(20, 77)
+    db = model.get_db()
+    assert db.get_n_viruses() > 1
+
+    hv = decode(db.get_hist_virus())
+    assert len(set(hv["ids"])) > 1
+    vt = decode(db.get_hist_virus_transitions())
+    rn = decode(db.get_reproductive_number())
+    for table in (hv, vt, rn):
+        assert len(table["disease"]) > 0
+        assert set(table["disease"]) == {"Flu"}
+    assert "" not in vt["viruses"]
+    assert len(vt["viruses"]) == len(vt["ids"])
+
+
 def test_empty_model_diseases():
     model = Model(5)
     assert model.get_diseases() == []

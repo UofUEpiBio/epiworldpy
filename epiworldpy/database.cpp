@@ -64,8 +64,8 @@ static auto get_reproductive_number(DataBase &self,
 		sources->push_back(kv.first[1]);
 		dates->push_back(kv.first[2]);
 		counts->push_back(kv.second);
-		dnames.push_back(diseases.at(static_cast<size_t>(
-			self.get_model()->get_virus(kv.first[0]).get_disease())));
+		dnames.push_back(diseases.at(
+			static_cast<size_t>(self.get_virus_disease(kv.first[0]))));
 	}
 	return make_dict(make_dict_entry("disease", dnames),
 					 make_dict_entry("virus_id", *viruses),
@@ -279,7 +279,7 @@ static auto get_hist_virus_transitions(DataBase &self,
 									disease_index(*self.get_model(), disease),
 									&dnames);
 	for (int id : *ids)
-		viruses.push_back(self.get_model()->get_virus(id).get_name());
+		viruses.push_back(self.get_virus_name(id));
 	return make_dict(
 		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
 		make_dict_entry("ids", *ids), make_dict_entry("viruses", viruses),
