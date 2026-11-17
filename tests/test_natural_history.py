@@ -154,7 +154,9 @@ def test_transitions_by_name_strains_and_values():
     assert by_day.max() <= 20
     assert counts[(ids == 0)].max() > 20
     assert model.get_virus(1).get_name() == "B"
-    assert model.get_virus(1).get_lineage_id() == 1
+    assert model.get_diseases() == ["A virus"]
+    assert set(hv["ids"]) == {0, 1}
+    assert list(hv["disease"]["values"]) == ["A virus"]
 
     # Values: 1 - parameter, 1 / parameter, and a Python function
     v = (Virus("Values")

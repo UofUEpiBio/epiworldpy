@@ -93,18 +93,17 @@ void epiworldpy::export_layer(py::module &m) {
 		.def("get_id", &ContactLayer::get_id, doc::get_id)
 		.def("set_weight", &ContactLayer::set_weight, doc::set_weight,
 			 py::arg("param"))
+
 		.def(
-			"add_virus_target",
-			[](ContactLayer &self, int lineage_id) {
-				self.add_virus_target(lineage_id);
+			"add_target",
+			[](ContactLayer &self,
+			   const py::object &disease) -> ContactLayer & {
+				self.add_target(disease_name(disease));
+				return self;
 			},
-			doc::add_virus_target_id, py::arg("lineage_id"))
-		.def(
-			"add_virus_target",
-			[](ContactLayer &self, const Virus &virus) {
-				self.add_virus_target(virus);
-			},
-			doc::add_virus_target, py::arg("virus"))
+			py::return_value_policy::reference_internal, doc::add_target,
+			py::arg("disease"))
+		.def("get_targets", &ContactLayer::get_targets, doc::get_targets)
 		.def("enable_tracing", &ContactLayer::enable_tracing,
 			 doc::enable_tracing, py::arg("max_contacts") = EPI_MAX_TRACKING)
 		.def("disable_tracing", &ContactLayer::disable_tracing,

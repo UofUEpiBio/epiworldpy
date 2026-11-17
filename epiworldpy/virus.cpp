@@ -52,7 +52,7 @@ void epiworldpy::export_virus(py::class_<Virus> &c) {
 	c.def(py::init<std::string>(), doc::init, py::arg("name"))
 		.def("get_id", &Virus::get_id, doc::get_id)
 		.def("get_name", &Virus::get_name, doc::get_name)
-		.def("get_lineage_id", &Virus::get_lineage_id, doc::get_lineage_id)
+		.def("strain", &Virus::strain, doc::strain, py::arg("name"))
 		.def("set_name", &Virus::set_name, doc::set_name, py::arg("name"))
 		.def("get_date", &Virus::get_date, doc::get_date)
 		.def("set_date", &Virus::set_date, doc::set_date, py::arg("date"))

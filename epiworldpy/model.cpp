@@ -53,17 +53,17 @@ static auto get_statuses(const Model &self) -> std::vector<std::string> {
 }
 
 /* The label of each agent's stage (or status; "Free" without statuses) */
-static auto agents_labels(Model &self, bool status)
+static auto agents_labels(Model &self, bool status, int disease = all_diseases)
 	-> std::vector<std::string> {
 	if (status && (self.get_statuses() == nullptr))
 		return std::vector<std::string>(self.size(), "Free");
 	const std::vector<std::string> &labels =
-		status ? self.get_statuses()->get_stages() : model_nh(self).get_stages();
+		status ? self.get_statuses()->get_stages() : self.get_stages(disease);
 	std::vector<std::string> out;
 	out.reserve(self.size());
 	for (const auto &a : self.get_agents())
-		out.push_back(labels[static_cast<size_t>(status ? self.get_status(a)
-														: self.get_stage(a))]);
+		out.push_back(labels[static_cast<size_t>(
+			status ? self.get_status(a) : self.get_stage(a, disease))]);
 	return out;
 }
 
@@ -117,9 +117,10 @@ void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 		.def(
 			"assign_virus",
 			[](Model &self, size_t virus_pos, const PyAssign &assign) {
-				self.assign_virus(virus_pos,
-								  assign_from_py(&assign,
-												 stage_resolver(model_nh(self))));
+				self.assign_virus(
+					virus_pos,
+					assign_from_py(&assign, stage_resolver(virus_nh(
+												self.get_virus(virus_pos)))));
 			},
 			doc::assign_virus, py::arg("virus_pos"), py::arg("assign"))
 		.def("rm_virus", &Model::rm_virus, doc::rm_virus,
@@ -154,24 +155,33 @@ void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 			py::arg("tool_pos"))
 		.def(
 			"set_initial",
-			[](Model &self, const PyAssign &assign) {
-				// The labels are the model's stages
+			[](Model &self, const PyAssign &assign, const py::object &disease) {
+				const int d = disease_index(self, disease);
 				self.set_initial(
-					assign_from_py(&assign, stage_resolver(model_nh(self))));
+					assign_from_py(&assign, stage_resolver(model_nh(self, d))),
+					d);
 			},
-			doc::set_initial, py::arg("assign"))
+			doc::set_initial, py::arg("assign"),
+			py::arg("disease") = py::none())
 		.def(
 			"get_stages",
-			[](const Model &self) { return model_nh(self).get_stages(); },
-			doc::get_stages)
+			[](const Model &self, const py::object &disease) {
+				const int d = disease_index(self, disease);
+				model_nh(self, d);
+				return self.get_stages(d);
+			},
+			doc::get_stages, py::arg("disease") = py::none())
+		.def("get_diseases", &Model::get_diseases, doc::get_diseases)
 		.def("get_statuses", &get_statuses, doc::get_statuses)
 		.def(
 			"get_stage",
-			[](const Model &self, const Agent &agent) {
-				return model_nh(self).get_stages()[static_cast<size_t>(
-					self.get_stage(agent))];
+			[](const Model &self, const Agent &agent,
+			   const py::object &disease) {
+				const int d = disease_index(self, disease);
+				return self.get_stages(
+					d)[static_cast<size_t>(self.get_stage(agent, d))];
 			},
-			doc::get_stage, py::arg("agent"))
+			doc::get_stage, py::arg("agent"), py::arg("disease") = py::none())
 		.def(
 			"get_status",
 			[](const Model &self, const Agent &agent) -> std::string {
@@ -184,19 +194,27 @@ void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 			doc::get_status, py::arg("agent"))
 		.def(
 			"get_agents_stages",
-			[](Model &self) { return agents_labels(self, false); },
-			doc::get_agents_stages)
+			[](Model &self, const py::object &disease) {
+				const int d = disease_index(self, disease);
+				if (self.get_n_diseases() == 0u)
+					return std::vector<std::string>(self.size(), "");
+				return agents_labels(self, false, d);
+			},
+			doc::get_agents_stages, py::arg("disease") = py::none())
 		.def(
 			"get_agents_statuses",
 			[](Model &self) { return agents_labels(self, true); },
 			doc::get_agents_statuses)
 		.def(
 			"fire",
-			[](Model &self, std::string_view transition, size_t agent_id) {
-				return self.fire(self.transition_id(transition),
+			[](Model &self, std::string_view transition, size_t agent_id,
+			   const py::object &disease) {
+				return self.fire(self.transition_id(
+									 transition, disease_index(self, disease)),
 								 self.get_agent(agent_id));
 			},
-			doc::fire, py::arg("transition"), py::arg("agent_id"))
+			doc::fire, py::arg("transition"), py::arg("agent_id"),
+			py::arg("disease") = py::none())
 		.def("draw_natural_history", &Model::draw_natural_history,
 			 doc::draw_natural_history)
 		.def("reset", &Model::reset, doc::reset)

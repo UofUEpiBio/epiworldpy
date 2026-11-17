@@ -125,7 +125,7 @@ class TestDatabaseAPI:
         db = seirconn.get_db()
         tm = db.get_hist_transition_matrix(skip_zeros=True)
         assert sorted(tm) == [
-            "counts", "dates", "stage_from", "stage_to", "status_from",
+            "counts", "dates", "disease", "stage_from", "stage_to", "status_from",
             "status_to",
         ]
         assert set(tm["stage_from"]["values"]) <= set(seirconn.get_stages())
@@ -154,7 +154,7 @@ class TestDatabaseAPI:
     def test_get_today_total(self, seirconn):
         db = seirconn.get_db()
         today = db.get_today_total()
-        assert sorted(today) == ["counts", "stages", "statuses"]
+        assert sorted(today) == ["counts", "disease", "stages", "statuses"]
         # 4 stages in SEIR, no statuses
         assert len(today["counts"]) == 4
         assert today["counts"].sum() == 5000
@@ -162,7 +162,7 @@ class TestDatabaseAPI:
     def test_get_today_virus(self, seirconn):
         db = seirconn.get_db()
         tv = db.get_today_virus()
-        assert sorted(tv) == ["counts", "ids", "stages", "statuses"]
+        assert sorted(tv) == ["counts", "disease", "ids", "stages", "statuses"]
 
     def test_transition_probability(self, seirconn):
         db = seirconn.get_db()

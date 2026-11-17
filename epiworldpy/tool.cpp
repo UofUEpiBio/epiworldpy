@@ -1,4 +1,5 @@
 #include "tool.hpp"
+#include "natural_history.hpp"
 #include "docstrings/tool.hpp"
 
 #include <pybind11/functional.h>
@@ -85,15 +86,38 @@ void epiworldpy::export_tool(pybind11::class_<epiworld::Tool> &c) {
 			 doc::set_recovery_enhancer_fun, py::arg("fun"))
 		.def("set_death_reduction_fun", &Tool::set_death_reduction_fun,
 			 doc::set_death_reduction_fun, py::arg("fun"))
-		.def("add_target", py::overload_cast<int>(&Tool::add_target),
-			 doc::add_target, py::arg("target"))
-		.def("add_target",
-			 py::overload_cast<const Virus &>(&Tool::add_target),
-			 doc::add_target, py::arg("target"))
-		.def("set_targets", &Tool::set_targets, doc::set_targets,
-			 py::arg("lineage_ids"))
+		.def(
+			"add_target",
+			[](Tool &self, const py::object &disease) -> Tool & {
+				self.add_target(disease_name(disease));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::add_target,
+			py::arg("disease"))
+		.def(
+			"set_targets",
+			[](Tool &self, const py::object &diseases) -> Tool & {
+				std::vector<std::string> names;
+				if (!diseases.is_none()) {
+					if (!py::isinstance<py::list>(diseases))
+						throw py::type_error("set_targets(diseases) takes a "
+											 "list of disease names or None.");
+					for (auto d : diseases.cast<py::list>())
+						names.push_back(disease_name(d));
+				}
+				self.set_targets(std::move(names));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::set_targets,
+			py::arg("diseases"))
 		.def("get_targets", &Tool::get_targets, doc::get_targets)
-		.def("clear_targets", &Tool::clear_targets, doc::clear_targets)
+		.def(
+			"clear_targets",
+			[](Tool &self) -> Tool & {
+				self.clear_targets();
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::clear_targets)
 		.def("targets", &Tool::targets, doc::targets, py::arg("v"))
 		.def(
 			"clone",

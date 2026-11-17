@@ -14,7 +14,8 @@ def transmissions(model):
     """Infections by another agent (seeds excluded)."""
     tr = model.get_db().get_transmissions()
     keep = tr["sources"] >= 0
-    return {k: np.asarray(v)[keep] for k, v in tr.items()}
+    return {k: (v["values"][v["indexes"]] if isinstance(v, dict)
+                else np.asarray(v))[keep] for k, v in tr.items()}
 
 
 def sir(n=1000):
@@ -264,14 +265,19 @@ def test_several_layers_weights_and_targets():
     m.run(20, 1)
     assert set(transmissions(m)["layers"]) == {1}
 
-    # A layer that targets another virus (a strain, placed on nobody) does not
-    # spread this one. The target is the model's copy: only it has a lineage.
-    other = m.get_virus(0).clone()
-    other.set_name("other")
+    # A layer targeting another disease (placed on nobody) does not spread flu.
+    other = (epiworld.Virus("other").add_stage("Susceptible")
+             .add_stage("Infected", infectious=True).add_stage("Recovered")
+             .add_infection("Susceptible", "Infected", rate=0.5)
+             .add_rate("Infected", "Recovered", rate=0.1))
     m.add_virus(other)
-    b.add_virus_target(m.get_virus(1))
+    b.add_target("other")
+    assert b.get_targets() == ["other"]
     m.run(20, 1)
     assert len(transmissions(m)["layers"]) == 0
+    b.add_target("measles")
+    with pytest.raises((ValueError, RuntimeError), match="measles"):
+        m.run(5, 1)
 
 
 def test_contact_rate_and_infectious_stages():

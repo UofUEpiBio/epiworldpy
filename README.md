@@ -73,8 +73,8 @@ error that names their replacement.
   `set_rewiring(graph.rewire_degseq(param))`. The contact matrix of a mixing
   model is on `model.get_layer("mixing")`.
 - `get_transmissions()` gains `layers`: the layer each infection came
-  through. Layers have a weight (`set_weight(param)`) and virus targets
-  (`add_virus_target(virus)`).
+  through. Layers have a weight (`set_weight(param)`) and disease targets
+  (`add_target(disease)`, by name).
 - Entities are gone; groups live in mixing layers
   ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
   `Entity`, `Model.add_entity()`, `get_entity()`, `get_n_entities()`, and

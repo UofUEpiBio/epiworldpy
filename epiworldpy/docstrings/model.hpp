@@ -25,7 +25,8 @@ An empty ``Model(n)`` builds a custom model: add parameters
 (:meth:`add_param`), a virus that carries the stages of the disease and the
 transitions between them (:class:`Virus`), placed with :mod:`epiworldpy.assign`
 (:meth:`add_virus`), tools (:meth:`add_tool`), and layers (:meth:`add_layer`).
-The first virus gives the model its stages.
+Each disease has its own stages. Use disease names from :meth:`get_diseases`
+when querying stages in a model with several diseases.
 )doc";
 
 inline constexpr const char *init =
@@ -145,11 +146,14 @@ int
 
 inline constexpr const char *add_virus = R"doc(Add a virus to the model.
 
-The model keeps its own copy of ``virus``: only that copy gets an id (and a
-lineage), so give agents and tools the model's copy (:meth:`get_virus`). The
-first virus gives the model its stages; a second one is a strain of it, with
-the same stages and transitions (a copy, :meth:`Virus.clone`, whose
-transitions may read other parameters, :meth:`Virus.use_param`).
+The model keeps its own copy of ``virus`` and gives it an id. A virus built
+from scratch starts a new disease with a distinct name; a copy from
+:meth:`Virus.strain` or :meth:`Virus.clone` is a strain of the same disease,
+with the same stages and transitions. A strain can read different parameters
+(:meth:`Virus.use_param`). An agent holds at most one infection at a time.
+With several diseases, tools must explicitly name their targets, automatic
+transmission uses pull, and forcing push is an error. If one disease removes
+an agent, the others record it in "Removed (other disease)".
 
 Parameters
 ----------
@@ -681,7 +685,7 @@ virus_pos : int
 Returns
 -------
 Virus
-    The model's virus (not a copy): its id and lineage are the model's.
+    The model's virus (not a copy), with its assigned id.
 )doc";
 
 inline constexpr const char *assign_tool = R"doc(Change where a tool of the model is placed.
@@ -723,16 +727,23 @@ already recovered. The virus's seeds are placed first.
 
 Parameters
 ----------
+disease : str or None, default None
+    Disease name; required when the model has several diseases.
 assign : epiworldpy.assign.Assign
-    The placement; its labels are the model's stages.
+    The placement; its labels are the selected disease's stages.
 )doc";
 
 inline constexpr const char *get_stages = R"doc(Get the model's stages.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name; required when the model has several diseases.
+
 Returns
 -------
 list of str
-    The labels of the stages, in order (from the model's first virus).
+    The labels of this disease's stages, in order.
 )doc";
 
 inline constexpr const char *get_statuses = R"doc(Get the model's statuses.
@@ -748,6 +759,8 @@ inline constexpr const char *get_stage = R"doc(Get the stage of an agent.
 
 Parameters
 ----------
+disease : str or None, default None
+    Disease name; required when the model has several diseases.
 agent : Agent
     The agent (from :meth:`get_agent`).
 
@@ -773,6 +786,11 @@ str
 inline constexpr const char *get_agents_stages =
 	R"doc(Get the stage of every agent.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name; required when the model has several diseases.
+
 Returns
 -------
 list of str
@@ -796,6 +814,9 @@ An agent moves only along a declared transition; an external one
 
 Parameters
 ----------
+disease : str or None, default None
+    Disease name; required for stage transitions when the model has several
+    diseases. A status transition needs none.
 transition : str
     Name of the transition (e.g., ``"Vaccination"``, or
     ``"Infected -> Recovered"`` for an unnamed one).
@@ -816,6 +837,16 @@ Returns
 str
     The diagram's Mermaid source: the stages (and statuses), and one
     unlabeled arrow per pair of them that some transition joins.
+)doc";
+
+inline constexpr const char *get_diseases = R"doc(Get the model's disease names, in the order added.
+
+Returns
+-------
+list of str
+    Diseases. A virus built from scratch starts a disease; its copies and
+    Virus.strain() belong to the same disease. An agent carries at most one
+    infection at a time and may catch another disease after recovery.
 )doc";
 
 } // namespace epiworldpy::docstrings::model
