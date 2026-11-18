@@ -22,7 +22,8 @@ from ._defunct import entity_stub as _entity_stub
 from ._defunct import install as _install_defunct
 
 _install_defunct(
-    {"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool, "DataBase": DataBase}
+    {"Model": Model, "Agent": Agent, "Virus": Virus, "Tool": Tool,
+     "DataBase": DataBase, "ContactLayer": layer.ContactLayer}
 )
 Entity = _entity_stub()  # removed in 1.0.0: calling it raises
 UpdateFun = _class_stub("UpdateFun")  # removed in 1.0.0: using it raises
@@ -114,7 +115,14 @@ def write_db_results_multiple_csv(
             writer = csv.writer(f)
             if isinstance(value, dict):
                 writer.writerow(value.keys())
-                rows = zip(*value.values())
+                columns = (
+                    column["values"][column["indexes"]]
+                    if isinstance(column, dict)
+                    and "values" in column and "indexes" in column
+                    else column
+                    for column in value.values()
+                )
+                rows = zip(*columns)
                 writer.writerows(rows)
             else:
                 writer.writerows(value)

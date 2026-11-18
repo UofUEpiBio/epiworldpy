@@ -1,4 +1,5 @@
 #include "database.hpp"
+#include "natural_history.hpp"
 #include "docstrings/database.hpp"
 #include "common.hpp"
 #include "config.hpp"
@@ -13,56 +14,71 @@ using namespace pybind11::literals;
 namespace py = pybind11;
 namespace doc = epiworldpy::docstrings::database;
 
-static auto get_hist_total(DataBase &self) -> py::dict {
+static auto get_hist_total(DataBase &self,
+						   const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
 	auto dates = new std::vector<int>;
 	auto counts = new std::vector<int>;
 
-	self.get_hist_total(dates, &statuses, &stages, counts);
+	self.get_hist_total(dates, &statuses, &stages, counts, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("statuses", statuses),
-					 make_dict_entry("stages", stages),
-					 make_dict_entry("counts", *counts));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("statuses", statuses),
+		make_dict_entry("stages", stages), make_dict_entry("counts", *counts));
 }
 
-static auto get_hist_transitions(DataBase &self) -> py::dict {
+static auto get_hist_transitions(DataBase &self,
+								 const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto transitions = std::vector<std::string>();
 	auto counts = new std::vector<int>();
 
-	self.get_hist_transitions(*dates, transitions, *counts);
+	self.get_hist_transitions(*dates, transitions, *counts, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("dates", *dates),
 					 make_dict_entry("transitions", transitions),
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_reproductive_number(DataBase &self)
-	-> py::array_t<long long> {
-	auto raw_rt = self.get_reproductive_number();
-
-	auto nrows = static_cast<py::ssize_t>(raw_rt.size());
-	py::ssize_t ncols = 4;
-
-	py::array_t<long long> arr({nrows, ncols});
-	auto buf = arr.mutable_unchecked<2>();
-
-	py::ssize_t i = 0;
-	for (const auto &kv : raw_rt) {
-		const auto &key = kv.first;
-		buf(i, 0) = static_cast<long long>(key[0]);
-		buf(i, 1) = static_cast<long long>(key[2]);
-		buf(i, 2) = static_cast<long long>(key[1]);
-		buf(i, 3) = static_cast<long long>(kv.second);
-		++i;
+static auto get_reproductive_number(DataBase &self,
+									const py::object &disease) -> py::dict {
+	auto raw =
+		self.get_reproductive_number(disease_index(*self.get_model(), disease));
+	auto viruses = new std::vector<int>();
+	auto sources = new std::vector<int>();
+	auto dates = new std::vector<int>();
+	auto counts = new std::vector<int>();
+	std::vector<std::string> dnames;
+	const auto diseases = self.get_model()->get_diseases();
+	for (const auto &kv : raw) {
+		viruses->push_back(kv.first[0]);
+		sources->push_back(kv.first[1]);
+		dates->push_back(kv.first[2]);
+		counts->push_back(kv.second);
+		dnames.push_back(diseases.at(
+			static_cast<size_t>(self.get_virus_disease(kv.first[0]))));
 	}
-
-	return arr;
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("virus_id", *viruses),
+					 make_dict_entry("sources", *sources),
+					 make_dict_entry("source_exposure_dates", *dates),
+					 make_dict_entry("rt", *counts));
 }
 
-static auto get_transmissions(DataBase &self) -> py::dict {
+static auto get_transmissions(DataBase &self,
+							  const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto sources = new std::vector<int>();
 	auto targets = new std::vector<int>();
@@ -71,32 +87,39 @@ static auto get_transmissions(DataBase &self) -> py::dict {
 	auto layers = new std::vector<int>();
 
 	self.get_transmissions(*dates, *sources, *targets, *viruses,
-						   *source_exposure_dates, *layers);
+						   *source_exposure_dates, *layers, d, &dnames);
 
 	return make_dict(
-		make_dict_entry("dates", *dates), make_dict_entry("sources", *sources),
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("sources", *sources),
 		make_dict_entry("targets", *targets),
 		make_dict_entry("viruses", *viruses),
 		make_dict_entry("source_exposure_dates", *source_exposure_dates),
 		make_dict_entry("layers", *layers));
 }
 
-static auto get_generation_time(DataBase &self) -> py::dict {
+static auto get_generation_time(DataBase &self,
+								const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto agents = new std::vector<int>();
 	auto viruses = new std::vector<int>();
 	auto times = new std::vector<int>();
 	auto gentimes = new std::vector<int>();
 
-	self.get_generation_time(*agents, *viruses, *times, *gentimes);
+	self.get_generation_time(*agents, *viruses, *times, *gentimes, d, &dnames);
 
-	return make_dict(make_dict_entry("agents", *agents),
-					 make_dict_entry("viruses", *viruses),
-					 make_dict_entry("times", *times),
-					 make_dict_entry("generation_times", *gentimes));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("agents", *agents),
+		make_dict_entry("viruses", *viruses), make_dict_entry("times", *times),
+		make_dict_entry("generation_times", *gentimes));
 }
 
-static auto get_hist_transition_matrix(DataBase &self, bool skip_zeros)
-	-> py::dict {
+static auto get_hist_transition_matrix(DataBase &self, bool skip_zeros,
+									   const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
 
 	auto status_from = std::vector<std::string>();
 	auto stage_from = std::vector<std::string>();
@@ -106,9 +129,11 @@ static auto get_hist_transition_matrix(DataBase &self, bool skip_zeros)
 	auto counts = new std::vector<int>();
 
 	self.get_hist_transition_matrix(status_from, stage_from, status_to,
-									stage_to, *dates, *counts, skip_zeros);
+									stage_to, *dates, *counts, skip_zeros, d,
+									&dnames);
 
-	return make_dict(make_dict_entry("status_from", status_from),
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("status_from", status_from),
 					 make_dict_entry("stage_from", stage_from),
 					 make_dict_entry("status_to", status_to),
 					 make_dict_entry("stage_to", stage_to),
@@ -116,102 +141,150 @@ static auto get_hist_transition_matrix(DataBase &self, bool skip_zeros)
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_hist_virus(DataBase &self) -> py::dict {
+static auto get_hist_virus(DataBase &self,
+						   const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto ids = new std::vector<int>();
 	auto counts = new std::vector<int>();
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
 
-	self.get_hist_virus(*dates, *ids, statuses, stages, *counts);
+	self.get_hist_virus(*dates, *ids, statuses, stages, *counts, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("ids", *ids),
-					 make_dict_entry("statuses", statuses),
-					 make_dict_entry("stages", stages),
-					 make_dict_entry("counts", *counts));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("ids", *ids), make_dict_entry("statuses", statuses),
+		make_dict_entry("stages", stages), make_dict_entry("counts", *counts));
 }
 
-static auto get_hist_tool(DataBase &self) -> py::dict {
+static auto get_hist_tool(DataBase &self,
+						  const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto ids = new std::vector<int>();
 	auto counts = new std::vector<int>();
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
 
-	self.get_hist_tool(*dates, *ids, statuses, stages, *counts);
+	self.get_hist_tool(*dates, *ids, statuses, stages, *counts, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("ids", *ids),
-					 make_dict_entry("statuses", statuses),
-					 make_dict_entry("stages", stages),
-					 make_dict_entry("counts", *counts));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("ids", *ids), make_dict_entry("statuses", statuses),
+		make_dict_entry("stages", stages), make_dict_entry("counts", *counts));
 }
 
-static auto get_today_virus(DataBase &self) -> py::dict {
+static auto get_today_virus(DataBase &self,
+							const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
 	auto ids = new std::vector<int>();
 	auto counts = new std::vector<int>();
 
-	self.get_today_virus(statuses, stages, *ids, *counts);
+	self.get_today_virus(statuses, stages, *ids, *counts, d, &dnames);
 
-	return make_dict(make_dict_entry("statuses", statuses),
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("statuses", statuses),
 					 make_dict_entry("stages", stages),
 					 make_dict_entry("ids", *ids),
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_today_total(DataBase &self) -> py::dict {
+static auto get_today_total(DataBase &self,
+							const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto counts = new std::vector<int>();
 	auto statuses = std::vector<std::string>();
 	auto stages = std::vector<std::string>();
 
-	self.get_today_total(&statuses, &stages, counts);
+	self.get_today_total(&statuses, &stages, counts, d, &dnames);
 
-	return make_dict(make_dict_entry("statuses", statuses),
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("statuses", statuses),
 					 make_dict_entry("stages", stages),
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_active_cases(DataBase &self) -> py::dict {
+static auto get_active_cases(DataBase &self,
+							 const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto virus_id = new std::vector<int>();
 	auto counts = new std::vector<int>();
 
-	self.get_active_cases(*dates, *virus_id, *counts);
+	self.get_active_cases(*dates, *virus_id, *counts, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
+	return make_dict(make_dict_entry("disease", dnames),
+					 make_dict_entry("dates", *dates),
 					 make_dict_entry("virus_id", *virus_id),
 					 make_dict_entry("counts", *counts));
 }
 
-static auto get_outbreak_size(DataBase &self) -> py::dict {
+static auto get_outbreak_size(DataBase &self,
+							  const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto virus_id = new std::vector<int>();
 	auto size = new std::vector<int>();
 
-	self.get_outbreak_size(*dates, *virus_id, *size);
+	self.get_outbreak_size(*dates, *virus_id, *size, d, &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("virus_id", *virus_id),
-					 make_dict_entry("size", *size));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("virus_id", *virus_id), make_dict_entry("size", *size));
 }
 
-static auto get_hospitalizations(DataBase &self) -> py::dict {
+static auto get_hospitalizations(DataBase &self,
+								 const py::object &disease) -> py::dict {
+	std::vector<std::string> dnames;
+	const int d = disease_index(*self.get_model(), disease);
+
 	auto dates = new std::vector<int>();
 	auto virus_id = new std::vector<int>();
 	auto tool_id = new std::vector<int>();
 	auto count = new std::vector<int>();
 	auto weight = new std::vector<double>();
 
-	self.get_hospitalizations(*dates, *virus_id, *tool_id, *count, *weight);
+	self.get_hospitalizations(*dates, *virus_id, *tool_id, *count, *weight, d,
+							  &dnames);
 
-	return make_dict(make_dict_entry("dates", *dates),
-					 make_dict_entry("virus_id", *virus_id),
-					 make_dict_entry("tool_id", *tool_id),
-					 make_dict_entry("count", *count),
-					 make_dict_entry("weight", *weight));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("virus_id", *virus_id),
+		make_dict_entry("tool_id", *tool_id), make_dict_entry("count", *count),
+		make_dict_entry("weight", *weight));
+}
+
+static auto get_hist_virus_transitions(DataBase &self,
+									   const py::object &disease) -> py::dict {
+	auto dates = new std::vector<int>();
+	auto ids = new std::vector<int>();
+	auto counts = new std::vector<int>();
+	std::vector<std::string> transitions, dnames, viruses;
+	self.get_hist_virus_transitions(*dates, *ids, transitions, *counts,
+									disease_index(*self.get_model(), disease),
+									&dnames);
+	for (int id : *ids)
+		viruses.push_back(self.get_virus_name(id));
+	return make_dict(
+		make_dict_entry("disease", dnames), make_dict_entry("dates", *dates),
+		make_dict_entry("ids", *ids), make_dict_entry("viruses", viruses),
+		make_dict_entry("transitions", transitions),
+		make_dict_entry("counts", *counts));
 }
 
 void epiworldpy::export_database(
@@ -255,45 +328,72 @@ void epiworldpy::export_database(
 			py::arg("fn_active_cases") = std::string(""),
 			py::arg("fn_outbreak_size") = std::string(""),
 			py::arg("fn_hospitalizations") = std::string(""))
-		.def("get_hist_virus", &get_hist_virus, doc::get_hist_virus)
-		.def("get_hist_tool", &get_hist_tool, doc::get_hist_tool)
-		.def("get_today_virus", &get_today_virus, doc::get_today_virus)
-		.def("get_today_total", &get_today_total, doc::get_today_total)
+		.def("get_hist_virus", &get_hist_virus, doc::get_hist_virus,
+			 py::arg("disease") = py::none())
+		.def("get_hist_tool", &get_hist_tool, doc::get_hist_tool,
+			 py::arg("disease") = py::none())
+		.def("get_today_virus", &get_today_virus, doc::get_today_virus,
+			 py::arg("disease") = py::none())
+		.def("get_today_total", &get_today_total, doc::get_today_total,
+			 py::arg("disease") = py::none())
 		.def("size", &DataBase::size, doc::size)
 		.def("record", &DataBase::record, doc::record)
 		.def("reset", &DataBase::reset, doc::reset)
-		.def("record_tool", &DataBase::record_tool,
-			 doc::record_tool, py::arg("t"))
-		.def("record_virus", &DataBase::record_virus,
-			 doc::record_virus, py::arg("v"), py::arg("founder") = false)
-		.def("get_hist_total", &get_hist_total,
-			 doc::get_hist_total)
+		.def("record_tool", &DataBase::record_tool, doc::record_tool,
+			 py::arg("t"))
+		.def("record_virus", &DataBase::record_virus, doc::record_virus,
+			 py::arg("v"), py::arg("founder") = false)
+		.def("get_hist_total", &get_hist_total, doc::get_hist_total,
+			 py::arg("disease") = py::none())
 		.def("get_reproductive_number", &get_reproductive_number,
-			 doc::get_reproductive_number)
-		.def("get_transmissions", &get_transmissions,
-			 doc::get_transmissions)
+			 doc::get_reproductive_number, py::arg("disease") = py::none())
+		.def("get_transmissions", &get_transmissions, doc::get_transmissions,
+			 py::arg("disease") = py::none())
 		.def("get_generation_time", &get_generation_time,
-			 doc::get_generation_time)
+			 doc::get_generation_time, py::arg("disease") = py::none())
+		.def("get_hist_virus_transitions", &get_hist_virus_transitions,
+			 doc::get_hist_virus_transitions, py::arg("disease") = py::none())
 		.def("get_hist_transitions", &get_hist_transitions,
-			 doc::get_hist_transitions)
+			 doc::get_hist_transitions, py::arg("disease") = py::none())
 		.def("get_hist_transition_matrix", &get_hist_transition_matrix,
-			 doc::get_hist_transition_matrix,
-			 py::arg("skip_zeros") = false)
-		.def("get_active_cases", &get_active_cases,
-			 doc::get_active_cases)
-		.def("get_outbreak_size", &get_outbreak_size,
-			 doc::get_outbreak_size)
+			 doc::get_hist_transition_matrix, py::arg("skip_zeros") = false,
+			 py::arg("disease") = py::none())
+		.def("get_active_cases", &get_active_cases, doc::get_active_cases,
+			 py::arg("disease") = py::none())
+		.def("get_outbreak_size", &get_outbreak_size, doc::get_outbreak_size,
+			 py::arg("disease") = py::none())
 		.def("get_hospitalizations", &get_hospitalizations,
-			 doc::get_hospitalizations)
+			 doc::get_hospitalizations, py::arg("disease") = py::none())
+
 		.def(
 			"get_transition_probability",
-			[](const DataBase &self, bool print, bool normalize) {
+			[](DataBase &self, const std::string &margin,
+			   const py::object &disease, bool normalize, bool print) {
+				Margin m;
+				if (margin == "pair")
+					m = Margin::pair;
+				else if (margin == "stage")
+					m = Margin::stage;
+				else if (margin == "status")
+					m = Margin::status;
+				else
+					throw py::value_error(
+						"margin must be \"pair\", \"stage\" or \"status\".");
 				auto tm = self.get_transition_probability(
-					epiworld::Margin::pair, epiworld::all_diseases, normalize);
+					m, disease_index(*self.get_model(), disease), normalize);
 				if (print)
 					tm.print();
-				return tm.values;
+				const py::ssize_t n = static_cast<py::ssize_t>(
+					m == Margin::status ? tm.status.size() : tm.stage.size());
+				py::array_t<epiworld_double> out({n, n});
+				auto values = out.mutable_unchecked<2>();
+				for (py::ssize_t i = 0; i < n; ++i)
+					for (py::ssize_t j = 0; j < n; ++j)
+						values(i, j) =
+							tm.values[static_cast<size_t>(i + j * n)];
+				return out;
 			},
-			doc::get_transition_probability,
-			py::arg("print") = false, py::arg("normalize") = true);
+			doc::get_transition_probability, py::arg("margin") = "pair",
+			py::arg("disease") = py::none(), py::arg("normalize") = true,
+			py::arg("print") = false);
 }

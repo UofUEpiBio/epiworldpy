@@ -46,6 +46,27 @@ inline epiworld::Value value_from_py(const pybind11::handle &x) {
 		"(Value.inverse(), Value.complement() or Value.fun()).");
 }
 
+/* Diseases are named in Python; None requests all (or the only disease). */
+inline std::string disease_name(const pybind11::handle &x) {
+	if (!pybind11::isinstance<pybind11::str>(x))
+		throw pybind11::type_error(
+			"Pass a disease's name (a str; see Model.get_diseases()), "
+			"not a virus or a lineage id.");
+	return x.cast<std::string>();
+}
+
+inline int disease_index(const epiworld::Model &model,
+						 const pybind11::handle &disease) {
+	if (disease.is_none())
+		return epiworld::all_diseases;
+	const auto name = disease_name(disease);
+	const auto names = model.get_diseases();
+	for (size_t i = 0; i < names.size(); ++i)
+		if (names[i] == name)
+			return static_cast<int>(i);
+	throw pybind11::value_error("The model has no disease \"" + name + "\".");
+}
+
 /* The natural history of `virus` (raises if it has no stages yet). */
 inline const epiworld::NaturalHistory &virus_nh(const epiworld::Virus &virus) {
 	const epiworld::NaturalHistory *nh = virus.get_natural_history();
@@ -56,9 +77,10 @@ inline const epiworld::NaturalHistory &virus_nh(const epiworld::Virus &virus) {
 	return *nh;
 }
 
-/* The natural history of the model (its stages come from its first virus). */
-inline const epiworld::NaturalHistory &model_nh(const epiworld::Model &model) {
-	const epiworld::NaturalHistory *nh = model.get_natural_history();
+/* A disease's natural history (required with several diseases). */
+inline const epiworld::NaturalHistory &
+model_nh(const epiworld::Model &model, int disease = epiworld::all_diseases) {
+	const epiworld::NaturalHistory *nh = model.get_natural_history(disease);
 	if (nh == nullptr)
 		throw std::invalid_argument(
 			"The model has no stages yet: add a virus with a natural history "

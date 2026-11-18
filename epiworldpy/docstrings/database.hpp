@@ -11,12 +11,18 @@ inline constexpr const char *cls = R"doc(The results of a model run.
 
 Get it with :meth:`Model.get_db` after running the model. The ``get_*``
 methods return the results as dictionaries of equal-length lists, one entry
-per row, which convert directly to data frames::
+per row. String columns (including the first column, ``disease``) are
+encoded as ``{"values": labels, "indexes": indices}``; decode them with
+``column["values"][column["indexes"]]`` before making a data frame.
+Every table defaults to all diseases; pass ``disease="Flu"`` to select one::
 
     import pandas as pd
 
     model.run(ndays=100, seed=1912)
-    totals = pd.DataFrame(model.get_db().get_hist_total())
+    data = model.get_db().get_hist_total()
+    totals = pd.DataFrame({k: v["values"][v["indexes"]]
+                           if isinstance(v, dict) else v
+                           for k, v in data.items()})
 )doc";
 
 inline constexpr const char *add_user_data_row =
@@ -115,40 +121,60 @@ fn_hospitalizations : str, default ""
 inline constexpr const char *get_hist_virus =
 	R"doc(Get the number of agents with each virus, by status, stage, and day.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"ids"`` (virus IDs), ``"statuses"`` and ``"stages"``
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"ids"`` (virus IDs), ``"statuses"`` and ``"stages"``
     (labels), and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_hist_tool =
 	R"doc(Get the number of agents with each tool, by status, stage, and day.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"ids"`` (tool IDs), ``"statuses"`` and ``"stages"``
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"ids"`` (tool IDs), ``"statuses"`` and ``"stages"``
     (labels), and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_today_virus =
 	R"doc(Get the number of agents with each virus, by status and stage, today.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"statuses"`` and ``"stages"`` (labels), ``"ids"`` (virus IDs), and
+    First column ``"disease"`` (names), followed by ``"statuses"`` and ``"stages"`` (labels), ``"ids"`` (virus IDs), and
     ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_today_total =
 	R"doc(Get the number of agents in each status and stage today.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"statuses"`` and ``"stages"`` (labels) and ``"counts"``, one entry per
+    First column ``"disease"`` (names), followed by ``"statuses"`` and ``"stages"`` (labels) and ``"counts"``, one entry per
     pair.
 )doc";
 
@@ -186,7 +212,7 @@ Parameters
 v : Virus
     The virus.
 founder : bool, default False
-    Whether the virus starts its own lineage (as when the model adds it).
+    Whether this is a founder added to the model, rather than a mutation.
 )doc";
 
 inline constexpr const char *get_hist_total =
@@ -194,31 +220,45 @@ inline constexpr const char *get_hist_total =
 
 Without statuses, the status is ``"Free"``.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"statuses"`` and ``"stages"`` (labels), and ``"counts"``,
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"statuses"`` and ``"stages"`` (labels), and ``"counts"``,
     one entry per row.
 )doc";
 
 inline constexpr const char *get_reproductive_number =
 	R"doc(Get the number of agents each infected agent went on to infect.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
-numpy.ndarray
-    Integer array with one row per infected agent and four columns: the
-    virus ID, the day the agent was infected, the agent's ID, and the number
-    of agents it infected (its reproductive number).
+dict
+    First column ``"disease"`` (names), then ``"virus_id"``, ``"sources"``,
+    ``"source_exposure_dates"``, and ``"rt"`` (secondary infections).
 )doc";
 
 inline constexpr const char *get_transmissions =
 	R"doc(Get every transmission event.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"sources"`` (IDs of the infecting agents, ``-1`` for the
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"sources"`` (IDs of the infecting agents, ``-1`` for the
     initial cases), ``"targets"`` (IDs of the infected agents),
     ``"viruses"`` (virus IDs), ``"source_exposure_dates"`` (days the
     infecting agents were infected), and ``"layers"`` (ids of the contact
@@ -232,10 +272,15 @@ inline constexpr const char *get_generation_time =
 The generation time is the number of days between an agent's infection and
 the first infection it caused.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"agents"`` (agent IDs), ``"viruses"`` (virus IDs), ``"times"`` (days
+    First column ``"disease"`` (names), followed by ``"agents"`` (agent IDs), ``"viruses"`` (virus IDs), ``"times"`` (days
     the agents were infected), and ``"generation_times"`` (``-1`` for agents
     who infected no one), one entry per infected agent.
 )doc";
@@ -247,32 +292,44 @@ A cell is a pair of a status and a stage.
 
 Parameters
 ----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
 skip_zeros : bool, default False
     Whether to leave out the rows with a zero count.
 
 Returns
 -------
 dict
-    ``"status_from"``, ``"stage_from"``, ``"status_to"``, ``"stage_to"``
+    First column ``"disease"`` (names), followed by ``"status_from"``, ``"stage_from"``, ``"status_to"``, ``"stage_to"``
     (labels), ``"dates"``, and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_active_cases =
 	R"doc(Get the number of agents with each virus, by day.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"virus_id"``, and ``"counts"``, one entry per row.
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"virus_id"``, and ``"counts"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_outbreak_size =
 	R"doc(Get the cumulative number of agents infected with each virus, by day.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"virus_id"``, and ``"size"``, one entry per row.
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"virus_id"``, and ``"size"``, one entry per row.
 )doc";
 
 inline constexpr const char *get_hospitalizations =
@@ -281,39 +338,69 @@ inline constexpr const char *get_hospitalizations =
 Only models that track hospitalizations (for example,
 :func:`~epiworldpy.epimodels.ModelSEIRQuarantine`) record them.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"virus_id"``, ``"tool_id"``, ``"count"``, and
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"virus_id"``, ``"tool_id"``, ``"count"``, and
     ``"weight"``, one entry per row.
 )doc";
 
-inline constexpr const char *get_transition_probability =
-	R"doc(Estimate the daily probability of moving between each pair of cells.
+inline constexpr const char *get_transition_probability = R"doc(Get daily transition probabilities or counts over a margin.
 
 Parameters
 ----------
-print : bool, default False
-    Whether to also print the matrix.
+margin : {"pair", "stage", "status"}, default "pair"
+    Matrix over status and stage pairs, stages, or statuses.
+disease : str or None, default None
+    Disease name; required for pair and stage margins with several diseases.
 normalize : bool, default True
-    Whether to divide the counts by the number of agents in each origin
-    cell, giving probabilities; otherwise, return the counts.
+    Divide each origin's counts by their sum to obtain probabilities.
+print : bool, default False
+    Also print the matrix.
 
 Returns
 -------
-list of float
-    A flattened ``C x C`` matrix, where ``C`` is the number of cells (pairs
-    of a status and a stage), stored by columns: entry ``i + j * C`` is the
-    probability of moving from cell ``i`` to cell ``j``.
+numpy.ndarray
+    Square matrix with origins in rows and destinations in columns.
+    Before a run, an empty matrix of shape (0, 0).
+)doc";
+
+inline constexpr const char *get_hist_virus_transitions = R"doc(Get declared stage transitions by virus (strain) and day.
+
+Infections are counted under the strain caught; transitions leaving a carrier
+stage under the strain carried. Over a disease's strains these sum to its
+transition counts, except external firings from stages without the virus.
+Seeding and imports are not transitions. Status transitions have no strain.
+
+Parameters
+----------
+disease : str or None, default None
+    Disease name; None selects every disease.
+
+Returns
+-------
+dict
+    ``"disease"``, ``"dates"``, ``"ids"`` (virus IDs), ``"viruses"``
+    (strain names), ``"transitions"`` (names), and ``"counts"``.
 )doc";
 
 inline constexpr const char *get_hist_transitions =
 	R"doc(Get how many times each transition fired, by day.
 
+Parameters
+----------
+disease : str or None, default None
+    Disease name (see Model.get_diseases()). None selects every disease.
+
 Returns
 -------
 dict
-    ``"dates"``, ``"transitions"`` (names: ``"<from> -> <to>"`` unless
+    First column ``"disease"`` (names), followed by ``"dates"``, ``"transitions"`` (names: ``"<from> -> <to>"`` unless
     named), and ``"counts"``, one entry per row.
 )doc";
 

@@ -9,7 +9,9 @@ namespace epiworldpy::docstrings::virus {
 inline constexpr const char *cls =
 	R"doc(A virus (or any other contagious condition) and its natural history.
 
-A virus carries the stages of the disease and the transitions between them.
+A virus built from scratch starts a disease. Its copies (:meth:`strain`,
+:meth:`clone`, or mutations) are strains of that disease, sharing its stages
+and transitions. Different diseases may have different stages.
 A stage is a **carrier** if its agents hold the virus, and **infectious** if
 they transmit it (which implies carrier); the first stage is where agents
 start. The transitions name the model parameters they read:
@@ -57,18 +59,6 @@ Returns
 -------
 int
     ID of the virus.
-)doc";
-
-inline constexpr const char *get_lineage_id =
-	R"doc(Get the virus's lineage id.
-
-A lineage is a virus added to a model together with all of its variants;
-contact layers and tools target viruses by lineage.
-
-Returns
--------
-int
-    Lineage id, or -99 if the virus has not been added to a model.
 )doc";
 
 inline constexpr const char *get_name = R"doc(Get the name of the virus.
@@ -273,9 +263,9 @@ dict
 
 inline constexpr const char *clone = R"doc(Copy the virus.
 
-The copy is a new variant: added to a model, it gets its own id (and
-lineage), so the model records it apart from the original. Rename it with
-:meth:`set_name`.
+The copy is a strain of the same disease: added to a model, it gets its own
+id, so the model records it apart from the original. Rename it with
+:meth:`set_name`, or use :meth:`strain` to copy and name it in one call.
 
 Returns
 -------
@@ -412,6 +402,22 @@ Returns
 -------
 Duration
     The duration.
+)doc";
+
+inline constexpr const char *strain = R"doc(Create a named strain of the same disease.
+
+The copy shares the disease's stages and transitions. Use use_param() to
+read different parameters. Adding it to a model records it as its own virus.
+
+Parameters
+----------
+name : str
+    Strain name.
+
+Returns
+-------
+Virus
+    A new strain of this virus's disease.
 )doc";
 
 } // namespace epiworldpy::docstrings::virus

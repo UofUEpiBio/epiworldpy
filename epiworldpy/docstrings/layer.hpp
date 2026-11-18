@@ -194,29 +194,7 @@ param : str
     :meth:`epiworldpy.Model.add_param`).
 )doc";
 
-inline constexpr const char *add_virus_target_id =
-	R"doc(Restrict the layer to a virus lineage.
 
-A layer without targets spreads every virus; after the first target, only
-the targeted lineages spread through it.
-
-Parameters
-----------
-lineage_id : int
-    Lineage id of the virus (see :meth:`epiworldpy.Virus.get_lineage_id`).
-)doc";
-
-inline constexpr const char *add_virus_target =
-	R"doc(Restrict the layer to a virus (and its variants).
-
-A layer without targets spreads every virus; after the first target, only
-the targeted lineages spread through it.
-
-Parameters
-----------
-virus : Virus
-    A virus already added to the model.
-)doc";
 
 inline constexpr const char *enable_tracing =
 	R"doc(Log the contacts the layer samples.
@@ -571,6 +549,30 @@ Returns
 -------
 Network
     The layer, to add with :meth:`epiworldpy.Model.add_layer`.
+)doc";
+
+inline constexpr const char *add_target = R"doc(Restrict this object's effects to a disease, by name.
+
+Names are checked when the model runs. All strains of a disease are targeted.
+
+Parameters
+----------
+disease : str
+    Disease name (see Model.get_diseases()).
+
+Returns
+-------
+ContactLayer
+    This object, for chaining.
+)doc";
+
+inline constexpr const char *get_targets = R"doc(Get the targeted disease names.
+
+Returns
+-------
+list of str
+    Disease names. An empty list means every disease; with several diseases,
+    tools must explicitly name their targets. Layers may have no targets.
 )doc";
 
 } // namespace epiworldpy::docstrings::layer

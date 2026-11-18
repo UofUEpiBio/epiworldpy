@@ -182,7 +182,7 @@ DEFUNCT.update(
         ("Virus", "distribute"): _ASSIGN_VIRUS,
         ("Virus", "set_sequence"): (
             "Variants are recorded by id and parent: genetic sequences are gone "
-            "(see Virus.get_lineage_id())."
+            "(see Model.get_diseases())."
         ),
         ("Virus", "mutate"): (
             "Use agent.mutate_virus(model), which calls the function from "
@@ -215,6 +215,17 @@ DEFUNCT.update(
         for name in ("set_post_immunity", "set_post_recovery", "post_recovery")
     }
 )
+
+DEFUNCT.update({
+    ("Virus", "get_lineage_id"): (
+        "Targets are diseases: Tool.add_target(disease) and "
+        "ContactLayer.add_target(disease), by name (see Model.get_diseases())."
+    ),
+    ("ContactLayer", "add_virus_target"): (
+        "Layers target diseases, by name: layer.add_target(disease) "
+        "(see Model.get_diseases()); without targets, every disease spreads."
+    ),
+})
 
 # Classes removed in 1.0.0 (the update functions of the states)
 DEFUNCT_CLASSES = {"UpdateFun": _STATE, "NativeUpdateFun": _STATE}

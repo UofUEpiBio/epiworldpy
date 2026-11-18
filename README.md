@@ -73,8 +73,8 @@ error that names their replacement.
   `set_rewiring(graph.rewire_degseq(param))`. The contact matrix of a mixing
   model is on `model.get_layer("mixing")`.
 - `get_transmissions()` gains `layers`: the layer each infection came
-  through. Layers have a weight (`set_weight(param)`) and virus targets
-  (`add_virus_target(virus)`).
+  through. Layers have a weight (`set_weight(param)`) and disease targets
+  (`add_target(disease)`, by name).
 - Entities are gone; groups live in mixing layers
   ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
   `Entity`, `Model.add_entity()`, `get_entity()`, `get_n_entities()`, and
@@ -121,6 +121,18 @@ error that names their replacement.
   `get_today_virus()`; the transition matrix has `status_from`, `stage_from`,
   `status_to` and `stage_to`. `get_hist_transitions()` counts how many times
   each transition fired.
+- Several diseases per model, each with its own stages
+  ([epiworld#377](https://github.com/UofUEpiBio/epiworld/pull/377)): a
+  virus built from scratch is a new disease, and `virus.strain(name)` is a
+  strain of the same one (`model.get_diseases()` lists them). Every output
+  takes `disease=` (a name; `None` means all) and returns a `disease` column
+  first. What depends on one disease's stages (`get_stages()`, `get_stage()`,
+  `get_agents_stages()`, `set_initial()`, `fire()`,
+  `get_transition_probability()`) needs `disease=` when the model has
+  several. Tools and layers target diseases by name
+  (`add_target(disease)`), which replaces the lineage targets
+  (`get_lineage_id()` and `add_virus_target()` are gone).
+  `get_hist_virus_transitions()` counts the transitions by strain.
 - Models come from the registry
   ([epiworld#356](https://github.com/UofUEpiBio/epiworld/pull/356)):
   `epimodels.make_model(id, values, virus_name)`, `list_models()` and

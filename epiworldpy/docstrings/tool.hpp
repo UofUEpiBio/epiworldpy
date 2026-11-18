@@ -171,57 +171,65 @@ inline constexpr const char *set_death_reduction_fun =
 inline constexpr const char *print = R"doc(Print information about the tool.
 )doc";
 
-inline constexpr const char *add_target = R"doc(Restrict the tool to a virus lineage.
+inline constexpr const char *add_target = R"doc(Restrict this object's effects to a disease, by name.
 
-By default, a tool acts on every virus. Adding targets restricts all of the
-tool's effects (susceptibility and transmission reduction, recovery enhancer,
-and death reduction) to the listed virus lineages. A lineage is a virus added
-with :meth:`Model.add_virus` together with all of its mutations, so a tool
-targeting a virus also acts on its variants. Only lineages 0 to 62 can be
-targeted. Set the targets before calling :meth:`Model.add_tool`, which copies
-the tool.
+Names are checked when the model runs. All strains of a disease are targeted.
 
 Parameters
 ----------
-target : int or Virus
-    Lineage ID (see :meth:`Virus.get_lineage_id`), or a virus already added
-    to the model with :meth:`Model.add_virus`.
-)doc";
-
-inline constexpr const char *set_targets =
-	R"doc(Replace the virus lineages the tool acts on.
-
-Parameters
-----------
-lineage_ids : list of int
-    Lineage IDs (see :meth:`Virus.get_lineage_id`). An empty list makes the
-    tool act on every virus.
-)doc";
-
-inline constexpr const char *get_targets =
-	R"doc(Get the virus lineages the tool acts on.
+disease : str
+    Disease name (see Model.get_diseases()).
 
 Returns
 -------
-list of int
-    Lineage IDs. Empty if the tool acts on every virus.
+Tool
+    This object, for chaining.
 )doc";
 
-inline constexpr const char *clear_targets =
-	R"doc(Remove the targets so that the tool acts on every virus.
+inline constexpr const char *set_targets = R"doc(Replace the targeted diseases.
+
+Parameters
+----------
+diseases : list of str or None
+    Disease names, or None (or []) to clear the targets.
+
+Returns
+-------
+Tool
+    This tool, for chaining.
 )doc";
 
-inline constexpr const char *targets = R"doc(Check whether the tool acts on a virus.
+inline constexpr const char *get_targets = R"doc(Get the targeted disease names.
+
+Returns
+-------
+list of str
+    Disease names. An empty list means every disease; with several diseases,
+    tools must explicitly name their targets. Layers may have no targets.
+)doc";
+
+inline constexpr const char *clear_targets = R"doc(Clear all disease targets.
+
+Returns
+-------
+Tool
+    This tool, for chaining. With one disease it acts on that disease;
+    with several, a tool without explicit targets is an error at run time.
+)doc";
+
+inline constexpr const char *targets = R"doc(Check whether this tool acts on a virus's disease.
+
+Call after the model resolves the targets at the start of a run.
 
 Parameters
 ----------
 v : Virus
-    The virus.
+    A virus belonging to the model.
 
 Returns
 -------
 bool
-    True if the tool acts on the virus's lineage.
+    Whether the resolved targets include the virus's disease.
 )doc";
 
 inline constexpr const char *clone = R"doc(Copy the tool.

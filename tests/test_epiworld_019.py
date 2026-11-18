@@ -1,72 +1,111 @@
-"""Tests for the API added with epiworld 0.19: tools that target viruses."""
+"""Disease targets, ported from epiworldR's test-tool-targets.R."""
 
-import numpy as np
 import pytest
 
 import epiworldpy as epiworld
 from epiworldpy import assign, epimodels, graph, layer
 
-SEED = 1
-
 
 def make_two_virus_model():
-    # Two viruses: the model's, and a strain of it (a copy with its own name)
-    m = epimodels.ModelSIR("flu", n=2000, prevalence=0.01,
-                           transmission_prob=0.5, recovery_rate=0.1)
-    covid = m.get_virus(0).clone()
-    covid.set_name("covid")
-    m.add_virus(covid, assign.share(0.01))
-
-    m.add_layer(layer.network("contacts", graph.smallworld(k=10, p=0.01)))
+    m = epimodels.ModelSIR("flu", n=1000, prevalence=0.02,
+                           transmission_prob=0.5, recovery_rate=0.2)
+    covid = (epiworld.Virus("covid").add_stage("Susceptible")
+             .add_stage("Infected", infectious=True).add_stage("Recovered")
+             .add_infection("Susceptible", "Infected", rate=0.5)
+             .add_rate("Infected", "Recovered", rate=0.2))
+    m.add_virus(covid, assign.count(20))
+    m.add_param(4.0, "Contact rate")
+    contacts = layer.mixing("everyone", [0] * 1000, contact_matrix=[1.0])
+    contacts.set_contact_rate("Contact rate")
+    m.add_layer(contacts)
     m.verbose_off()
-    # The model's copies: only they have an id and a lineage
     return m, (m.get_virus(0), m.get_virus(1))
 
 
+def vaccine():
+    return epiworld.Tool("Perfect vaccine", susceptibility_reduction=1.0)
+
+
+def n_transmissions(model, disease):
+    return (model.get_db().get_transmissions(disease=disease)["sources"] >= 0).sum()
+
+
 def test_lineage_id():
-    v = epiworld.Virus("v")
-    assert v.get_lineage_id() == -99
-    _, (flu, covid) = make_two_virus_model()
-    assert flu.get_lineage_id() == flu.get_id() == 0
-    assert covid.get_lineage_id() == covid.get_id() == 1
+    # The removed feature remains a stub naming its replacement.
+    with pytest.raises(RuntimeError, match="defunct.*add_target"):
+        epiworld.Virus("v").get_lineage_id()
+    contacts = layer.network("contacts", graph.smallworld(k=4, p=0.1))
+    with pytest.raises(RuntimeError, match="defunct.*add_target"):
+        contacts.add_virus_target(0)
 
 
 def test_targets_api():
-    _, (flu, covid) = make_two_virus_model()
-    tool = epiworld.Tool("Vaccine", susceptibility_reduction=1.0)
+    tool = vaccine()
     assert tool.get_targets() == []
-    assert tool.targets(flu) and tool.targets(covid)
-
-    tool.add_target(flu)
-    assert tool.get_targets() == [0]
-    assert tool.targets(flu) and not tool.targets(covid)
-
-    tool.set_targets([0, 1])
-    assert tool.get_targets() == [0, 1]
+    assert tool.add_target("flu") is tool
+    tool.add_target("covid")
+    assert tool.get_targets() == ["flu", "covid"]
+    assert tool.set_targets(["covid"]) is tool
+    assert tool.get_targets() == ["covid"]
+    tool.set_targets(None)
+    assert tool.get_targets() == []
+    tool.set_targets(["flu", "covid"])
+    assert tool.clear_targets() is tool
+    assert tool.get_targets() == []
     tool.set_targets([])
-    assert tool.get_targets() == []
-
-    tool.add_target(1)
-    assert tool.get_targets() == [1]
-    tool.clear_targets()
-    assert tool.get_targets() == []
-
-    with pytest.raises(Exception):
-        tool.add_target(63)
-    with pytest.raises(Exception):
-        tool.add_target(epiworld.Virus("v"))
+    for bad in (0, 63, epiworld.Virus("v"), ["flu", "covid"], None):
+        with pytest.raises(TypeError, match="disease's name"):
+            tool.add_target(bad)
+    for bad in ([1, 2], ["flu", None], "flu", epiworld.Virus("v")):
+        with pytest.raises(TypeError, match="disease"):
+            tool.set_targets(bad)
 
 
-def test_targeted_tool_blocks_only_its_lineage():
-    # Everyone gets a perfect vaccine against flu only, so only covid spreads.
-    m, (flu, _) = make_two_virus_model()
-    tool = epiworld.Tool("Vaccine", susceptibility_reduction=1.0)
-    tool.add_target(flu)
+@pytest.mark.parametrize("target,other", [("flu", "covid"), ("covid", "flu")])
+def test_targeted_tool_blocks_only_its_disease(target, other):
+    m, viruses = make_two_virus_model()
+    tool = vaccine().add_target(target)
     m.add_tool(tool, assign.share(1.0))
-    m.run(30, SEED)
+    assert m.get_tool(0).get_targets() == [target]
+    m.run(20, 1231)
+    assert n_transmissions(m, target) == 0
+    assert n_transmissions(m, other) > 0
+    assert len(m.get_db().get_hist_tool(disease=other)["counts"]) == 0
+    assert len(m.get_db().get_hist_tool(disease=target)["counts"]) > 0
+    for v in viruses:
+        assert m.get_tool(0).targets(v) == (v.get_name() == target)
 
-    tr = m.get_db().get_transmissions()
-    # Seeded cases have no source (-1); keep agent-to-agent transmissions.
-    viruses = np.asarray(tr["viruses"])[np.asarray(tr["sources"]) >= 0]
-    assert np.sum(viruses == 0) == 0
-    assert np.sum(viruses == 1) > 0
+
+def test_missing_or_unknown_targets():
+    for target in (None, "unknown"):
+        m, _ = make_two_virus_model()
+        tool = vaccine()
+        if target is not None:
+            tool.add_target(target)
+        m.add_tool(tool, assign.share(1.0))
+        with pytest.raises((ValueError, RuntimeError), match="target|unknown"):
+            m.run(5, 1)
+
+
+def test_one_disease_default_targets():
+    m = epimodels.ModelSIR("flu", 1000, 0.02, 0.5, 0.2)
+    m.add_layer(layer.network("contacts", graph.smallworld(k=6, p=0.1)))
+    m.verbose_off()
+    m.add_tool(vaccine(), assign.share(1.0))
+    m.run(20, 1231)
+    assert n_transmissions(m, "flu") == 0
+
+
+def test_targets_survive_run_multiple():
+    m, _ = make_two_virus_model()
+    m.add_tool(vaccine().add_target("flu"), assign.share(1.0))
+    results = []
+
+    def save(sim, model):
+        results.append((n_transmissions(model, "flu"),
+                        n_transmissions(model, "covid")))
+
+    m.run_multiple(ndays=20, nexperiments=2, seed_=1231, fun=save,
+                   nthreads=1, verbose=False)
+    assert len(results) == 2
+    assert all(a == 0 and b > 0 for a, b in results)
