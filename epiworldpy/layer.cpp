@@ -104,6 +104,19 @@ void epiworldpy::export_layer(py::module &m) {
 			py::return_value_policy::reference_internal, doc::add_target,
 			py::arg("disease"))
 		.def("get_targets", &ContactLayer::get_targets, doc::get_targets)
+		.def(
+			"exclude_status",
+			[](ContactLayer &self, std::string status) -> ContactLayer & {
+				self.exclude_status(std::move(status));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::exclude_status,
+			py::arg("status"))
+		.def("get_excluded_statuses", &ContactLayer::get_excluded_statuses,
+			 doc::get_excluded_statuses)
+		.def("close", &ContactLayer::close, doc::close)
+		.def("reopen", &ContactLayer::reopen, doc::reopen)
+		.def("is_closed", &ContactLayer::is_closed, doc::is_closed)
 		.def("enable_tracing", &ContactLayer::enable_tracing,
 			 doc::enable_tracing, py::arg("max_contacts") = EPI_MAX_TRACKING)
 		.def("disable_tracing", &ContactLayer::disable_tracing,

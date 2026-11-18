@@ -232,6 +232,55 @@ bool
     Whether the resolved targets include the virus's disease.
 )doc";
 
+inline constexpr const char *add_layer_target =
+	R"doc(Restrict this tool's contact effects to a named layer.
+
+Susceptibility and transmission reductions apply only through the targeted
+layers. Without layer targets they apply through every layer. Recovery and
+death effects are unaffected. An infection given by code, outside any layer,
+sees only tools without layer targets. An unknown layer raises an error when
+the model runs. Set targets before the run or before adding the tool to a
+running model.
+
+Parameters
+----------
+layer : str
+    Name of a layer of the model. Repeated names are kept only once.
+
+Returns
+-------
+Tool
+    This tool, for chaining.
+)doc";
+
+inline constexpr const char *set_layer_targets =
+	R"doc(Replace the layers targeted by this tool's contact effects.
+
+See :meth:`add_layer_target` for which effects are restricted and when the
+targets are checked.
+
+Parameters
+----------
+layers : list of str
+    Layer names. Duplicates are dropped; an empty list clears the targets.
+)doc";
+
+inline constexpr const char *get_layer_targets =
+	R"doc(Get the layer names targeted by this tool's contact effects.
+
+Returns
+-------
+list of str
+    Layer names, in the order they were added. An empty list means every
+    layer, including infections given outside any layer.
+)doc";
+
+inline constexpr const char *clear_layer_targets =
+	R"doc(Clear all layer targets so the contact effects apply everywhere.
+
+This also includes infections given by code, outside any layer.
+)doc";
+
 inline constexpr const char *clone = R"doc(Copy the tool.
 
 The copy is a new tool: added to a model, it gets its own id, so the model
