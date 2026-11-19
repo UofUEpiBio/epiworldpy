@@ -543,8 +543,8 @@ mode : {"auto", "push", "pull"}
     the sum of degrees and ``N`` the number of agents, over the infected
     agents that can transmit (``c``) and the susceptible ones (``s``), and
     pulls otherwise. ``"pull"`` reproduces the random streams of
-    runs from before mixing layers could be pushed (epiworld 1.0.0 and
-    earlier, including 0.15).
+    epiworld 0.15 and earlier and, for models with mixing layers, of runs
+    from before mixing layers could be pushed (epiworld Phase 5).
 kappa : float, default 0.5
     Threshold used by ``"auto"``; a finite, non-negative number. Smaller
     values pull more often.
