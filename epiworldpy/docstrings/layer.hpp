@@ -196,6 +196,58 @@ param : str
 
 
 
+inline constexpr const char *exclude_status =
+	R"doc(Exclude agents in a status from this layer.
+
+These agents neither sample this layer nor are sampled through it. Set this
+between runs; calling it during a run raises an error. An unknown status
+raises an error when the model runs. Repeated names are kept only once.
+
+Parameters
+----------
+status : str
+    Name of a status of the model.
+
+Returns
+-------
+ContactLayer
+    This layer, for chaining.
+)doc";
+
+inline constexpr const char *get_excluded_statuses =
+	R"doc(Get the statuses excluded from this layer.
+
+Returns
+-------
+list of str
+    Excluded status names, in the order they were added.
+)doc";
+
+inline constexpr const char *close =
+	R"doc(Close the layer so it samples no contacts.
+
+A closed layer logs no contacts and transmits nothing. Called between runs,
+this closes it in every run until reopened. Called during a run (for example,
+from a global event), it closes from the next day on, for that run only.
+)doc";
+
+inline constexpr const char *reopen =
+	R"doc(Reopen the layer so it can sample contacts again.
+
+Called between runs, this opens it in every run until closed. Called during
+a run, it opens from the next day on, for that run only.
+)doc";
+
+inline constexpr const char *is_closed =
+	R"doc(Whether the layer is closed today.
+
+Returns
+-------
+bool
+    True if the layer is closed today. Changes requested during a run take
+    effect from the next day.
+)doc";
+
 inline constexpr const char *enable_tracing =
 	R"doc(Log the contacts the layer samples.
 

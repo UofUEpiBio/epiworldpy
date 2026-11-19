@@ -23,6 +23,31 @@ the disease and the transitions between them, with their values
    Bubbles
 ```
 
+## Contact layers
+
+Network and mixing layers share participation controls on
+{class}`~epiworldpy.layer.ContactLayer`. Use
+{meth}`~epiworldpy.layer.ContactLayer.exclude_status` between runs to exclude
+a status from one layer, or {meth}`~epiworldpy.layer.ContactLayer.close` and
+{meth}`~epiworldpy.layer.ContactLayer.reopen` to stop and resume its contacts.
+During a run, closures take effect from the next day and last for that run.
+Use {meth}`~epiworldpy.Tool.add_layer_target` to restrict a tool's
+susceptibility and transmission reductions to named layers; recovery and
+death effects still apply everywhere.
+
+```{eval-rst}
+.. currentmodule:: epiworldpy.layer
+
+.. autosummary::
+   :toctree: generated
+   :template: class.rst
+   :nosignatures:
+
+   ContactLayer
+   Network
+   Mixing
+```
+
 ## Placement
 
 Who gets a virus, a tool, an initial stage, or a group, at the start of each

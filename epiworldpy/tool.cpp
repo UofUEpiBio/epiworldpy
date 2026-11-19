@@ -120,6 +120,20 @@ void epiworldpy::export_tool(pybind11::class_<epiworld::Tool> &c) {
 			py::return_value_policy::reference_internal, doc::clear_targets)
 		.def("targets", &Tool::targets, doc::targets, py::arg("v"))
 		.def(
+			"add_layer_target",
+			[](Tool &self, std::string layer) -> Tool & {
+				self.add_layer_target(std::move(layer));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::add_layer_target,
+			py::arg("layer"))
+		.def("set_layer_targets", &Tool::set_layer_targets,
+			 doc::set_layer_targets, py::arg("layers"))
+		.def("get_layer_targets", &Tool::get_layer_targets,
+			 doc::get_layer_targets)
+		.def("clear_layer_targets", &Tool::clear_layer_targets,
+			 doc::clear_layer_targets)
+		.def(
 			"clone",
 			[](const Tool &self) {
 				// A new tool: the model gives it its own id when it is added
