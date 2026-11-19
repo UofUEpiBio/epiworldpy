@@ -530,7 +530,7 @@ inline constexpr const char *set_transmission_mode =
 
 A step pushes or pulls every layer. In a *pull* step, each susceptible agent
 looks at its infected contacts; in a *push* step, each infected agent adds its
-infection odds to its susceptible contacts. Both give the same distribution of
+infection hazards to its susceptible contacts. Both give the same distribution of
 infections and differ only in speed and in the random numbers drawn. Network
 and mixing layers can be pushed; directed networks (and layer types without
 push) always pull.

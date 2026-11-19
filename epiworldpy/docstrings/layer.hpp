@@ -182,10 +182,12 @@ int
 )doc";
 
 inline constexpr const char *set_weight =
-	R"doc(Scale the odds of infection through the layer by a model parameter.
+	R"doc(Scale the hazard of infection through the layer by a model parameter.
 
-A weight of 0 turns the layer off, and 1 changes nothing; a layer without a
-weight has weight 1.
+The hazard of a contact of probability ``p`` is ``-log(1 - p)``, so with
+weight ``w`` the contact counts as ``1 - (1 - p)^w``. A weight of 0 turns the
+layer off, 1 changes nothing, and 2 is two independent exposures; a layer
+without a weight has weight 1.
 
 Parameters
 ----------

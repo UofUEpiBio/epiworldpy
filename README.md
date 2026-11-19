@@ -73,7 +73,8 @@ error that names their replacement.
   `set_rewiring(graph.rewire_degseq(param))`. The contact matrix of a mixing
   model is on `model.get_layer("mixing")`.
 - `get_transmissions()` gains `layers`: the layer each infection came
-  through. Layers have a weight (`set_weight(param)`) and disease targets
+  through. Layers have a weight (`set_weight(param)`, which multiplies the
+  hazard of infection through the layer) and disease targets
   (`add_target(disease)`, by name).
 - Entities are gone; groups live in mixing layers
   ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
@@ -150,6 +151,15 @@ error that names their replacement.
   group of the pool that day); `model.set_param_cycle(pname, values)` makes a
   parameter follow a cycle of days (`clear_param_cycle()`,
   `has_param_cycle()`).
+- Independent exposures (epiworld Phase 6a, re-vendored to epiworld
+  `bb78cbbd`, [epiworld#388](https://github.com/UofUEpiBio/epiworld/pull/388)):
+  a susceptible agent escapes infection with probability `prod(1 - p)` over
+  its infected contacts in every layer, and the infector is drawn in
+  proportion to its hazard `-log(1 - p)`. Before, the draw was conditioned on
+  at most one transmission, which lowered the probability of infection as
+  contacts piled up. A layer's weight now multiplies the hazard (a contact
+  counts as `1 - (1 - p)^w`); before, it scaled the odds. **Results change**:
+  recalibrate parameters fitted with 0.x.
 - Push for mixing layers and `run()` after an error (epiworld Phases 4d and 5,
   re-vendored to epiworld `da6bdcb6`,
   [epiworld#384](https://github.com/UofUEpiBio/epiworld/pull/384),
