@@ -150,6 +150,15 @@ error that names their replacement.
   group of the pool that day); `model.set_param_cycle(pname, values)` makes a
   parameter follow a cycle of days (`clear_param_cycle()`,
   `has_param_cycle()`).
+- Push for mixing layers and `run()` after an error (epiworld Phases 4d and 5,
+  re-vendored to epiworld `da6bdcb6`,
+  [epiworld#384](https://github.com/UofUEpiBio/epiworld/pull/384),
+  [#386](https://github.com/UofUEpiBio/epiworld/pull/386)): a step pushes or
+  pulls every layer, and mixing layers can be pushed (`"auto"` may push them
+  early in an outbreak). Directed networks always pull. Results of models with
+  mixing layers change under `"auto"` and `"push"` (same distribution, other
+  random numbers); `set_transmission_mode("pull")` reproduces runs from before.
+  A model can be run again after `run()` raised an error.
 - Social bubbles: `Bubbles` is new in epiworldpy
   ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
   `ties="complete"`, bubblemates meet in a household layer (a within-group

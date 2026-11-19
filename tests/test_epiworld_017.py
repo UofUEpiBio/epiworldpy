@@ -125,6 +125,37 @@ class TestTransmissionMode:
             finals[mode] = np.mean(recovered)
         assert finals["push"] == pytest.approx(finals["pull"], rel=0.15)
 
+    def test_mixing_layer_pushes(self):
+        def run(mode, seed):
+            m = epimodels.ModelSIR("v", n=500, prevalence=0.05,
+                                   transmission_prob=0.5, recovery_rate=0.2)
+            m.add_layer(layer.mixing("all", [0] * 500, contact_prob=0.02))
+            m.verbose_off()
+            m.set_transmission_mode(mode)
+            m.run(DAYS, seed)
+            return m
+
+        assert run("push", 1).get_last_transmission_mode() == "push"
+        assert run("pull", 1).get_last_transmission_mode() == "pull"
+        means = {
+            mode: np.mean([
+                run(mode, s).get_agents_stages().count("Recovered")
+                for s in range(40)
+            ])
+            for mode in ("push", "pull")
+        }
+        assert means["push"] == pytest.approx(means["pull"], rel=0.1)
+
+    def test_directed_network_pulls(self):
+        m = epimodels.ModelSIR("v", n=500, prevalence=0.05,
+                               transmission_prob=0.5, recovery_rate=0.2)
+        m.add_layer(layer.network(
+            "contacts", graph.smallworld(k=10, p=0.01, directed=True)))
+        m.verbose_off()
+        m.set_transmission_mode("push")
+        m.run(5, SEED)
+        assert m.get_last_transmission_mode() == "pull"
+
     def test_rates_compete(self):
         # Two rates out of a stage: each agent makes at most one transition a
         # day, and equal rates reach both targets about equally often

@@ -526,12 +526,14 @@ name : str
 )doc";
 
 inline constexpr const char *set_transmission_mode =
-	R"doc(Set how network transmission is computed.
+	R"doc(Set how transmission is computed.
 
-In a *pull* step, each susceptible agent looks at its infected neighbors; in
-a *push* step, each infected agent adds its infection odds to its susceptible
-neighbors. Both give the same distribution of infections and differ only in
-speed and in the random numbers drawn. Directed networks always pull.
+A step pushes or pulls every layer. In a *pull* step, each susceptible agent
+looks at its infected contacts; in a *push* step, each infected agent adds its
+infection odds to its susceptible contacts. Both give the same distribution of
+infections and differ only in speed and in the random numbers drawn. Network
+and mixing layers can be pushed; directed networks (and layer types without
+push) always pull.
 
 Parameters
 ----------
@@ -541,7 +543,8 @@ mode : {"auto", "push", "pull"}
     the sum of degrees and ``N`` the number of agents, over the infected
     agents that can transmit (``c``) and the susceptible ones (``s``), and
     pulls otherwise. ``"pull"`` reproduces the random streams of
-    epiworld 0.15 and earlier.
+    runs from before mixing layers could be pushed (epiworld 1.0.0 and
+    earlier, including 0.15).
 kappa : float, default 0.5
     Threshold used by ``"auto"``; a finite, non-negative number. Smaller
     values pull more often.
