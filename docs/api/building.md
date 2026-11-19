@@ -31,6 +31,12 @@ Network and mixing layers share participation controls on
 a status from one layer, or {meth}`~epiworldpy.layer.ContactLayer.close` and
 {meth}`~epiworldpy.layer.ContactLayer.reopen` to stop and resume its contacts.
 During a run, closures take effect from the next day and last for that run.
+{meth}`~epiworldpy.layer.ContactLayer.set_schedule` makes a layer sample
+contacts on some days only (weekdays, say), and
+{meth}`~epiworldpy.layer.Mixing.set_pools` with
+{meth}`~epiworldpy.layer.Mixing.set_persistence` keeps agents in their usual
+group most days. {meth}`~epiworldpy.Model.set_param_cycle` makes a parameter
+follow a weekly cycle.
 Use {meth}`~epiworldpy.Tool.add_layer_target` to restrict a tool's
 susceptibility and transmission reductions to named layers; recovery and
 death effects still apply everywhere.

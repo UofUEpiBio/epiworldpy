@@ -253,6 +253,12 @@ void epiworldpy::export_model(py::class_<epiworld::Model> &c) {
 		.def("get_param", &Model::get_param, doc::get_param, py::arg("pname"))
 		.def("set_param", &Model::set_param, doc::set_param, py::arg("pname"),
 			 py::arg("val"))
+		.def("set_param_cycle", &Model::set_param_cycle, doc::set_param_cycle,
+			 py::arg("pname"), py::arg("values"))
+		.def("clear_param_cycle", &Model::clear_param_cycle,
+			 doc::clear_param_cycle, py::arg("pname"))
+		.def("has_param_cycle", &Model::has_param_cycle,
+			 doc::has_param_cycle, py::arg("pname"))
 		.def("par", &Model::par, doc::par, py::arg("pname"))
 		.def(
 			"get_agent",

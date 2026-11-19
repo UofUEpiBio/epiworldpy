@@ -141,6 +141,15 @@ error that names their replacement.
   model's: a copy (`model.get_virus(0).clone()`) with its own name. The model
   keeps its own copy of each virus and tool, and only that copy has an id:
   give agents and tools `model.get_virus(i)` and `model.get_tool(i)`.
+- Routine and persistence (epiworld Phase 4c, re-vendored to epiworld
+  `fe1e229d`, [epiworld#383](https://github.com/UofUEpiBio/epiworld/pull/383)):
+  `layer.set_schedule([True] * 5 + [False] * 2)` makes a layer sample contacts
+  on some days only (`clear_schedule()`, `has_schedule()`, `is_scheduled(day)`);
+  a within-group mixing layer gets `set_pools()` and `set_persistence()`
+  (agents stay in their usual group, `get_usual_group()`, or go to another
+  group of the pool that day); `model.set_param_cycle(pname, values)` makes a
+  parameter follow a cycle of days (`clear_param_cycle()`,
+  `has_param_cycle()`).
 - Social bubbles: `Bubbles` is new in epiworldpy
   ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
   `ties="complete"`, bubblemates meet in a household layer (a within-group
