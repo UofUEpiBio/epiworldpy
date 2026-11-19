@@ -114,6 +114,24 @@ void epiworldpy::export_layer(py::module &m) {
 			py::arg("status"))
 		.def("get_excluded_statuses", &ContactLayer::get_excluded_statuses,
 			 doc::get_excluded_statuses)
+		.def(
+			"set_schedule",
+			[](ContactLayer &self, std::vector<bool> days) -> ContactLayer & {
+				self.set_schedule(std::move(days));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::set_schedule,
+			py::arg("days"))
+		.def(
+			"clear_schedule",
+			[](ContactLayer &self) -> ContactLayer & {
+				self.clear_schedule();
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::clear_schedule)
+		.def("has_schedule", &ContactLayer::has_schedule, doc::has_schedule)
+		.def("is_scheduled", &ContactLayer::is_scheduled, doc::is_scheduled,
+			 py::arg("day"))
 		.def("close", &ContactLayer::close, doc::close)
 		.def("reopen", &ContactLayer::reopen, doc::reopen)
 		.def("is_closed", &ContactLayer::is_closed, doc::is_closed)
@@ -199,6 +217,50 @@ void epiworldpy::export_layer(py::module &m) {
 				return g;
 			},
 			doc::get_group, py::arg("agent"))
+		.def(
+			"set_pools",
+			[](Mixing &self, std::vector<size_t> pools) -> Mixing & {
+				self.set_pools(std::move(pools));
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::set_pools,
+			py::arg("pools"))
+		.def("get_pools", &Mixing::get_pools, doc::get_pools)
+		.def(
+			"set_persistence",
+			[](Mixing &self, double q) -> Mixing & {
+				self.set_persistence(q);
+				return self;
+			},
+			py::return_value_policy::reference_internal, doc::set_persistence,
+			py::arg("persistence"))
+		.def(
+			"set_persistence",
+			[](Mixing &self, std::vector<double> q) -> Mixing & {
+				self.set_persistence(std::move(q));
+				return self;
+			},
+			py::return_value_policy::reference_internal,
+			doc::set_persistence_list, py::arg("persistence"))
+		.def("get_persistence", &Mixing::get_persistence,
+			 doc::get_persistence)
+		.def(
+			"clear_persistence",
+			[](Mixing &self) -> Mixing & {
+				self.clear_persistence();
+				return self;
+			},
+			py::return_value_policy::reference_internal,
+			doc::clear_persistence)
+		.def(
+			"get_usual_group",
+			[](const Mixing &self, size_t agent) -> std::optional<size_t> {
+				size_t g = self.get_usual_group(agent);
+				if (g == Mixing::NO_GROUP)
+					return std::nullopt;
+				return g;
+			},
+			doc::get_usual_group, py::arg("agent"))
 		.def(
 			"set_group",
 			[](Mixing &self, size_t agent, std::optional<size_t> group) {

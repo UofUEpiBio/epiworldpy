@@ -449,6 +449,160 @@ int
     The number of groups of the layer.
 )doc";
 
+inline constexpr const char *set_schedule =
+	R"doc(Make the layer sample contacts on some days only.
+
+The list repeats: day ``d`` uses ``days[(d - 1) % len(days)]``, so
+``[True] * 5 + [False] * 2`` is weekdays, with day 1 a Monday. A day off the
+schedule has no contacts in the layer, like a closure. The schedule is a
+setting: it lasts across runs, so set it between runs.
+
+Parameters
+----------
+days : list of bool
+    Whether the layer is on each day of the cycle. An empty list raises an
+    error.
+
+Returns
+-------
+ContactLayer
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *clear_schedule =
+	R"doc(Remove the schedule: the layer samples contacts every day again.
+
+Set this between runs.
+
+Returns
+-------
+ContactLayer
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *has_schedule =
+	R"doc(Whether the layer has a schedule.
+
+Returns
+-------
+bool
+    True if :meth:`set_schedule` was called and not cleared.
+)doc";
+
+inline constexpr const char *is_scheduled =
+	R"doc(Whether the schedule has a day on.
+
+Parameters
+----------
+day : int
+    The day (the first day of a run is 1).
+
+Returns
+-------
+bool
+    True if the layer samples contacts that day by its schedule; always True
+    without a schedule. A closure is not part of the schedule.
+)doc";
+
+inline constexpr const char *set_pools =
+	R"doc(Gather the groups into pools (within-group mixing layers only).
+
+Pools are used by the persistence of the layer: an agent that leaves its
+usual group goes to another group of the same pool. Set this between runs.
+
+Parameters
+----------
+pools : list of int
+    The pool id of each group (one per group).
+
+Returns
+-------
+Mixing
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *get_pools =
+	R"doc(Get the pool of each group.
+
+Returns
+-------
+list of int
+    The pool id of each group (empty if there are no pools).
+)doc";
+
+inline constexpr const char *set_persistence =
+	R"doc(Keep agents in their usual group (within-group mixing layers only).
+
+Each day, every agent stays in its usual group with probability
+``persistence``, and otherwise goes to another group of the same pool that
+day. Needs pools (:meth:`set_pools`); the contact probabilities apply to the
+groups of the day. Set this between runs.
+
+Parameters
+----------
+persistence : float
+    The probability, between 0 and 1, that an agent stays in its usual group.
+
+Returns
+-------
+Mixing
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *set_persistence_list =
+	R"doc(Keep agents in their usual group, with a probability for each agent.
+
+See :meth:`set_persistence`.
+
+Parameters
+----------
+persistence : list of float
+    The probability, between 0 and 1, that each agent stays in its usual
+    group.
+
+Returns
+-------
+Mixing
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *get_persistence =
+	R"doc(Get the persistence of the layer.
+
+Returns
+-------
+list of float
+    The probabilities set (empty without persistence).
+)doc";
+
+inline constexpr const char *clear_persistence =
+	R"doc(Remove the persistence: everyone stays in its usual group.
+
+Set this between runs.
+
+Returns
+-------
+Mixing
+    The layer itself, so calls can be chained.
+)doc";
+
+inline constexpr const char *get_usual_group =
+	R"doc(Get the usual group of an agent.
+
+:meth:`get_group` gives the group of today (after a run, the day after the
+last one), which differs from the usual group when the layer has persistence.
+
+Parameters
+----------
+agent : int
+    Id of the agent (starting at 0).
+
+Returns
+-------
+int or None
+    The usual group of the agent, or None if it is not in the layer.
+)doc";
+
 inline constexpr const char *get_group = R"doc(Get the group of an agent.
 
 Parameters

@@ -361,6 +361,48 @@ val : float
     New value.
 )doc";
 
+inline constexpr const char *set_param_cycle =
+	R"doc(Make a parameter follow a cycle of values.
+
+On day ``d`` the parameter is ``values[(d - 1) % len(values)]``. Layers that
+read the parameter daily (the contact rate, through ``set_contact_rate()``,
+and the weight, through ``set_weight()``) follow it. A global event that sets
+the parameter at the end of each day gives the same run. The cycle starts
+over in each run, and after a run the parameter has the last day's value.
+Beware of double counting: a rate already averaged over the week should not
+get a cycle on top of it without keeping the weekly mean.
+
+Parameters
+----------
+pname : str
+    Name of the parameter (it must exist).
+values : list of float
+    The value of each day of the cycle (not empty).
+)doc";
+
+inline constexpr const char *clear_param_cycle =
+	R"doc(Remove the cycle of a parameter.
+
+Parameters
+----------
+pname : str
+    Name of the parameter.
+)doc";
+
+inline constexpr const char *has_param_cycle =
+	R"doc(Whether a parameter follows a cycle.
+
+Parameters
+----------
+pname : str
+    Name of the parameter.
+
+Returns
+-------
+bool
+    True if :meth:`set_param_cycle` was called for it and not cleared.
+)doc";
+
 inline constexpr const char *par =
 	R"doc(Get the value of a named parameter (alias of :meth:`get_param`).
 
