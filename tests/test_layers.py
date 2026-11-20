@@ -280,6 +280,37 @@ def test_several_layers_weights_and_targets():
         m.run(5, 1)
 
 
+
+def test_independent_exposures_and_weights():
+    # Pairs (2k, 2k + 1): the even agent is infected, and the odd one meets it
+    # on day 1 with p = 0.2 through a layer of weight w. Exposures are
+    # independent and the weight multiplies the hazard -log(1 - p), so the odd
+    # agent is infected with probability 1 - (1 - p)^w: 0.36 with w = 2 (the
+    # 0.x rule, which scaled the odds, gave 0.33).
+    npairs, p = 20000, 0.2
+    m = epimodels.ModelSIR(
+        "flu", n=2 * npairs, prevalence=0, transmission_prob=p,
+        recovery_rate=0,
+    )
+    m.verbose_off()
+    evens = list(range(0, 2 * npairs, 2))
+    m.assign_virus(0, assign.agents(evens))
+    pairs = layer.network("pairs", graph.edgelist(
+        evens, [i + 1 for i in evens], 2 * npairs
+    ))
+    m.add_layer(pairs)
+    m.add_param(1.0, "pair weight")
+    pairs.set_weight("pair weight")
+
+    for w in (1.0, 2.0, 3.0):
+        m.set_param("pair weight", w)
+        m.run(1, 33)
+        share = (m.get_db().get_today_total()["counts"][1] - npairs) / npairs
+        expected = 1 - (1 - p) ** w
+        assert abs(share - expected) < 4 * np.sqrt(
+            expected * (1 - expected) / npairs
+        ), (w, share, expected)
+
 def test_contact_rate_and_infectious_stages():
     # Random mixing: "Contact rate" is read every day, so a global event that
     # sets it to 0 on day 10 stops new infections from day 11 on

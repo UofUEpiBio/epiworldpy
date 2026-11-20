@@ -530,7 +530,7 @@ inline constexpr const char *set_transmission_mode =
 
 A step pushes or pulls every layer. In a *pull* step, each susceptible agent
 looks at its infected contacts; in a *push* step, each infected agent adds its
-infection odds to its susceptible contacts. Both give the same distribution of
+infection hazards to its susceptible contacts. Both give the same distribution of
 infections and differ only in speed and in the random numbers drawn. Network
 and mixing layers can be pushed; directed networks (and layer types without
 push) always pull.
@@ -542,9 +542,10 @@ mode : {"auto", "push", "pull"}
     it pushes when ``D_c + 4 N_c <= kappa (D_s + 4 N_s)``, where ``D`` is
     the sum of degrees and ``N`` the number of agents, over the infected
     agents that can transmit (``c``) and the susceptible ones (``s``), and
-    pulls otherwise. ``"pull"`` reproduces the random streams of
-    epiworld 0.15 and earlier and, for models with mixing layers, of runs
-    from before mixing layers could be pushed (epiworld Phase 5).
+    pulls otherwise. ``"pull"`` draws every contact from the susceptible
+    side, as epiworld 0.x did. No mode reproduces runs of earlier
+    versions: since epiworld 1.0.0 every exposure is independent, which
+    changes results in both modes.
 kappa : float, default 0.5
     Threshold used by ``"auto"``; a finite, non-negative number. Smaller
     values pull more often.

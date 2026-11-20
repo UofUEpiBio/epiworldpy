@@ -73,7 +73,8 @@ error that names their replacement.
   `set_rewiring(graph.rewire_degseq(param))`. The contact matrix of a mixing
   model is on `model.get_layer("mixing")`.
 - `get_transmissions()` gains `layers`: the layer each infection came
-  through. Layers have a weight (`set_weight(param)`) and disease targets
+  through. Layers have a weight (`set_weight(param)`, which multiplies the
+  hazard of infection through the layer) and disease targets
   (`add_target(disease)`, by name).
 - Entities are gone; groups live in mixing layers
   ([epiworld#349](https://github.com/UofUEpiBio/epiworld/pull/349)).
@@ -150,6 +151,17 @@ error that names their replacement.
   group of the pool that day); `model.set_param_cycle(pname, values)` makes a
   parameter follow a cycle of days (`clear_param_cycle()`,
   `has_param_cycle()`).
+- Independent exposures (epiworld Phase 6a, re-vendored to epiworld
+  `bb78cbbd`, [epiworld#388](https://github.com/UofUEpiBio/epiworld/pull/388)):
+  a susceptible agent escapes infection with probability `prod((1 - p)^w)`
+  over its infected contacts in every layer, where `w` is the weight of the
+  contact's layer (1 unless set), and the infector is drawn in proportion to
+  its hazard `-w log(1 - p)` (uniformly among the contacts with `p = 1`, if
+  any). No transmission mode reproduces earlier runs, `"pull"` included. Before, the draw was conditioned on
+  at most one transmission, which lowered the probability of infection as
+  contacts piled up. A layer's weight now multiplies the hazard (a contact
+  counts as `1 - (1 - p)^w`); before, it scaled the odds. **Results change**:
+  recalibrate parameters fitted with 0.x.
 - Push for mixing layers and `run()` after an error (epiworld Phases 4d and 5,
   re-vendored to epiworld `da6bdcb6`,
   [epiworld#384](https://github.com/UofUEpiBio/epiworld/pull/384),
@@ -157,7 +169,8 @@ error that names their replacement.
   pulls every layer, and mixing layers can be pushed (`"auto"` may push them
   early in an outbreak). Directed networks always pull. Results of models with
   mixing layers change under `"auto"` and `"push"` (same distribution, other
-  random numbers); `set_transmission_mode("pull")` reproduces runs from before.
+  random numbers); `set_transmission_mode("pull")` gave those runs back until
+  independent exposures (above) changed results in both modes.
   A model can be run again after `run()` raised an error.
 - Social bubbles: `Bubbles` is new in epiworldpy
   ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
