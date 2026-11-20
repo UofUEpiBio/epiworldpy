@@ -153,9 +153,11 @@ error that names their replacement.
   `has_param_cycle()`).
 - Independent exposures (epiworld Phase 6a, re-vendored to epiworld
   `bb78cbbd`, [epiworld#388](https://github.com/UofUEpiBio/epiworld/pull/388)):
-  a susceptible agent escapes infection with probability `prod(1 - p)` over
-  its infected contacts in every layer, and the infector is drawn in
-  proportion to its hazard `-log(1 - p)`. Before, the draw was conditioned on
+  a susceptible agent escapes infection with probability `prod((1 - p)^w)`
+  over its infected contacts in every layer, where `w` is the weight of the
+  contact's layer (1 unless set), and the infector is drawn in proportion to
+  its hazard `-w log(1 - p)` (uniformly among the contacts with `p = 1`, if
+  any). No transmission mode reproduces earlier runs, `"pull"` included. Before, the draw was conditioned on
   at most one transmission, which lowered the probability of infection as
   contacts piled up. A layer's weight now multiplies the hazard (a contact
   counts as `1 - (1 - p)^w`); before, it scaled the odds. **Results change**:
@@ -167,7 +169,8 @@ error that names their replacement.
   pulls every layer, and mixing layers can be pushed (`"auto"` may push them
   early in an outbreak). Directed networks always pull. Results of models with
   mixing layers change under `"auto"` and `"push"` (same distribution, other
-  random numbers); `set_transmission_mode("pull")` reproduces runs from before.
+  random numbers); `set_transmission_mode("pull")` gave those runs back until
+  independent exposures (above) changed results in both modes.
   A model can be run again after `run()` raised an error.
 - Social bubbles: `Bubbles` is new in epiworldpy
   ([epiworld#353](https://github.com/UofUEpiBio/epiworld/pull/353)). With
